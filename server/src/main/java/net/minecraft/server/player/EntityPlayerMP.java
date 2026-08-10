@@ -113,6 +113,21 @@ public class EntityPlayerMP extends Player implements ContainerListener {
         this.yOffset = 0.0F;
     }
 
+    // An MP player is anchored at its bounding-box minY (feet), not at an eye
+    // line... so the constructor sets yOffset = 0 and every position the client
+    // sends is feet-relative. Player.setCrawling is singleplayer code that
+    // moves yOffset between 1.62 and 0.56 to swap eye height; run as-is here
+    // it would leave yOffset at 0.56 while the feet anchor stays put, and the
+    // movement handler's teleportTo(posY) then adds that offset a second time,
+    // a persistent +0.56 desync that every moved-wrongly rubber-band resets to
+    // the log's "Expected +0.56". The crawl bounding box (0.9m) is still what
+    // collision and fitting use; only the eye offset is pinned
+    @Override
+    public void setCrawling(boolean state) {
+        this.crawling = state;
+        this.setSize(0.6F, state ? 0.9F : 1.8F);
+    }
+
     @Override
     public float getEyeHeight() {
         return 1.62F;
