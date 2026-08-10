@@ -12,8 +12,6 @@ import java.util.logging.Logger;
 import net.minecraft.SharedConstants;
 import net.minecraft.commands.Command;
 import net.minecraft.commands.CommandSource;
-import net.minecraft.game.block.BlockList;
-import net.minecraft.game.block.material.MaterialList;
 import net.minecraft.game.block.tileentity.TileEntity;
 import net.minecraft.game.block.tileentity.other.SignEntity;
 import net.minecraft.game.block.tileentity.smelters.GeneratorEntity;
@@ -23,6 +21,7 @@ import net.minecraft.game.item.ItemList;
 import net.minecraft.game.item.ItemStack;
 import net.minecraft.game.item.misc.Book;
 import net.minecraft.game.item.misc.WrittenBook;
+import net.minecraft.game.physics.BoundingBox;
 import net.minecraft.game.world.util.Position;
 import net.minecraft.localization.Translator;
 import net.minecraft.network.NetworkHandler;
@@ -263,23 +262,16 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
             }
 
             if (!this.mcServer.allowFlight) {
-                // playerInAirTime used to be reset only in the else branch below - the
-                // allow-flight=true branch, i.e. the one where it is never read. With the
-                // default allow-flight=false it was a monotonic counter incremented once per
-                // movement packet, so it crossed 80 four seconds after a player started moving
-                // and kicked them. Walking, swimming, standing still: everyone, always.
-                //
-                // It also tested `d15`, which the zeroing above always forces to 0.0, so the
-                // "is this player hovering?" question was never actually being asked. Ask it
-                // properly instead: are they unsupported, and not descending?
-                boolean supported = this.playerEntity.onGround
-                    || this.playerEntity.isInWater()
-                    || this.playerEntity.isInLava()
-                    || this.playerEntity.mount != null
-                    || this.playerEntity.isPlayerSleeping()
-                    || this.playerEntity.canClimb(BlockList.ladder)
-                    || this.playerEntity.canClimb(BlockList.vine)
-                    || this.playerEntity.canClimb(MaterialList.rope);
+                // Ask the world, not the entity. playerEntity.onGround comes from the moveEntity()
+                // call above, which only sets it when a *downward* move was clipped by a block. A
+                // client walking on flat ground reports the same Y every tick, so the delta
+                // re-applied here is dy=0, nothing is clipped, and onGround is false for someone
+                // standing on the floor - which used to kick everyone four seconds after they
+                // joined. Blocks under the feet is the real question, and it covers water,
+                // ladders and vines for free.
+                boolean supported = !isAllAir(
+                    worldServer2, this.playerEntity.boundingBox.copy().expand(f21, f21, f21).addCoord(0.0, -0.55, 0.0)
+                );
                 if (!supported && this.playerEntity.posY - d3 >= -0.03125) {
                     this.playerInAirTime++;
                     if (this.playerInAirTime > 80) {
@@ -298,6 +290,27 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
             this.mcServer.configManager.setPositionUponLogin(this.playerEntity);
             this.playerEntity.handleFalling(this.playerEntity.posY - d3, packet10Flying1.onGround);
         }
+    }
+
+    private static boolean isAllAir(WorldServer world, BoundingBox box) {
+        int minX = MathHelper.floor_double(box.minX);
+        int maxX = MathHelper.floor_double(box.maxX);
+        int minY = MathHelper.floor_double(box.minY);
+        int maxY = MathHelper.floor_double(box.maxY);
+        int minZ = MathHelper.floor_double(box.minZ);
+        int maxZ = MathHelper.floor_double(box.maxZ);
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    if (!world.isAir(x, y, z)) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true;
     }
 
     public void teleportTo(double d1, double d3, double d5, float f7, float f8) {
