@@ -11,6 +11,7 @@ import net.minecraft.client.commands.ClientCommands;
 import net.minecraft.client.gamemode.CreativeMode;
 import net.minecraft.client.gamemode.SpectatorMode;
 import net.minecraft.client.gamemode.SurvivalMode;
+import net.minecraft.client.gui.screens.container.ContainerScreen;
 import net.minecraft.client.gui.screens.container.inventory.RecipeScreen;
 import net.minecraft.client.gui.screens.container.tileentity.AnvilScreen;
 import net.minecraft.client.gui.screens.container.tileentity.BarrelScreen;
@@ -513,9 +514,11 @@ public class LocalPlayer extends Player implements CommandSource {
 
     @Override
     public void displayGUIRecipe() {
-        this.dropItems = false;
+        if (this.mc.currentScreen instanceof ContainerScreen && this.openContainer == this.container) {
+            ((ContainerScreen)this.mc.currentScreen).keepContainerOpen();
+        }
+
         this.mc.setScreen(new RecipeScreen(this.inventory));
-        this.dropItems = true;
     }
 
     @Override

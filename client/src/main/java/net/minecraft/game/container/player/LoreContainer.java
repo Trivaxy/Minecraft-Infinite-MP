@@ -26,44 +26,8 @@ public class LoreContainer extends Container {
         }
     }
 
-    @Override
-    public void onClose(Player player) {
-        super.onClose(player);
-        ItemStack itemstack = this.loreSlot.getStackInSlot(0);
-        if (itemstack != null && !player.inventory.addItemToInventory(itemstack)) {
-            player.dropPlayerItem(itemstack);
-        }
-    }
-
-    @Override
-    public ItemStack getStackInSlot(int i) {
-        ItemStack itemstack = null;
-        Slot slot = this.slots.get(i);
-        if (slot != null && slot.hasStack()) {
-            ItemStack slotStack = slot.getStack();
-            itemstack = slotStack.copy();
-            if (i == 0) {
-                if (!this.isSlotFree(slotStack, 1, 36, false)) {
-                    return null;
-                }
-            } else if (!this.isSlotFree(slotStack, 0, 1, false)) {
-                return null;
-            }
-
-            if (slotStack.stackSize == 0) {
-                slot.putStack(null);
-            } else {
-                slot.onChanged();
-            }
-
-            if (slotStack.stackSize == itemstack.stackSize) {
-                return null;
-            }
-
-            slot.onPickup(slotStack);
-        }
-
-        return itemstack;
+    public void setDisplayStack(ItemStack itemstack) {
+        this.slots.get(0).putStack(itemstack == null ? null : itemstack.copy());
     }
 
     @Override

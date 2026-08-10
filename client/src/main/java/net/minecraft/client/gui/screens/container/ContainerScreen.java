@@ -43,6 +43,7 @@ public abstract class ContainerScreen extends GuiScreen {
     protected int lastAvailableSlot;
     protected int horizontalOffset = 0;
     protected int verticalOffset = 0;
+    private boolean keepContainerOpen = false;
 
     public ContainerScreen(Container container) {
         this.container = container;
@@ -406,9 +407,19 @@ public abstract class ContainerScreen extends GuiScreen {
             if (selectedSlotIndex != -1) {
                 boolean shift = selectedSlotIndex != -999
                     && (Keyboard.isKeyDown(42) || Keyboard.isKeyDown(54) && this.mc.player.inventory.getItemStack() == null);
-                this.mc.gamemode.windowClick(this.container.windowId, selectedSlotIndex, click, shift, this.mc.player);
+                if (!this.slotClicked(slot, selectedSlotIndex, click, shift)) {
+                    this.mc.gamemode.windowClick(this.container.windowId, selectedSlotIndex, click, shift, this.mc.player);
+                }
             }
         }
+    }
+
+    public void keepContainerOpen() {
+        this.keepContainerOpen = true;
+    }
+
+    protected boolean slotClicked(Slot slot, int slotIndex, int click, boolean shift) {
+        return false;
     }
 
     @Override
@@ -425,7 +436,7 @@ public abstract class ContainerScreen extends GuiScreen {
     @Override
     public void onClose() {
         super.onClose();
-        if (this.mc.player != null) {
+        if (this.mc.player != null && !this.keepContainerOpen) {
             this.mc.gamemode.closeScreen(this.container.windowId, this.mc.player);
         }
     }

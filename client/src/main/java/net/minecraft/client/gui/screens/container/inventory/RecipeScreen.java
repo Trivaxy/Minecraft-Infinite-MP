@@ -28,14 +28,13 @@ public class RecipeScreen extends ContainerScreen {
         super(new LoreContainer(inventory));
         this.contWidth = 256;
         this.contHeight = 205;
-        if (inventory.getItemStack() != null) {
-            this.container.putStackInSlot(0, inventory.getItemStack());
-        }
+        ((LoreContainer)this.container).setDisplayStack(inventory.getItemStack());
     }
 
     @Override
     public void initGui() {
         super.initGui();
+        this.mc.player.openContainer = this.mc.player.container;
         int guiTop = (this.height - this.contHeight) / 2 + this.contHeight - 89;
         this.buttons.get(0).y = guiTop;
         int x = this.width / 2;
@@ -105,6 +104,31 @@ public class RecipeScreen extends ContainerScreen {
         }
 
         super.mouseClicked(mouseX, mouseY, click);
+    }
+
+    @Override
+    protected boolean slotClicked(Slot slot, int slotIndex, int click, boolean shift) {
+        if (slot == null) {
+            return false;
+        }
+
+        LoreContainer book = (LoreContainer)this.container;
+        if (slotIndex == 0) {
+            book.setDisplayStack(click == 0 ? this.mc.player.inventory.getItemStack() : null);
+            return true;
+        }
+
+        if (shift) {
+            book.setDisplayStack(slot.getStack());
+            return true;
+        }
+
+        Slot playerSlot = this.mc.player.container.getSlotInInventory(slot.inventory, slot.slotIndex);
+        if (playerSlot != null) {
+            this.mc.gamemode.windowClick(this.mc.player.container.windowId, playerSlot.slotNumber, click, false, this.mc.player);
+        }
+
+        return true;
     }
 
     @Override
