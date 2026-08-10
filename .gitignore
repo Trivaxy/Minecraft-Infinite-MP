@@ -1,0 +1,19 @@
+.gradle/
+build/
+run/
+out/
+
+# no need to commit these
+Latest.zip
+Server-FOR-DEV-WORK-ONLY.jar
+Version archive/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.vscode/

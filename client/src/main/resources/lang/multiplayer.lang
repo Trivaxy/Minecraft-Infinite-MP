@@ -1,0 +1,46 @@
+selectServer.title=Select Server
+selectServer.empty=empty
+selectServer.select=Join Server
+selectServer.direct=Direct Connect
+selectServer.edit=Edit
+selectServer.delete=Delete
+selectServer.add=Add server
+selectServer.defaultName=Minecraft Server
+selectServer.deleteQuestion=Are you sure you want to remove this server?
+selectServer.deleteWarning=will be lost forever! (A long time!)
+selectServer.deleteButton=Delete
+selectServer.refresh=Refresh
+addServer.title=Edit Server Info
+addServer.enterName=Server Name
+addServer.enterIp=Server Address
+addServer.add=Done
+
+multiplayer.title=Play Multiplayer
+multiplayer.connect=Connect
+multiplayer.warning=NOTICE:
+multiplayer.info1=Multiplayer is currently in very early stages of development
+multiplayer.info2=and there are going to be many bugs.
+multiplayer.info3=So don't expect it to be finished any time soon.
+multiplayer.ipinfo=Enter the IP of a server to connect to it:
+multiplayer.downloadingTerrain=Downloading terrain
+multiplayer.stopSleeping=Leave Bed
+
+chat.link.confirm=Are you sure you want to open the following URL?
+chat.link.warning=Never open links from people that you don't trust!
+chat.copy=Copy to Clipboard
+
+connect.connecting=Connecting to %1$s...
+connect.authorizing=Logging in...
+connect.failed=Failed to connect to the server
+
+disconnect.genericReason=%s
+disconnect.disconnected=Disconnected by Server
+disconnect.lost=Connection Lost
+disconnect.kicked=Was kicked from the game
+disconnect.timeout=Timed out
+disconnect.closed=Connection closed
+disconnect.loginFailed=Failed to login
+disconnect.loginFailedInfo=Failed to login: %s
+disconnect.quitting=Quitting
+disconnect.endOfStream=End of stream
+disconnect.overflow=Buffer overflow

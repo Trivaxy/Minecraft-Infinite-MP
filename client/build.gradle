@@ -1,0 +1,93 @@
+import org.gradle.internal.os.OperatingSystem
+
+configurations {
+    natives
+}
+
+// LWJGL 2 ships its .so/.dll/.dylib inside a per-platform jar.
+def nativeClassifier = {
+    def os = OperatingSystem.current()
+    if (os.windows) return 'natives-windows'
+    if (os.macOsX) return 'natives-osx'
+    return 'natives-linux'
+}()
+
+def lwjglVersion = '2.9.4-nightly-20150209'
+
+dependencies {
+    // paulscode sound system + jorbis/jogg, lifted out of the shipped client jar.
+    implementation files(rootProject.file('libs/vendor-sound.jar'))
+
+    implementation "org.lwjgl.lwjgl:lwjgl:${lwjglVersion}"
+    implementation "org.lwjgl.lwjgl:lwjgl_util:${lwjglVersion}"
+    implementation 'net.java.jinput:jinput:2.0.5'
+    implementation 'net.java.jutils:jutils:1.0.0'
+
+    natives "org.lwjgl.lwjgl:lwjgl-platform:${lwjglVersion}:${nativeClassifier}"
+    natives "net.java.jinput:jinput-platform:2.0.5:${nativeClassifier}"
+}
+
+def nativesDir = layout.buildDirectory.dir('natives')
+
+tasks.register('extractNatives', Copy) {
+    group = 'minecraft'
+    description = 'Unpacks the LWJGL/JInput native libraries'
+    from { configurations.natives.collect { zipTree(it) } }
+    into nativesDir
+    exclude 'META-INF/**'
+}
+
+tasks.register('runClient', JavaExec) {
+    group = 'minecraft'
+    description = 'Runs the Minecraft Infinite client'
+    dependsOn tasks.named('extractNatives')
+
+    mainClass = 'net.minecraft.client.Minecraft'
+    classpath = sourceSets.main.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+
+    // The game treats user.dir as its .minecraft folder (minecraft.useAppData=false).
+    workingDir = rootProject.file('run/client')
+
+    jvmArgs = [
+        "-Djava.library.path=${nativesDir.get().asFile}",
+        "-Dorg.lwjgl.librarypath=${nativesDir.get().asFile}",
+        "-Dnet.java.games.input.librarypath=${nativesDir.get().asFile}",
+        // Prism/MultiMC passes this; old Minecraft trips the JDK7+ merge sort contract check.
+        '-Djava.util.Arrays.useLegacyMergeSort=true',
+        '-Xmx3G',
+    ]
+
+    // main(String[]) is: <username> <sessionId> [--width N --height N] [--fullscreen]
+    args = [
+        (project.findProperty('mcUsername') ?: 'Player') as String,
+        (project.findProperty('mcSession') ?: '-') as String,
+    ]
+
+    doFirst {
+        workingDir.mkdirs()
+    }
+}
+
+// Produces a jar that can be dropped straight into a Prism/MultiMC instance in place
+// of the shipped InfdevPlus-Client.jar.
+tasks.register('jarmod', Jar) {
+    group = 'minecraft'
+    description = 'Builds a Prism/MultiMC-compatible client jarmod'
+    archiveFileName = 'InfdevPlus-Client.jar'
+
+    from sourceSets.main.output
+    from(zipTree(rootProject.file('libs/vendor-common.jar'))) { exclude 'META-INF/**' }
+    from(zipTree(rootProject.file('libs/vendor-sound.jar'))) { exclude 'META-INF/**' }
+
+    manifest {
+        attributes(
+            'Main-Class': 'net.minecraft.client.Minecraft',
+            'Class-Path': 'soundsystem-20120107.jar codecjorbis-20101023.jar codecwav-20101023.jar libraryjavasound-20101123.jar librarylwjglopenal-20100824.jar',
+        )
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}

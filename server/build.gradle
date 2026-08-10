@@ -1,0 +1,92 @@
+tasks.register('runServer', JavaExec) {
+    group = 'minecraft'
+    description = 'Runs the Minecraft Infinite server'
+
+    mainClass = 'net.minecraft.server.MinecraftServer'
+    classpath = sourceSets.main.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+
+    workingDir = rootProject.file('run/server')
+
+    jvmArgs = [
+        '-Djava.util.Arrays.useLegacyMergeSort=true',
+        '-Xmx2G',
+    ]
+
+    // Pass 'nogui' to skip the Swing console; -PserverArgs=... to override.
+    args = ((project.findProperty('serverArgs') ?: 'nogui') as String).tokenize(' ')
+
+    // Lets you type server commands into the Gradle console.
+    standardInput = System.in
+
+    doFirst {
+        workingDir.mkdirs()
+    }
+}
+
+// Headless protocol-level tests. They speak the real wire format using the server's own
+// packet classes, so they can't drift from the game. Run them against an ALREADY-RUNNING
+// server (start one with :server:runServer in another terminal first).
+sourceSets {
+    smoketest {
+        java.srcDir 'src/smoketest/java'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+
+tasks.register('smokeTest', JavaExec) {
+    group = 'verification'
+    description = 'Logs two headless clients into a running server and checks login + chat relay'
+
+    mainClass = (project.findProperty('smokeClass') ?: 'net.minecraft.smoketest.TwoClientTest') as String
+    classpath = sourceSets.smoketest.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+
+    args = [
+        (project.findProperty('smokeHost') ?: '127.0.0.1') as String,
+        (project.findProperty('smokePort') ?: '25565') as String,
+    ] + ((project.findProperty('smokeArgs') ?: '') as String).tokenize(' ')
+}
+
+// Rewrites the Dimension tag in a player save, so multi-world can be tested end to end before
+// any travel code exists. The server must be stopped - it rewrites player files on shutdown.
+//   ./gradlew :server:setPlayerDimension -PsmokePlayer=Alice -PsmokeDimension=1
+tasks.register('setPlayerDimension', JavaExec) {
+    group = 'verification'
+    description = 'Sets a player save file\'s dimension (stop the server first)'
+
+    mainClass = 'net.minecraft.smoketest.SetPlayerDimension'
+    classpath = sourceSets.smoketest.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+
+    def level = (project.findProperty('smokeLevel') ?: 'world') as String
+    def player = (project.findProperty('smokePlayer') ?: 'Alice') as String
+
+    args = [
+        rootProject.file("run/server/${level}/players/${player}.dat".toString()).toString(),
+        (project.findProperty('smokeDimension') ?: '1') as String,
+    ]
+}
+
+// Standalone runnable server jar.
+tasks.register('serverJar', Jar) {
+    group = 'minecraft'
+    description = 'Builds a runnable standalone server jar'
+    archiveFileName = 'minecraft-infinite-server.jar'
+
+    from sourceSets.main.output
+    from(zipTree(rootProject.file('libs/vendor-common.jar'))) { exclude 'META-INF/**' }
+
+    manifest {
+        attributes('Main-Class': 'net.minecraft.server.MinecraftServer')
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}

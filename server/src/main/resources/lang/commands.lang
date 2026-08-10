@@ -1,0 +1,302 @@
+commands.base.unknown=Unknown Command. Type /help for a list of all available commands.
+commands.base.noperms=You do not have permission to run this command.
+commands.base.error=Error:
+commands.base.error.notenoughargs=Not enough arguments!
+commands.base.error.invalidbool=Invalid boolean value
+commands.base.error.invalidnumber=Invalid number
+commands.base.error.invalidfloat=Invalid floating-point number
+commands.base.error.invalidid=Invalid block id!
+commands.base.error.invaliditem=Invalid item!
+commands.base.error.invalidmeta=Invalid metadata!
+commands.base.error.infinity=Infinity not allowed!
+commands.base.error.nan=Error! Not a number!
+commands.base.error.unknown.bool=Unknown mode, use either on or off!
+commands.base.error.arguments=Invalid number of arguments
+commands.base.error.player=Player required!
+
+commands.alias=Alias for the command
+
+commands.help=Shows a list of all available commands.
+commands.help.specific=Shows all help information about the specified command.
+commands.help.hint=Hint: Use tab to auto-complete command arguments!
+
+commands.me=Appends * to your message (third-person)
+
+commands.imagine=is a cool dude!
+
+commands.chat.clear=Clears the chat history
+
+commands.gamemode=Sets your gamemode to the specified mode.
+commands.gamemode.change=Your game mode has been changed.
+
+commands.gamerule=Toggles the specified game rule.
+commands.gamerule.set=Enabled game rule
+commands.gamerule.dis=Disabled game rule
+commands.gamerule.error=Unknown game rule!
+
+commands.timer=Sets the game timer's TPS to the specified value.
+commands.timer.invalid=Invalid timer value!
+commands.timer.unknown=Unknown mode. Use either 'reset' or 'set'.
+commands.timer.set=Set TPS to
+commands.timer.value=Current TPS is
+commands.timer.reset=Resets the timer back to the default value of 20 TPS.
+
+commands.difficulty=Toggles the world difficulty
+commands.difficulty.invalid=Please specify difficulty with either numerical ID or name!
+commands.difficulty.set=Difficulty set to
+commands.difficulty.current=Current difficulty is
+
+commands.seed=Shows world seed and copies it to the clipboard.
+commands.seed.set=Copied seed to clipboard
+
+commands.biome=Finds the closest biome or structure to the player in the provided radius. Default radius is 1000 blocks.
+commands.biome.list=Lists all available biomes and structures
+commands.biome.attempt=Attempting to find '%s' in radius %d
+commands.biome.find='%s' found at %dx, %dz
+commands.biome.none='%s' not found in radius %d
+commands.biome.invalid=Invalid biome/structure name or radius!
+
+commands.chunk.info=Shows all properties of the current chunk the player is in.
+commands.chunk.coords=Shows all properties of the specified chunk (uses chunk coordinates!).
+commands.chunk.none=No chunk found at position %dx, %dz
+commands.chunk.pos=Chunk at position: %dx, %dz
+commands.chunk.section=Number of sections: %d sections
+commands.chunk.heightmap=Heightmap: %d ints
+commands.chunk.percipation=Percipation heightmap: %d ints
+commands.chunk.light=Skylight columns: %d bits
+commands.chunk.entities=Entities: %d
+commands.chunk.tileentities=Tile Entities: %d
+commands.chunk.loaded=Is loaded: %b
+commands.chunk.modified=Modified: %b
+commands.chunk.rendered=Rendered: %b
+commands.chunk.save=Saves: %b
+commands.chunk.decorated=Being decorated: %b
+commands.chunk.populated=Is populated: %b
+commands.chunk.savetime=Last save time: %d
+
+commands.inv.clear=Clears your inventory.
+commands.inv.clear.player=Clears the specified player's inventory.
+commands.inv.noplayer=Player not found.
+commands.inv.cleared=Cleared %s's inventory
+
+commands.give=Gives a full stack of the specified item.
+commands.give.count=Gives the item with the specified count.
+commands.give.metadata=Gives the item with the specified metadata and count.
+commands.give.full=Gives the specified item with metadata and of count.
+commands.give.player=Gives the selected player the specified item.
+commands.give.player.full=Gives the selected player the specified item with metadata.
+commands.give.error=There is no item with id
+commands.give.success=Giving %s %d of %d:%d.
+
+commands.replaceitem=Replaces the specified inventory slot with the given item.
+commands.replaceitem.player=Replaces the specified inventory slot of the chosen player with the given item.
+commands.item.replace=Replaced item in slot %d with %d of count %d.
+
+commands.effect=Applies the provided effect to the player running the command.
+commands.effect.player=Applies the provided effect to the specified player.
+commands.effect.clear=Clears all effects for the player running the command.
+commands.effect.clear.player=Clears all effects for the specified player.
+commands.effect.error.id=Invalid effect ID!
+commands.effect.apply=Applied %s for player %s for %d ticks.
+commands.effect.clear.all=Cleared all effects from
+commands.effect.list=Lists all internal effect names for use with the command.
+
+commands.enchant=Applies the specified enchant to your currently held item.
+commands.enchant.success=Successfully enchanted held item with %s %d
+commands.enchant.fail=No held item to enchant!
+commands.enchant.error=Level cannot be negative!
+commands.enchant.help=Clears all enchants applied to the currently held item.
+commands.enchant.clear=Cleared all enchantments!
+commands.enchant.list=Lists all available enchants
+commands.enchant.unknown=Invalid enchant! Do <list> for a list of all enchants!
+
+commands.explosion=Creates an explosion with the specified parameters. Types of explosion are regular (0), fire (1), effect (2) and wind (3).
+commands.explosion.type=Creates an explosion with the specified parameters in the designated area.
+commands.explosion.error=Please specify explosion radius and type! 
+
+commands.weather=Toggles between different weather states.
+commands.weather.state=Toggles global weather ticks for world.
+commands.weather.freeze=Disabled weather ticks.
+commands.weather.unfreeze=Enabled weather ticks.
+commands.weather.rain=Rain enabled
+commands.weather.thunder=Thunder enabled
+commands.weather.clear=Cleared all weather.
+commands.weather.error=Unknown mode. Expected rain, thunder, clear, freeze or unfreeze!
+
+commands.time=Adds to or sets the time in the current world.
+commands.time.state=Sets permaday to on/off.
+commands.time.exact=Sets the time to be one of the pre-determined values.
+commands.time.error=Unknopwn mode. Use either add, set, freeze or unfreeze.
+commands.time.add=Added %d to time.
+commands.time.set=Set time to %d.
+commands.time.freeze=Froze time.
+commands.time.unfreeze=Unfroze time.
+commands.time.current=Current world time is
+commands.time.day=Set time to day.
+commands.time.night=Set time to night.
+commands.time.midnight=Set time to midnight.
+commands.time.noon=Set time to noon.
+commands.time.dawn=Set time to dawn.
+commands.time.dusk=Set time to dusk.
+
+commands.world.info=Displays the current world's information.
+commands.world.name=World name
+commands.world.seed=World seed
+commands.world.spawn=World spawn point: %dx, %dy, %dz
+commands.world.height=World height
+commands.world.type=World type
+commands.world.dimension=Current dimension
+commands.world.gamemode=World gamemode
+commands.world.difficulty=World difficulty
+commands.world.cheats=Commands enabled
+commands.world.structures=Generate structures
+commands.world.amplified=Amplified terrain
+commands.world.weather=Weather enabled
+commands.world.permaday=Permaday
+commands.world.size=World size
+commands.world.timer=Current time
+commands.world.day=Day length (in mins)
+commands.world.mobdrop=Mob drops
+commands.world.blockdrop=Block drops
+commands.world.spawning=Mob spawning
+commands.world.ai=Mob AI
+commands.world.phys=Physics
+commands.world.error=No world found!
+commands.world.infinite=infinite
+
+commands.home=Returns you to your spawn point.
+commands.home.return=Returned to spawn
+commands.home.player=Returned player %s to spawn.
+commands.home.extra=Returns the specified player to world spawn.
+
+commands.setspawn=Sets the selected location as your spawn point. Leave blank to use current position.
+commands.spawn.set=Set player spawn location at %dx, %dy, %dz.
+commands.setspawn.extra=Sets the specified player's spawn point.
+
+commands.worldspawn=Sets the selected location as world spawn. Leave blank to use current position.
+commands.world.setspawn=Set world spawn location to %dx, %dy, %dz.
+
+commands.sound=Plays the specified sound.
+commands.sound.loc=Plays the specified sound in the given coordinates.
+commands.sound.full=Plays the specified sound with adjustable volume and pitch.
+commands.sound.play=Played %s at %.1fx, %.1fy, %.1fz with volume %.1f and pitch %.1f.
+
+commands.achievement=Grants you the specified achievement instantly.
+commands.achievement.error=Invalid achievement! Make sure to use internal names from stats.lang!
+commands.achievement.reset.all=Reset all achievements!
+commands.achievement.reset=Reset achievement
+commands.achievement.resets=Resets the specified achievement back to an unacquired state.
+
+commands.kill=Kills the player.
+commands.kill.all=Killed %d entities.
+commands.kill.all.specific=Killed all instances of %s
+commands.kill.extra=Kills all entities except players.
+commands.kill.specific=Kills all instnaces of the specified entity (use entity names).
+commands.kill.player=Kills the specified player
+commands.kill.direct=Killed
+
+commands.count=Counts all entities of specified type in the surrounding area.
+commands.count.success=Counted %d of %s.
+
+commands.particle=Spawns a particle at the player's location.
+commands.particle.loc=Spawns a particle at the given location.
+commands.particle.count=Spawns specified particle count at location.
+commands.particle.spawn=Spawned particle '%s' at %.2fx, %.2fy, %.2fz.
+commands.particle.error=Invalid particle!
+commands.particle.list=Lists all available particles.
+
+commands.score=Changes your score value.
+commands.score.player=Changes the specified player's score.
+commands.score.amount=Sets your score to the provided amount.
+commands.score.add=Added %d points to %s's score
+commands.score.remove=Removed %d points from %s's score.
+commands.score.set=Set %s's score to %d.
+commands.score.error=Invalid arguments. Use add, set or remove and the amount!
+
+commands.setspeed=Sets your movement speed multiplier.
+commands.setspeed.axis=Sets your movement speed multiplier for the specified axis.
+commands.setspeed.reset=Resets your movement speed to its defaults.
+commands.setspeed.resetted=Reset all movement speed to default.
+commands.setspeed.error=Unknown value
+commands.setspeed.x=Set X axis movement speed multiplier to: %f
+commands.setspeed.y=Set Y axis movement speed multiplier to: %f
+commands.setspeed.z=Set Z axis movement speed multiplier to: %f
+commands.setspeed.all=Set all axes movement speed multiplier to: %f
+
+commands.summon=Spawns an entity of the specified type. Name is case sensitive and must be exact!
+commands.summon.pos=Spawns an entity of the specified type at the given location.
+commands.summon.unknown=Unknown entity ID
+commands.summon.invalid=Entity not allowed!
+commands.summon.success=Summoned new %s at %.2fx, %.2fy, %.2fz.
+commands.summon.list=Valid entities list
+commands.summon.lists=Lists all valid entities that can be summoned.
+
+commands.teleport=Teleports you to the specified coordinates.
+commands.teleport.player=Teleports player 1 to player 2.
+commands.teleport.player.loc=Teleports the specified player to the specified coordinates.
+commands.teleport.error=Syntax error, please provide valid coordinates or a player name.
+commands.teleport.error.coords=Invalid coordinates!
+commands.teleport.error.user=Can't find player
+commands.teleport.error.dimension=Players are in different dimensions!
+commands.teleport.coords=Teleporting %s to %.2fx, %.2fy, %.2fz.
+commands.teleport.players=Teleporting %s to %s.
+
+commands.dimension=Teleports you to another dimension instantly.
+commands.dimension.error=Invalid dimension! Use 0 (overworld), 1 (crimson), 2 (astral) or 3 (void)!
+
+commands.event=Sets the current world event.
+commands.event.clear=Cleared all ongoing world events!
+commands.event.set=Set current world event to
+commands.event.list=All events list
+commands.event.error=Unknown event!
+
+commands.sleeptimer=Resets the time the player can't sleep for.
+commands.sleep.reset=You feel very tired...
+
+commands.setblock=Places a single block at the specified coordinates. ID's only!
+commands.block.set=Placed %d:%d at %dx, %dy, %dz.
+commands.setblock.error=Invalid block ID/metadata!
+
+commands.worldedit.error=Set points first with /point <x> <y> <z> <start | end>!
+
+commands.clear=Clears the active area of blocks.
+commands.clear.blocks=blocks cleared.
+
+commands.copy=Copies the active area to the clipboard.
+commands.copy.blocks=blocks copied to the clipboard.
+
+commands.cut=Copies and then removes active area to the clipboard.
+commands.cut.blocks=blocks cut to the clipboard.
+
+commands.paste=Pastes clipboard contents to the new position.
+commands.paste.blocks=blocks pasted to the world.
+
+commands.undo=Undoes the last performed WorldEdit action.
+commands.undo.error=Nothing to undo!
+commands.undo.success=Undid changes to
+
+commands.rotate=Rotates the selection clockwise/counter-clockwise around the Y axis.
+
+commands.corner=Sets the start/end corners for the WorldEdit active area.
+commands.corner.error=No blocks in range!
+commands.corner.end.set=2nd point set to %dx, %dy, %dz.
+commands.corner.start.set=1st point set to %dx, %dy, %dz.
+commands.corner.invalid=Invalid mode! Use 'start' or 'end'!
+
+commands.replace=Replaces the specified block in the selected area.
+
+commands.fill=Fills the selected area with the specified block.
+commands.fill.blocks=blocks filled.
+
+commands.export=Exports current area using an exporter.
+commands.export.list=Lists all available exporters.
+commands.export.error=Unknown exporter
+commands.export.attempt=Attempting export..
+commands.export.success=%d blocks exported to %s using exporter %s
+commands.export.fail=Export failed, check console for more information
+commands.export.help=Shows information about the selected exporter.
+commands.export.raw=No extra parameters for this exporter.
+commands.export.columns=Exports a column-first ordered based raw array. Compatible with dynamic schematics or features directly based on schematics. Adding arg "rotations" generates 4 rotated arrays. Nothing generates direct copy. Each array item is id | (meta << 12).
+commands.export.schematic=Exports area in .schematic format. No extra parameters for this exporter.
+
+commands.wand=Gives you the wand for setting WorldEdit corners.

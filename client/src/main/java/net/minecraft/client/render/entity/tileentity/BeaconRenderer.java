@@ -1,0 +1,93 @@
+package net.minecraft.client.render.entity.tileentity;
+
+import net.minecraft.client.render.Tessellator;
+import net.minecraft.game.block.tileentity.other.BeaconEntity;
+import net.minecraft.game.item.potion.EffectList;
+import net.minecraft.util.math.MathHelper;
+import org.lwjgl.opengl.GL11;
+
+public class BeaconRenderer extends TileEntityRenderer<BeaconEntity> {
+    public void render(BeaconEntity beacon, double x, double y, double z, float tick) {
+        float aciveTime = beacon.getActiveTime();
+        if (aciveTime > 0.0F && beacon.getPrimaryEffect() > 0) {
+            Tessellator tess = Tessellator.instance;
+            this.bindTexture("/misc/beam.png");
+            GL11.glTexParameterf(3553, 10242, 10497.0F);
+            GL11.glTexParameterf(3553, 10243, 10497.0F);
+            GL11.glDisable(2896);
+            GL11.glDisable(2884);
+            GL11.glDisable(3042);
+            GL11.glDisable(2912);
+            GL11.glDepthMask(true);
+            GL11.glBlendFunc(770, 1);
+            float worldTime = (float)(beacon.world.getWorldTime() % (long)beacon.world.settings.dayLength) + tick;
+            float timeOffset = -worldTime * 0.2F - MathHelper.floor_float(-worldTime * 0.1F);
+            double spinTime = worldTime * 0.025 * -1.5;
+            int color = EffectList.effects[beacon.getPrimaryEffect()].getLiquidColor();
+            int red = color >> 16 & 0xFF;
+            int blue = color >> 8 & 0xFF;
+            int green = color >> 0 & 0xFF;
+            double offset = 0.2;
+            double u1 = 0.5 + Math.cos(spinTime + (Math.PI * 3.0 / 4.0)) * offset;
+            double v1 = 0.5 + Math.sin(spinTime + (Math.PI * 3.0 / 4.0)) * offset;
+            double u2 = 0.5 + Math.cos(spinTime + (Math.PI / 4)) * offset;
+            double v2 = 0.5 + Math.sin(spinTime + (Math.PI / 4)) * offset;
+            double u3 = 0.5 + Math.cos(spinTime + (Math.PI * 5.0 / 4.0)) * offset;
+            double v3 = 0.5 + Math.sin(spinTime + (Math.PI * 5.0 / 4.0)) * offset;
+            double u4 = 0.5 + Math.cos(spinTime + (Math.PI * 7.0 / 4.0)) * offset;
+            double v4 = 0.5 + Math.sin(spinTime + (Math.PI * 7.0 / 4.0)) * offset;
+            float timer = 256.0F * aciveTime;
+            float endU = -1.0F + timeOffset;
+            float endV = (float)(256.0F * aciveTime * (0.5 / offset) + endU);
+            tess.begin();
+            tess.setColorAlpha(red, blue, green, 64);
+            tess.setBrightness(15728880);
+            tess.addTexturedVertex(x + u1, y + timer, z + v1, 1.0F, endV);
+            tess.addTexturedVertex(x + u1, y, z + v1, 1.0F, endU);
+            tess.addTexturedVertex(x + u2, y, z + v2, 0.0F, endU);
+            tess.addTexturedVertex(x + u2, y + timer, z + v2, 0.0F, endV);
+            tess.addTexturedVertex(x + u4, y + timer, z + v4, 1.0F, endV);
+            tess.addTexturedVertex(x + u4, y, z + v4, 1.0F, endU);
+            tess.addTexturedVertex(x + u3, y, z + v3, 0.0F, endU);
+            tess.addTexturedVertex(x + u3, y + timer, z + v3, 0.0F, endV);
+            tess.addTexturedVertex(x + u2, y + timer, z + v2, 1.0F, endV);
+            tess.addTexturedVertex(x + u2, y, z + v2, 1.0F, endU);
+            tess.addTexturedVertex(x + u4, y, z + v4, 0.0F, endU);
+            tess.addTexturedVertex(x + u4, y + timer, z + v4, 0.0F, endV);
+            tess.addTexturedVertex(x + u3, y + timer, z + v3, 1.0F, endV);
+            tess.addTexturedVertex(x + u3, y, z + v3, 1.0F, endU);
+            tess.addTexturedVertex(x + u1, y, z + v1, 0.0F, endU);
+            tess.addTexturedVertex(x + u1, y + timer, z + v1, 0.0F, endV);
+            tess.draw();
+            GL11.glEnable(3042);
+            GL11.glBlendFunc(770, 771);
+            GL11.glDepthMask(false);
+            float vAlt = 256.0F * aciveTime + endU;
+            tess.begin();
+            tess.setColorAlpha(red, blue, green, 32);
+            tess.setBrightness(15728880);
+            tess.addTexturedVertex(x + 0.2, y + timer, z + 0.2, 1.0F, vAlt);
+            tess.addTexturedVertex(x + 0.2, y, z + 0.2, 1.0F, endU);
+            tess.addTexturedVertex(x + 0.8, y, z + 0.2, 0.0F, endU);
+            tess.addTexturedVertex(x + 0.8, y + timer, z + 0.2, 0.0F, vAlt);
+            tess.addTexturedVertex(x + 0.8, y + timer, z + 0.8, 1.0F, vAlt);
+            tess.addTexturedVertex(x + 0.8, y, z + 0.8, 1.0F, endU);
+            tess.addTexturedVertex(x + 0.2, y, z + 0.8, 0.0F, endU);
+            tess.addTexturedVertex(x + 0.2, y + timer, z + 0.8, 0.0F, vAlt);
+            tess.addTexturedVertex(x + 0.8, y + timer, z + 0.2, 1.0F, vAlt);
+            tess.addTexturedVertex(x + 0.8, y, z + 0.2, 1.0F, endU);
+            tess.addTexturedVertex(x + 0.8, y, z + 0.8, 0.0F, endU);
+            tess.addTexturedVertex(x + 0.8, y + timer, z + 0.8, 0.0F, vAlt);
+            tess.addTexturedVertex(x + 0.2, y + timer, z + 0.8, 1.0F, vAlt);
+            tess.addTexturedVertex(x + 0.2, y, z + 0.8, 1.0F, endU);
+            tess.addTexturedVertex(x + 0.2, y, z + 0.2, 0.0F, endU);
+            tess.addTexturedVertex(x + 0.2, y + timer, z + 0.2, 0.0F, vAlt);
+            tess.draw();
+            GL11.glEnable(2896);
+            GL11.glEnable(3553);
+            GL11.glEnable(2884);
+            GL11.glEnable(2912);
+            GL11.glDepthMask(true);
+        }
+    }
+}

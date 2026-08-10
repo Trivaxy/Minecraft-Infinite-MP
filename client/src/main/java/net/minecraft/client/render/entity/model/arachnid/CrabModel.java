@@ -1,0 +1,160 @@
+package net.minecraft.client.render.entity.model.arachnid;
+
+import net.minecraft.client.render.entity.model.Cuboid;
+import net.minecraft.client.render.entity.model.Model;
+import net.minecraft.client.render.entity.model.ModelPart;
+import net.minecraft.game.entity.Entity;
+import net.minecraft.util.math.MathHelper;
+
+public class CrabModel extends Model {
+    private final ModelPart body;
+    private final ModelPart leftLegs;
+    private final ModelPart leftLeg1;
+    private final ModelPart leftLegPart1;
+    private final ModelPart leftLeg2;
+    private final ModelPart leftLegPart2;
+    private final ModelPart leftLeg3;
+    private final ModelPart leftLegPart3;
+    private final ModelPart rightLegs;
+    private final ModelPart rightLeg1;
+    private final ModelPart rightLegPart1;
+    private final ModelPart rightLeg2;
+    private final ModelPart rightLegPart2;
+    private final ModelPart rightLeg3;
+    private final ModelPart rightLegPart3;
+    private final ModelPart rightClaw;
+    private final ModelPart rightClawBottomHalf;
+    private final ModelPart rightClawTopHalf;
+    private final ModelPart leftClaw;
+    private final ModelPart leftClawBottomHalf;
+    private final ModelPart leftClawTopHalf;
+
+    public CrabModel() {
+        this.textureWidth = 32;
+        this.textureHeight = 32;
+        this.body = new ModelPart(this);
+        this.body.setPivots(0.0F, 24.0F, 0.0F);
+        this.body.cuboids.add(new Cuboid(this.body, 13, 13, 1.8F, -4.8F, -1.2F, 1, 2, 2, 0.0F, false));
+        this.body.cuboids.add(new Cuboid(this.body, 13, 13, -1.8F, -4.8F, -1.2F, 1, 2, 2, 0.0F, false));
+        this.body.cuboids.add(new Cuboid(this.body, 0, 0, -2.0F, -4.0F, -1.0F, 5, 3, 5, 0.0F, false));
+        this.leftLegs = new ModelPart(this);
+        this.leftLegs.setPivots(-1.5F, -1.7F, 1.5F);
+        this.body.addChild(this.leftLegs);
+        this.setRotation(this.leftLegs, 0.0F, 3.1416F, 0.0F);
+        this.leftLeg1 = new ModelPart(this);
+        this.leftLeg1.setPivots(0.0F, 0.2F, -2.0F);
+        this.leftLegs.addChild(this.leftLeg1);
+        this.leftLegPart1 = new ModelPart(this);
+        this.leftLegPart1.setPivots(0.0F, 0.5F, 0.0F);
+        this.leftLeg1.addChild(this.leftLegPart1);
+        this.setRotation(this.leftLegPart1, 0.0F, 0.4363F, 0.3054F);
+        this.leftLegPart1.cuboids.add(new Cuboid(this.leftLegPart1, 7, 13, 0.0F, -1.0F, -0.5F, 3, 1, 1, 0.0F, true));
+        this.leftLeg2 = new ModelPart(this);
+        this.leftLeg2.setPivots(0.0F, 0.2F, 0.0F);
+        this.leftLegs.addChild(this.leftLeg2);
+        this.leftLegPart2 = new ModelPart(this);
+        this.leftLegPart2.setPivots(0.0F, -0.5F, 0.0F);
+        this.leftLeg2.addChild(this.leftLegPart2);
+        this.setRotation(this.leftLegPart2, 0.0F, 0.0F, 0.3054F);
+        this.leftLegPart2.cuboids.add(new Cuboid(this.leftLegPart2, 7, 13, 0.3007F, -0.0463F, -0.5F, 3, 1, 1, 0.0F, true));
+        this.leftLeg3 = new ModelPart(this);
+        this.leftLeg3.setPivots(0.0F, -0.3F, 2.0F);
+        this.leftLegs.addChild(this.leftLeg3);
+        this.leftLegPart3 = new ModelPart(this);
+        this.leftLegPart3.setPivots(0.0F, 0.5F, 0.0F);
+        this.leftLeg3.addChild(this.leftLegPart3);
+        this.setRotation(this.leftLegPart3, 0.0F, -0.2531F, 0.3054F);
+        this.leftLegPart3.cuboids.add(new Cuboid(this.leftLegPart3, 7, 13, 0.1539F, -0.5231F, -0.4675F, 3, 1, 1, 0.0F, true));
+        this.rightLegs = new ModelPart(this);
+        this.rightLegs.setPivots(2.5F, -1.7F, 1.5F);
+        this.body.addChild(this.rightLegs);
+        this.rightLeg1 = new ModelPart(this);
+        this.rightLeg1.setPivots(0.0F, 0.2F, -2.0F);
+        this.rightLegs.addChild(this.rightLeg1);
+        this.rightLegPart1 = new ModelPart(this);
+        this.rightLegPart1.setPivots(0.0F, 0.5F, 0.0F);
+        this.rightLeg1.addChild(this.rightLegPart1);
+        this.setRotation(this.rightLegPart1, 0.0F, 0.3054F, 0.3054F);
+        this.rightLegPart1.cuboids.add(new Cuboid(this.rightLegPart1, 7, 13, 0.0F, -1.0F, -0.5F, 3, 1, 1, 0.0F, false));
+        this.rightLeg2 = new ModelPart(this);
+        this.rightLeg2.setPivots(0.0F, 0.2F, 0.0F);
+        this.rightLegs.addChild(this.rightLeg2);
+        this.rightLegPart2 = new ModelPart(this);
+        this.rightLegPart2.setPivots(0.0F, -0.5F, 0.0F);
+        this.rightLeg2.addChild(this.rightLegPart2);
+        this.setRotation(this.rightLegPart2, 0.0F, 0.0F, 0.3054F);
+        this.rightLegPart2.cuboids.add(new Cuboid(this.rightLegPart2, 7, 13, 0.3007F, -0.0463F, -0.5F, 3, 1, 1, 0.0F, false));
+        this.rightLeg3 = new ModelPart(this);
+        this.rightLeg3.setPivots(0.0F, -0.3F, 2.0F);
+        this.rightLegs.addChild(this.rightLeg3);
+        this.rightLegPart3 = new ModelPart(this);
+        this.rightLegPart3.setPivots(0.0F, 0.5F, 0.0F);
+        this.rightLeg3.addChild(this.rightLegPart3);
+        this.setRotation(this.rightLegPart3, 0.0F, -0.384F, 0.3054F);
+        this.rightLegPart3.cuboids.add(new Cuboid(this.rightLegPart3, 7, 13, 0.1539F, -0.5231F, -0.4675F, 3, 1, 1, 0.0F, false));
+        this.rightClaw = new ModelPart(this);
+        this.rightClaw.setPivots(4.0F, -2.0F, -1.0F);
+        this.body.addChild(this.rightClaw);
+        this.setRotation(this.rightClaw, 0.0F, 0.3491F, -0.0436F);
+        this.rightClawBottomHalf = new ModelPart(this);
+        this.rightClawBottomHalf.setPivots(0.0F, 0.0F, 0.0F);
+        this.rightClaw.addChild(this.rightClawBottomHalf);
+        this.rightClawBottomHalf.cuboids.add(new Cuboid(this.rightClawBottomHalf, 0, 12, -1.0F, 0.0F, -3.0F, 2, 1, 3, 0.0F, false));
+        this.rightClawTopHalf = new ModelPart(this);
+        this.rightClawTopHalf.setPivots(0.0F, 0.0F, 0.0F);
+        this.rightClaw.addChild(this.rightClawTopHalf);
+        this.rightClawTopHalf.cuboids.add(new Cuboid(this.rightClawTopHalf, 0, 8, -1.0F, -1.0F, -3.0F, 2, 1, 3, 0.0F, false));
+        this.leftClaw = new ModelPart(this);
+        this.leftClaw.setPivots(-3.0F, -2.0F, -1.0F);
+        this.body.addChild(this.leftClaw);
+        this.setRotation(this.leftClaw, 0.0F, -0.3491F, 0.0F);
+        this.leftClawBottomHalf = new ModelPart(this);
+        this.leftClawBottomHalf.setPivots(0.0F, 0.0F, 0.0F);
+        this.leftClaw.addChild(this.leftClawBottomHalf);
+        this.leftClawBottomHalf.cuboids.add(new Cuboid(this.leftClawBottomHalf, 0, 12, -1.0F, 0.0F, -3.0F, 2, 1, 3, 0.0F, false));
+        this.leftClawTopHalf = new ModelPart(this);
+        this.leftClawTopHalf.setPivots(0.0F, 0.0F, 0.0F);
+        this.leftClaw.addChild(this.leftClawTopHalf);
+        this.leftClawTopHalf.cuboids.add(new Cuboid(this.leftClawTopHalf, 0, 8, -1.0F, -1.0F, -3.0F, 2, 1, 3, 0.0F, false));
+    }
+
+    @Override
+    public void render(Entity entity, float swing, float anim, float angle, float headYaw, float headPitch, float ticks) {
+        this.animate(swing, anim, angle, headYaw, headPitch, ticks);
+        this.body.render(ticks);
+    }
+
+    @Override
+    public void animate(float limbAngle, float animationSpeed, float angle, float headYaw, float headPitch, float tick) {
+        this.leftLeg1.rotationZ = 0.0F;
+        this.leftLeg2.rotationZ = 0.0F;
+        this.leftLeg3.rotationZ = 0.0F;
+        this.rightLeg1.rotationZ = 0.0F;
+        this.rightLeg2.rotationZ = 0.0F;
+        this.rightLeg3.rotationZ = 0.0F;
+        this.leftLeg1.rotationY = 0.0F;
+        this.leftLeg2.rotationY = 0.0F;
+        this.leftLeg3.rotationY = 0.0F;
+        this.rightLeg1.rotationY = 0.0F;
+        this.rightLeg2.rotationY = 0.0F;
+        this.rightLeg3.rotationY = 0.0F;
+        float rotY1 = -(MathHelper.cos(limbAngle * 0.6662F * 2.0F) * 0.4F) * animationSpeed;
+        float rotY2 = -(MathHelper.cos(limbAngle * 0.6662F * 2.0F + (float) Math.PI) * 0.4F) * animationSpeed;
+        float rotY3 = -(MathHelper.cos(limbAngle * 0.6662F * 2.0F + (float) (Math.PI / 2)) * 0.4F) * animationSpeed;
+        float rotZ1 = Math.abs(MathHelper.sin(limbAngle * 0.6662F) * 0.4F) * animationSpeed;
+        float rotZ2 = Math.abs(MathHelper.sin(limbAngle * 0.6662F + (float) Math.PI) * 0.4F) * animationSpeed;
+        float rotZ3 = Math.abs(MathHelper.sin(limbAngle * 0.6662F + (float) (Math.PI / 2)) * 0.4F) * animationSpeed;
+        this.rightLeg1.rotationY += rotY1;
+        this.rightLeg2.rotationY += rotY1;
+        this.rightLeg3.rotationY += rotY2;
+        this.leftLeg1.rotationY += rotY2;
+        this.leftLeg2.rotationY += rotY3;
+        this.leftLeg3.rotationY += rotY3;
+        this.rightLeg1.rotationZ += rotZ1;
+        this.rightLeg2.rotationZ += rotZ1;
+        this.rightLeg3.rotationZ += rotZ2;
+        this.leftLeg1.rotationZ += rotZ2;
+        this.leftLeg2.rotationZ += rotZ3;
+        this.leftLeg3.rotationZ += rotZ3;
+    }
+}

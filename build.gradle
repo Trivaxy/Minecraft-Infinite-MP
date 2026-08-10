@@ -1,0 +1,111 @@
+// Minecraft Infinite - development environment.
+//
+// The client and server are decompiled from the shipped jars. They are kept as two
+// independent source trees because the two builds have genuinely diverged, though far less
+// than they used to: the multiplayer parity pass reconciled the gameplay differences, so
+// what's left is the net.minecraft.game.item.crafting -> .recipe package rename, the packet
+// sub-package reorg, and five deliberate exceptions. `./gradlew checkParity` enforces that.
+// See DEVELOPING.md.
+
+subprojects {
+    apply plugin: 'java'
+
+    group = 'net.minecraft'
+    version = '1.0-dev'
+
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'mojang'
+            url = uri('https://libraries.minecraft.net')
+        }
+    }
+
+    // The game is built against, and must run on, Java 8. LWJGL 2.9.4 breaks on 21+.
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(8)
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        // Decompiled sources are warning soup; silence it so real errors stand out.
+        options.compilerArgs << '-nowarn'
+        options.compilerArgs << '-Xlint:none'
+    }
+
+    dependencies {
+        // fastutil + org.json, lifted verbatim out of the shipped jars so the
+        // bytecode we build against is exactly what the mod was compiled against.
+        implementation files(rootProject.file('libs/vendor-common.jar'))
+    }
+}
+
+// Guards the client/server source trees against accidental divergence.
+//
+// The two trees carry their own full copy of the shared game code, so a fix applied to one
+// and not the other is a silent multiplayer desync - the exact class of bug that made the
+// parity pass necessary in the first place. This task fails the build when a shared file
+// gains a difference that isn't on the known-and-intended list below.
+//
+// package/import lines are ignored: the server renamed net.minecraft.game.item.crafting to
+// .recipe and keeps its packets flat where the client uses sub-packages, so those lines
+// legitimately differ across ~17 files without any behaviour difference.
+tasks.register('checkParity') {
+    group = 'verification'
+    description = 'Fails if client and server source trees diverge beyond the intended exceptions'
+
+    def clientRoot = file('client/src/main/java')
+    def serverRoot = file('server/src/main/java')
+
+    // Deliberate, documented divergences. Anything else is a bug.
+    def expected = [
+        // The client's "fast leaves" graphics option. The server has no renderer, so no
+        // equivalent exists and there is nothing to reconcile.
+        'net/minecraft/game/block/building/Leaves.java',
+        'net/minecraft/game/block/building/LeafPile.java',
+        'net/minecraft/game/block/misc/TransparentBlock.java',
+        // Eight packets kept their vanilla-style names on the server and got friendlier ones
+        // on the client (UsePacket vs Packet7UseEntity, etc). Same ids, same flows, same
+        // read/write logic - the wire format is identical, so this is cosmetic only.
+        'net/minecraft/network/NetworkHandler.java',
+        'net/minecraft/network/packet/Packet.java',
+    ] as Set
+
+    doLast {
+        def significant = { File f ->
+            f.readLines().findAll { def t = it.trim()
+                !(t.startsWith('package ') || t.startsWith('import ')) }
+        }
+
+        def offenders = []
+        def shared = 0
+        def importOnly = 0
+
+        serverRoot.eachFileRecurse { File sf ->
+            if (!sf.isFile() || !sf.name.endsWith('.java')) return
+            def rel = serverRoot.toPath().relativize(sf.toPath()).toString().replace(File.separator, '/')
+            def cf = new File(clientRoot, rel)
+            if (!cf.exists()) return
+            shared++
+            if (expected.contains(rel)) return
+            if (significant(cf) != significant(sf)) {
+                offenders << rel
+            } else if (cf.text != sf.text) {
+                importOnly++
+            }
+        }
+
+        logger.lifecycle("checkParity: ${shared} shared files, ${importOnly} differ by imports only, " +
+                         "${expected.size()} known exceptions, ${offenders.size()} unexpected")
+
+        if (offenders) {
+            throw new GradleException(
+                "client/server source trees diverged in ${offenders.size()} file(s):\n" +
+                offenders.collect { "  $it" }.join('\n') +
+                "\n\nApply the change to both trees, or add it to `expected` in build.gradle " +
+                "with a comment explaining why the difference is intended.")
+        }
+    }
+}
