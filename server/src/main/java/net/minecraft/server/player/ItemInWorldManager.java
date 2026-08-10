@@ -96,12 +96,12 @@ public class ItemInWorldManager {
         int i4 = this.thisWorld.getBlockId(i1, i2, i3);
         int i5 = this.thisWorld.getBlockMetadata(i1, i2, i3);
         this.thisWorld.playEffect(this.thisPlayer, 2001, i1, i2, i3, i4 + this.thisWorld.getBlockMetadata(i1, i2, i3) * 256);
-        boolean z6 = this.removeBlock(i1, i2, i3);
         ItemStack itemStack7 = this.thisPlayer.getCurrentEquippedItem();
         if (this.thisPlayer.getUsing()) {
             itemStack7 = this.thisPlayer.inventory.getOffHandItem();
         }
 
+        boolean z8 = this.thisPlayer.canHarvestBlock(BlockList.blocks[i4]);
         if (itemStack7 != null) {
             if (BlockList.blocks[i4].hardness > 0.0F) {
                 itemStack7.onDestroyBlock(i4, i1, i2, i3, this.thisPlayer);
@@ -116,7 +116,8 @@ public class ItemInWorldManager {
             }
         }
 
-        if (z6 && this.thisPlayer.canHarvestBlock(BlockList.blocks[i4])) {
+        boolean z6 = this.removeBlock(i1, i2, i3);
+        if (z6 && z8) {
             BlockList.blocks[i4].dropItem(this.thisWorld, this.thisPlayer, i1, i2, i3, i5);
             ((EntityPlayerMP)this.thisPlayer).playerNetServerHandler.sendPacket(new UpdateBlockPacket(i1, i2, i3, this.thisWorld));
         }
