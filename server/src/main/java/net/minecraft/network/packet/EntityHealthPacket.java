@@ -13,8 +13,10 @@ public class EntityHealthPacket extends Packet {
     public EntityHealthPacket() {
     }
 
-    public EntityHealthPacket(int i1) {
-        this.healthMP = i1;
+    public EntityHealthPacket(int health, int food, float saturation) {
+        this.healthMP = health;
+        this.food = food;
+        this.foodSaturation = saturation;
     }
 
     @Override

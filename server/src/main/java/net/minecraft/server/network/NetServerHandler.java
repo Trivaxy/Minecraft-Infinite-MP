@@ -575,6 +575,10 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
         if (packet19EntityAction1.state == 3) {
             this.playerEntity.wakeUpPlayer(false, true, true);
             this.hasMoved = false;
+        } else if (packet19EntityAction1.state == 4) {
+            this.playerEntity.setSprinting(true);
+        } else if (packet19EntityAction1.state == 5) {
+            this.playerEntity.setSprinting(false);
         }
     }
 

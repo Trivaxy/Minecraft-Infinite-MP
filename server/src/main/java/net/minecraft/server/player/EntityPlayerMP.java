@@ -66,6 +66,8 @@ public class EntityPlayerMP extends Player implements ContainerListener {
     public List<Long> loadedChunks = new LinkedList<>();
     public LongOpenHashSet loadedChunksMP = new LongOpenHashSet();
     private int lastHealth = -99999999;
+    private int lastFood = -99999999;
+    private float lastSaturation = -99999999.0F;
     private int ticksOfInvuln = 60;
     private ItemStack[] playerInventory = new ItemStack[]{null, null, null, null, null, null};
     private int currentWindowId = 0;
@@ -240,9 +242,13 @@ public class EntityPlayerMP extends Player implements ContainerListener {
             }
         }
 
-        if (this.health != this.lastHealth) {
-            this.playerNetServerHandler.sendPacket(new EntityHealthPacket(this.health));
+        int food = this.foodStats.getHunger();
+        float saturation = this.foodStats.getSaturation();
+        if (this.health != this.lastHealth || food != this.lastFood || saturation != this.lastSaturation) {
+            this.playerNetServerHandler.sendPacket(new EntityHealthPacket(this.health, food, saturation));
             this.lastHealth = this.health;
+            this.lastFood = food;
+            this.lastSaturation = saturation;
         }
     }
 
@@ -493,6 +499,8 @@ public class EntityPlayerMP extends Player implements ContainerListener {
 
     public void setHealth() {
         this.lastHealth = -99999999;
+        this.lastFood = -99999999;
+        this.lastSaturation = -99999999.0F;
     }
 
     @Override
