@@ -17,6 +17,7 @@ import net.minecraft.game.entity.mob.Mob;
 import net.minecraft.game.entity.player.Player;
 import net.minecraft.game.entity.projectile.Bobber;
 import net.minecraft.game.entity.projectile.Projectile;
+import net.minecraft.game.entity.projectile.ProjectileType;
 import net.minecraft.game.item.ItemList;
 import net.minecraft.game.item.ItemStack;
 import net.minecraft.game.item.misc.MapItem;
@@ -288,10 +289,13 @@ public class EntityTrackerEntry {
                 this.trackedEntity, EntitySpawnPacket.EntityType.ARROW, entityLiving5 != null ? entityLiving5.entityId : this.trackedEntity.entityId
             );
         } else if (this.trackedEntity instanceof Projectile) {
-            Mob entityLiving5 = ((Projectile)this.trackedEntity).thrower;
-            return new EntitySpawnPacket(
-                this.trackedEntity, EntitySpawnPacket.EntityType.SNOWBALL, entityLiving5 != null ? entityLiving5.entityId : this.trackedEntity.entityId
+            Projectile projectile4 = (Projectile)this.trackedEntity;
+            Mob entityLiving5 = projectile4.thrower;
+            EntitySpawnPacket packet6 = new EntitySpawnPacket(
+                this.trackedEntity, EntitySpawnPacket.EntityType.PROJECTILE, entityLiving5 != null ? entityLiving5.entityId : this.trackedEntity.entityId
             );
+            packet6.metadata = ProjectileType.of(projectile4).id;
+            return packet6;
         } else if (this.trackedEntity instanceof PrimedTNT) {
             return new EntitySpawnPacket(this.trackedEntity, EntitySpawnPacket.EntityType.TNT);
         } else if (this.trackedEntity instanceof Bobber) {

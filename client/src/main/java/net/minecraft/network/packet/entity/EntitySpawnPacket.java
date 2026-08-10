@@ -132,7 +132,7 @@ public class EntitySpawnPacket extends Packet {
     public enum EntityType {
         MINECART(10),
         FRAME(20),
-        SNOWBALL(30),
+        PROJECTILE(30),
         TNT(50),
         ARROW(60),
         FALLING_BLOCK(70),

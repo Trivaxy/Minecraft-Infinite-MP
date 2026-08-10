@@ -184,6 +184,11 @@ public class Hook extends Projectile {
     }
 
     @Override
+    protected boolean impactsOnClient() {
+        return true;
+    }
+
+    @Override
     protected void onImpact(TargetingSystem mop) {
         if (!this.isReeling()) {
             if (mop.target == TargetingSystem.HitType.TILE && !this.world.isOnline) {

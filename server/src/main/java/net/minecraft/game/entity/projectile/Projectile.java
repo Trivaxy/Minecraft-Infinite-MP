@@ -149,7 +149,7 @@ public abstract class Projectile extends Entity {
             }
         }
 
-        if (hit != null) {
+        if (hit != null && (!this.world.isOnline || this.impactsOnClient())) {
             this.onImpact(hit);
             if (hit.entityHit != null && hit.entityHit instanceof Mob && this.thrower instanceof Player) {
                 this.thrower.attackTarget = (Mob)hit.entityHit;
@@ -212,6 +212,10 @@ public abstract class Projectile extends Entity {
     }
 
     protected void onImpact(TargetingSystem mop) {
+    }
+
+    protected boolean impactsOnClient() {
+        return false;
     }
 
     @Override

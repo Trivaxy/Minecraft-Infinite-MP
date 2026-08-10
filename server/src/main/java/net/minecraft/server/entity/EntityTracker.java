@@ -15,6 +15,7 @@ import net.minecraft.game.entity.misc.FallingBlock;
 import net.minecraft.game.entity.misc.PrimedTNT;
 import net.minecraft.game.entity.mob.Mob;
 import net.minecraft.game.entity.projectile.Bobber;
+import net.minecraft.game.entity.projectile.Projectile;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.player.EntityPlayerMP;
@@ -44,6 +45,8 @@ public class EntityTracker {
             }
         } else if (entity1 instanceof Arrow) {
             this.trackEntity(entity1, 64, 20, false);
+        } else if (entity1 instanceof Projectile) {
+            this.trackEntity(entity1, 64, 10, true);
         } else if (entity1 instanceof DroppedItem) {
             this.trackEntity(entity1, 64, 20, true);
         } else if (entity1 instanceof Minecart) {

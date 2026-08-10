@@ -51,7 +51,7 @@ import net.minecraft.game.entity.mob.monster.Monster;
 import net.minecraft.game.entity.player.Player;
 import net.minecraft.game.entity.projectile.Bobber;
 import net.minecraft.game.entity.projectile.Projectile;
-import net.minecraft.game.entity.projectile.Snowball;
+import net.minecraft.game.entity.projectile.ProjectileType;
 import net.minecraft.game.item.ItemList;
 import net.minecraft.game.item.ItemStack;
 import net.minecraft.game.item.misc.MapItem;
@@ -204,8 +204,10 @@ public class ClientHandler extends NetworkHandler {
             case FRAME:
                 entity = new Frame(this.world, (int)x, (int)y, (int)z, packt.ownerId, false);
                 break;
-            case SNOWBALL:
-                entity = new Snowball(this.world, x, y, z);
+            case PROJECTILE:
+                Projectile projectile = ProjectileType.byId(packt.metadata).create(this.world);
+                projectile.setPosition(x, y, z);
+                entity = projectile;
         }
 
         if (entity != null) {
@@ -239,7 +241,7 @@ public class ClientHandler extends NetworkHandler {
                         ((Frame)entity).setItemRotation(packt.metadata);
                         ((Frame)entity).setDisplayedItem(packt.stack);
                         break;
-                    case SNOWBALL:
+                    case PROJECTILE:
                         Entity entityToSpawnx = this.getEntityByID(packt.ownerId);
                         if (entityToSpawnx instanceof Mob) {
                             ((Projectile)entity).thrower = (Mob)entityToSpawnx;
