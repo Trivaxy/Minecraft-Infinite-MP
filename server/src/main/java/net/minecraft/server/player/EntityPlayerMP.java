@@ -34,6 +34,7 @@ import net.minecraft.game.item.potion.EffectData;
 import net.minecraft.game.world.World;
 import net.minecraft.game.world.chunk.ChunkUtils;
 import net.minecraft.game.world.util.Position;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.network.packet.AnimationPacket;
 import net.minecraft.network.packet.AttackDirectionPacket;
 import net.minecraft.network.packet.ChatPacket;
@@ -131,6 +132,18 @@ public class EntityPlayerMP extends Player implements ContainerListener {
     @Override
     public float getEyeHeight() {
         return 1.62F;
+    }
+
+    // The standing eye height above is always 1.62 regardless of crawl height,
+    // so Mob.isInsideBlock would look a metre above a crawling head and count the
+    // crawl-space ceiling as suffocation. Test the top of the actual box instead;
+    // while standing that is still y=1.8, so unchanged standing behaviour.
+    @Override
+    public boolean isInsideBlock() {
+        int x = MathHelper.floor_double(this.posX);
+        int y = MathHelper.floor_double(this.boundingBox.maxY);
+        int z = MathHelper.floor_double(this.posZ);
+        return this.world.isBlockFull(x, y, z);
     }
 
     @Override
