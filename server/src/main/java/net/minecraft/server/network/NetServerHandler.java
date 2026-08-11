@@ -637,6 +637,12 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
     @Override
     public void handleWindowClick(Packet102WindowClick packet102WindowClick1) {
         if (this.playerEntity.openContainer.windowId == packet102WindowClick1.window_Id && this.playerEntity.openContainer.canUseMP(this.playerEntity)) {
+            if (packet102WindowClick1.isActive && packet102WindowClick1.mouseClick >= 2) {
+                this.playerEntity.openContainer.swapWithHotbarSlot(packet102WindowClick1.inventorySlot, packet102WindowClick1.mouseClick - 2, this.playerEntity);
+                this.playerEntity.updateCraftingInventory(this.playerEntity.openContainer, this.playerEntity.openContainer.getStacks());
+                return;
+            }
+
             ItemStack itemStack2 = this.playerEntity
                 .openContainer
                 .windowClick(packet102WindowClick1.inventorySlot, packet102WindowClick1.mouseClick, packet102WindowClick1.isActive, this.playerEntity);

@@ -457,6 +457,10 @@ public abstract class ContainerScreen extends GuiScreen {
         boolean shiftClick = Keyboard.isKeyDown(42) || Keyboard.isKeyDown(54);
         Slot slot = this.getSlot(x, y);
         if (slot != null && !this.skipSlot(slot)) {
+            if (this.counter > -1) {
+                this.counter--;
+            }
+
             if (Mouse.isButtonDown(1) && shiftClick) {
                 if (slot.slotNumber != this.lastAvailableSlot
                     && this.mc.player.inventory.getItemStack() != null
@@ -475,10 +479,6 @@ public abstract class ContainerScreen extends GuiScreen {
                 this.mc.gamemode.windowClick(this.container.windowId, slot.slotNumber, 0, true, this.mc.player);
             }
 
-            if (this.counter > -1) {
-                this.counter--;
-            }
-
             if (this.mc.options.dropKey.key >= 0
                 && Keyboard.isKeyDown(this.mc.options.dropKey.key)
                 && (this.counter == -1 || shiftClick)
@@ -493,21 +493,23 @@ public abstract class ContainerScreen extends GuiScreen {
             for (int index = 0; index < 9; index++) {
                 if (OptionsList.allKeys[15 + index].key >= 0 && Keyboard.isKeyDown(OptionsList.allKeys[15 + index].key) && this.counter == -1) {
                     this.counter = 5;
-                    ItemStack backup = this.mc.player.inventory.getStackInSlot(index);
-                    if (slot.validItem(backup)) {
-                        ItemStack stack = slot.getStack();
-                        if (stack != null) {
-                            stack = stack.copy();
-                        }
+                    if (this instanceof CreativeScreen) {
+                        // the creative container only exists on the client, so its
+                        // slot numbers mean nothing to the server - swap it here
+                        ItemStack backup = this.mc.player.inventory.getStackInSlot(index);
+                        if (slot.validItem(backup)) {
+                            ItemStack stack = slot.getStack();
+                            if (stack != null) {
+                                stack = stack.copy();
+                            }
 
-                        this.mc.player.inventory.setSlotContents(index, stack);
-                        if (this instanceof CreativeScreen) {
+                            this.mc.player.inventory.setSlotContents(index, stack);
                             if (CreativeScreen.selectedTabIndex == CreativeTabs.tabInventory.getTabIndex() || slot.slotNumber >= 45) {
                                 slot.putStack(backup);
                             }
-                        } else {
-                            slot.putStack(backup);
                         }
+                    } else {
+                        this.mc.gamemode.containerSwapWithHotbar(this.container.windowId, slot.slotNumber, index, this.mc.player);
                     }
                 }
             }

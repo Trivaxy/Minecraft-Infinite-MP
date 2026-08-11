@@ -213,6 +213,38 @@ public abstract class Container {
         return activeStack;
     }
 
+    public void swapWithHotbarSlot(int slotIndex, int hotbarIndex, Player player) {
+        if (hotbarIndex < 0 || hotbarIndex > 8 || slotIndex < 0 || slotIndex >= this.slots.size()) {
+            return;
+        }
+
+        Slot slot = this.slots.get(slotIndex);
+        ItemStack hotbarStack = player.inventory.mainInventory[hotbarIndex];
+        if (hotbarStack != null && (!slot.validItem(hotbarStack) || hotbarStack.stackSize > slot.stackLimit())) {
+            return;
+        }
+
+        // taking out of a result slot has to go through the same gate a click
+        // does: the anvil charges levels here, the crafting slot eats the
+        // ingredients, and skipping it hands out the item for free
+        ItemStack hoveredStack = slot.getStack();
+        if (hoveredStack != null && !slot.canTakeStack(player)) {
+            return;
+        }
+
+        slot.putStack(hotbarStack);
+        player.inventory.setSlotContents(hotbarIndex, hoveredStack);
+        if (hoveredStack != null) {
+            slot.onPickup(hoveredStack);
+        }
+
+        for (Slot other : this.slots) {
+            if (other != slot && other.isHere(slot.inventory, slot.slotIndex)) {
+                other.onChanged();
+            }
+        }
+    }
+
     protected boolean isSlotFree(ItemStack stack, int startId, int endId, boolean reverse) {
         boolean isFree = false;
         int currId = startId;

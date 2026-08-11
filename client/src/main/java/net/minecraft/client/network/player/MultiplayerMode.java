@@ -184,6 +184,19 @@ public class MultiplayerMode extends SurvivalMode {
     }
 
     @Override
+    public void containerSwapWithHotbar(int windowId, int slot, int hotbarIndex, Player player) {
+        ClickPacket packet = new ClickPacket();
+        packet.window_Id = windowId;
+        packet.inventorySlot = slot;
+        // shift-click already uses isActive with mouseClick 0/1, so the
+        // hotbar index rides at +2
+        packet.mouseClick = hotbarIndex + 2;
+        packet.isActive = true;
+        packet.action = -2;
+        this.networkHandler.sendPacket(packet);
+    }
+
+    @Override
     public void closeScreen(int id, Player player) {
         this.networkHandler.sendPacket(new ContainerClosePacket(player.openContainer.windowId));
         super.closeScreen(id, player);

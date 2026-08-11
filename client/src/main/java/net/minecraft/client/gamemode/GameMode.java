@@ -179,6 +179,10 @@ public class GameMode {
         return player.openContainer.windowClick(slot, click, shift, player);
     }
 
+    public void containerSwapWithHotbar(int windowId, int slot, int hotbarIndex, Player player) {
+        player.openContainer.swapWithHotbarSlot(slot, hotbarIndex, player);
+    }
+
     public void closeScreen(int id, Player player) {
         player.openContainer.onClose(player);
         player.openContainer = player.container;
