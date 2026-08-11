@@ -16,9 +16,6 @@ import net.minecraft.util.math.MathHelper;
 
 public class Boat extends Entity {
     protected Material mat = MaterialList.water;
-    public int damageTaken;
-    public int hitTime;
-    public int direction;
     private int rotation;
     private double posXMP;
     private double posYMP;
@@ -32,9 +29,6 @@ public class Boat extends Entity {
     public Boat(World world) {
         super(world);
         this.setSize(1.5F, 0.6F);
-        this.damageTaken = 0;
-        this.hitTime = 0;
-        this.direction = 1;
         this.yOffset = this.height / 2.0F;
         this.preventSpawning = true;
     }
@@ -52,6 +46,33 @@ public class Boat extends Entity {
 
     @Override
     protected void init() {
+        this.dataSync.addObject(17, 0);
+        this.dataSync.addObject(18, 1);
+        this.dataSync.addObject(19, 0);
+    }
+
+    public int getHitTime() {
+        return this.dataSync.getObjectInt(17);
+    }
+
+    public void setHitTime(int ticks) {
+        this.dataSync.updateObject(17, ticks);
+    }
+
+    public int getDirection() {
+        return this.dataSync.getObjectInt(18);
+    }
+
+    public void setDirection(int dir) {
+        this.dataSync.updateObject(18, dir);
+    }
+
+    public int getDamageTaken() {
+        return this.dataSync.getObjectInt(19);
+    }
+
+    public void setDamageTaken(int damage) {
+        this.dataSync.updateObject(19, damage);
     }
 
     @Override
@@ -72,11 +93,11 @@ public class Boat extends Entity {
     @Override
     public boolean damageEntity(DamageSource src, int amount) {
         if (!this.world.isOnline && !this.isDead) {
-            this.direction = -this.direction;
-            this.hitTime = 10;
-            this.damageTaken += amount * 10;
+            this.setDirection(-this.getDirection());
+            this.setHitTime(10);
+            this.setDamageTaken(this.getDamageTaken() + amount * 10);
             this.setAttacked();
-            if (this.damageTaken > 40) {
+            if (this.getDamageTaken() > 40) {
                 if (this.rider != null) {
                     this.rider.mountEntity(this);
                 }
@@ -95,9 +116,9 @@ public class Boat extends Entity {
 
     @Override
     public void hurtAnim() {
-        this.direction = -this.direction;
-        this.hitTime = 10;
-        this.damageTaken = this.damageTaken + this.damageTaken * 10;
+        this.setDirection(-this.getDirection());
+        this.setHitTime(10);
+        this.setDamageTaken(this.getDamageTaken() + this.getDamageTaken() * 10);
     }
 
     @Override
@@ -128,12 +149,12 @@ public class Boat extends Entity {
     @Override
     public void onTick() {
         super.onTick();
-        if (this.hitTime > 0) {
-            this.hitTime--;
+        if (this.getHitTime() > 0) {
+            this.setHitTime(this.getHitTime() - 1);
         }
 
-        if (this.damageTaken > 0) {
-            this.damageTaken--;
+        if (this.getDamageTaken() > 0) {
+            this.setDamageTaken(this.getDamageTaken() - 1);
         }
 
         this.prevX = this.posX;
@@ -220,44 +241,6 @@ public class Boat extends Entity {
             }
 
             this.moveEntity(this.motionX, this.motionY, this.motionZ);
-            double dist = Math.sqrt(this.motionX * this.motionX + this.motionZ * this.motionZ);
-            if (dist > 0.15) {
-                double angleX = Math.cos(this.yaw * Math.PI / 180.0);
-                double angleZ = Math.sin(this.yaw * Math.PI / 180.0);
-
-                for (int i = 0; i < 1.0 + dist * 15.0; i++) {
-                    double offset1 = this.rand.nextFloat() * 2.0F - 1.0F;
-                    double offset2 = (this.rand.nextInt(2) * 2 - 1) * 0.7;
-                    if (this.rand.nextBoolean()) {
-                        double particleX = this.posX - angleX * offset1 * 0.8 + angleZ * offset2;
-                        double particleZ = this.posZ - angleZ * offset1 * 0.8 - angleX * offset2;
-                        this.world
-                            .spawnParticle(
-                                this.mat == MaterialList.lava ? ParticleType.SMOKE : ParticleType.RAINDROP,
-                                particleX,
-                                this.posY - 0.125,
-                                particleZ,
-                                this.motionX,
-                                this.motionY,
-                                this.motionZ
-                            );
-                    } else {
-                        double particleX = this.posX + angleX + angleZ * offset1 * 0.7;
-                        double particleZ = this.posZ + angleZ - angleX * offset1 * 0.7;
-                        this.world
-                            .spawnParticle(
-                                this.mat == MaterialList.lava ? ParticleType.SMOKE : ParticleType.SPLASH,
-                                particleX,
-                                this.posY - 0.125,
-                                particleZ,
-                                this.motionX,
-                                this.motionY,
-                                this.motionZ
-                            );
-                    }
-                }
-            }
-
             this.motionX *= 0.99F;
             this.motionY *= 0.95F;
             this.motionZ *= 0.99F;
@@ -307,6 +290,48 @@ public class Boat extends Entity {
 
             if (this.rider != null && this.rider.isDead) {
                 this.rider = null;
+            }
+        }
+
+        this.spawnWake(this.posX - this.prevX, this.posY - this.prevY, this.posZ - this.prevZ);
+    }
+
+    private void spawnWake(double travelX, double travelY, double travelZ) {
+        double dist = Math.sqrt(travelX * travelX + travelZ * travelZ);
+        if (dist > 0.15) {
+            double angleX = Math.cos(this.yaw * Math.PI / 180.0);
+            double angleZ = Math.sin(this.yaw * Math.PI / 180.0);
+
+            for (int i = 0; i < 1.0 + dist * 15.0; i++) {
+                double offset1 = this.rand.nextFloat() * 2.0F - 1.0F;
+                double offset2 = (this.rand.nextInt(2) * 2 - 1) * 0.7;
+                if (this.rand.nextBoolean()) {
+                    double particleX = this.posX - angleX * offset1 * 0.8 + angleZ * offset2;
+                    double particleZ = this.posZ - angleZ * offset1 * 0.8 - angleX * offset2;
+                    this.world
+                        .spawnParticle(
+                            this.mat == MaterialList.lava ? ParticleType.SMOKE : ParticleType.RAINDROP,
+                            particleX,
+                            this.posY - 0.125,
+                            particleZ,
+                            travelX,
+                            travelY,
+                            travelZ
+                        );
+                } else {
+                    double particleX = this.posX + angleX + angleZ * offset1 * 0.7;
+                    double particleZ = this.posZ + angleZ - angleX * offset1 * 0.7;
+                    this.world
+                        .spawnParticle(
+                            this.mat == MaterialList.lava ? ParticleType.SMOKE : ParticleType.SPLASH,
+                            particleX,
+                            this.posY - 0.125,
+                            particleZ,
+                            travelX,
+                            travelY,
+                            travelZ
+                        );
+                }
             }
         }
     }

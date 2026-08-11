@@ -20,14 +20,14 @@ public class BoatRenderer extends EntityRenderer<Boat> {
         GL11.glPushMatrix();
         GL11.glTranslatef((float)x, (float)y, (float)z);
         GL11.glRotatef(180.0F - offset, 0.0F, 1.0F, 0.0F);
-        float shake = boat.hitTime - tick;
-        float health = boat.damageTaken - tick;
+        float shake = boat.getHitTime() - tick;
+        float health = boat.getDamageTaken() - tick;
         if (health < 0.0F) {
             health = 0.0F;
         }
 
         if (shake > 0.0F) {
-            GL11.glRotatef(MathHelper.sin(shake) * shake * health / 10.0F * boat.direction, 1.0F, 0.0F, 0.0F);
+            GL11.glRotatef(MathHelper.sin(shake) * shake * health / 10.0F * boat.getDirection(), 1.0F, 0.0F, 0.0F);
         }
 
         float scale = 0.75F;

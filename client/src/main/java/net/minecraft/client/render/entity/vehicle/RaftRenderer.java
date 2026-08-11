@@ -19,14 +19,14 @@ public class RaftRenderer extends EntityRenderer<Raft> {
         GL11.glPushMatrix();
         GL11.glTranslatef((float)x, (float)y, (float)z);
         GL11.glRotatef(180.0F - yaw, 0.0F, 1.0F, 0.0F);
-        float lastHit = entity.hitTime - pitch;
-        float damage = entity.damageTaken - pitch;
+        float lastHit = entity.getHitTime() - pitch;
+        float damage = entity.getDamageTaken() - pitch;
         if (damage < 0.0F) {
             damage = 0.0F;
         }
 
         if (lastHit > 0.0F) {
-            GL11.glRotatef(MathHelper.sin(lastHit) * lastHit * damage / 10.0F * entity.direction, 1.0F, 0.0F, 0.0F);
+            GL11.glRotatef(MathHelper.sin(lastHit) * lastHit * damage / 10.0F * entity.getDirection(), 1.0F, 0.0F, 0.0F);
         }
 
         this.loadTexture("/terrain.png");

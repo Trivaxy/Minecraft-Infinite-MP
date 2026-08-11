@@ -27,9 +27,6 @@ public class Minecart extends Entity {
         {{0, 0, -1}, {1, 0, 0}}
     };
     private boolean reverse;
-    public int damageTaken;
-    public int hitTime;
-    public int direction;
     public int type;
     protected int drop;
     private int increments;
@@ -43,9 +40,6 @@ public class Minecart extends Entity {
         super(world);
         this.setSize(0.98F, 0.7F);
         this.yOffset = this.height / 2.0F;
-        this.damageTaken = 0;
-        this.hitTime = 0;
-        this.direction = 1;
         this.reverse = false;
         this.preventSpawning = true;
         this.produceFootsteps = false;
@@ -66,6 +60,33 @@ public class Minecart extends Entity {
 
     @Override
     protected void init() {
+        this.dataSync.addObject(17, 0);
+        this.dataSync.addObject(18, 1);
+        this.dataSync.addObject(19, 0);
+    }
+
+    public int getHitTime() {
+        return this.dataSync.getObjectInt(17);
+    }
+
+    public void setHitTime(int ticks) {
+        this.dataSync.updateObject(17, ticks);
+    }
+
+    public int getDirection() {
+        return this.dataSync.getObjectInt(18);
+    }
+
+    public void setDirection(int dir) {
+        this.dataSync.updateObject(18, dir);
+    }
+
+    public int getDamageTaken() {
+        return this.dataSync.getObjectInt(19);
+    }
+
+    public void setDamageTaken(int damage) {
+        this.dataSync.updateObject(19, damage);
     }
 
     @Override
@@ -103,10 +124,10 @@ public class Minecart extends Entity {
     @Override
     public boolean damageEntity(DamageSource src, int amount) {
         if (!this.world.isOnline && !this.isDead) {
-            this.direction = -this.direction;
-            this.hitTime = 10;
-            this.damageTaken += amount * 10;
-            if (this.damageTaken > 40 && !this.isDead) {
+            this.setDirection(-this.getDirection());
+            this.setHitTime(10);
+            this.setDamageTaken(this.getDamageTaken() + amount * 10);
+            if (this.getDamageTaken() > 40 && !this.isDead) {
                 this.dropItem(this.drop, 1);
                 this.setDead();
             }
@@ -131,12 +152,12 @@ public class Minecart extends Entity {
 
     @Override
     public void onTick() {
-        if (this.hitTime > 0) {
-            this.hitTime--;
+        if (this.getHitTime() > 0) {
+            this.setHitTime(this.getHitTime() - 1);
         }
 
-        if (this.damageTaken > 0) {
-            this.damageTaken--;
+        if (this.getDamageTaken() > 0) {
+            this.setDamageTaken(this.getDamageTaken() - 1);
         }
 
         if (!this.world.isOnline || this.increments <= 0) {
@@ -616,8 +637,8 @@ public class Minecart extends Entity {
 
     @Override
     public void hurtAnim() {
-        this.direction = -this.direction;
-        this.hitTime = 10;
-        this.damageTaken = this.damageTaken + this.damageTaken * 10;
+        this.setDirection(-this.getDirection());
+        this.setHitTime(10);
+        this.setDamageTaken(this.getDamageTaken() + this.getDamageTaken() * 10);
     }
 }

@@ -22,10 +22,6 @@ public class Raft extends Boat implements Inventory {
     }
 
     @Override
-    protected void init() {
-    }
-
-    @Override
     protected void onDead() {
         this.dropItem(ItemList.raft.id, 1, 0.0F);
 
