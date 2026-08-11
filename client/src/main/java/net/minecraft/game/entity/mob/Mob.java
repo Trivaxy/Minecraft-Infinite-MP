@@ -1059,6 +1059,10 @@ public abstract class Mob extends Entity {
     }
 
     public void despawn() {
+        if (this.world.isOnline) {
+            return;
+        }
+
         Entity entity = this.world.getClosestPlayer(this, -1.0);
         if (entity != null && this.canDespawn()) {
             double distX = entity.posX - this.posX;
