@@ -134,14 +134,12 @@ public class EntityPlayerMP extends Player implements ContainerListener {
         return 1.62F;
     }
 
-    // The standing eye height above is always 1.62 regardless of crawl height,
-    // so Mob.isInsideBlock would look a metre above a crawling head and count the
-    // crawl-space ceiling as suffocation. Test the top of the actual box instead;
-    // while standing that is still y=1.8, so unchanged standing behaviour.
+    // getEyeHeight is pinned at the standing 1.62 above, so cap the suffocation probe
+    // under the box top - strictly under, or a box touching a ceiling floors into it.
     @Override
     public boolean isInsideBlock() {
         int x = MathHelper.floor_double(this.posX);
-        int y = MathHelper.floor_double(this.boundingBox.maxY);
+        int y = MathHelper.floor_double(Math.min(this.posY + this.getEyeHeight(), this.boundingBox.maxY - 0.1));
         int z = MathHelper.floor_double(this.posZ);
         return this.world.isBlockFull(x, y, z);
     }
