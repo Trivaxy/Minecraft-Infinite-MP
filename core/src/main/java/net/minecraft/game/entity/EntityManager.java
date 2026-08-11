@@ -149,6 +149,16 @@ public class EntityManager {
     private static final Object2ObjectMap<String, Constructor<? extends Entity>> stringToConstructor = new Object2ObjectOpenHashMap<>();
 
     private static void addMapping(Class<? extends Entity> entityclass, String name, int id) {
+        Class<? extends Entity> idOwner = IdToClass.get(id);
+        if (idOwner != null) {
+            throw new Error("Entity id " + id + " is already registered to " + idOwner.getSimpleName() + ", cannot reuse it for " + entityclass.getSimpleName());
+        }
+
+        Class<? extends Entity> nameOwner = stringToClass.get(name);
+        if (nameOwner != null) {
+            throw new Error("Entity name " + name + " is already registered to " + nameOwner.getSimpleName() + ", cannot reuse it for " + entityclass.getSimpleName());
+        }
+
         stringToClass.put(name, entityclass);
         classToString.put(entityclass, name);
         IdToClass.put(id, entityclass);
@@ -298,14 +308,14 @@ public class EntityManager {
         addMapping(Bird.class, "Bird", 127);
         addMapping(Parrot.class, "Parrot", 128);
         addMapping(Ostrich.class, "Ostrich", 129);
-        addMapping(Vulture.class, "Vulture", 120);
-        addMapping(Bat.class, "Bat", 121);
-        addMapping(Fae.class, "Fae", 122);
-        addMapping(Penguin.class, "Penguin", 123);
-        addMapping(Fish.class, "Fish", 124);
-        addMapping(Dolphin.class, "Dolphin", 125);
-        addMapping(Shark.class, "Shark", 126);
-        addMapping(Jellyfish.class, "Jellyfish", 127);
+        addMapping(Vulture.class, "Vulture", 130);
+        addMapping(Bat.class, "Bat", 131);
+        addMapping(Fae.class, "Fae", 132);
+        addMapping(Penguin.class, "Penguin", 133);
+        addMapping(Fish.class, "Fish", 134);
+        addMapping(Dolphin.class, "Dolphin", 135);
+        addMapping(Shark.class, "Shark", 136);
+        addMapping(Jellyfish.class, "Jellyfish", 137);
         addMapping(Zombie.class, "Zombie", 150);
         addMapping(Mummy.class, "Mummy", 151);
         addMapping(Skeleton.class, "Skeleton", 152);
