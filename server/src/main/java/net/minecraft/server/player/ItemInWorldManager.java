@@ -5,7 +5,7 @@ import net.minecraft.game.block.BlockList;
 import net.minecraft.game.entity.player.Player;
 import net.minecraft.game.item.ItemStack;
 import net.minecraft.game.world.World;
-import net.minecraft.network.packet.UpdateBlockPacket;
+import net.minecraft.network.packet.world.UpdateBlockPacket;
 import net.minecraft.server.world.WorldServer;
 
 public class ItemInWorldManager {

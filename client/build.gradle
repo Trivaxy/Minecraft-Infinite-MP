@@ -15,6 +15,11 @@ def nativeClassifier = {
 def lwjglVersion = '2.9.4-nightly-20150209'
 
 dependencies {
+    // The shared game. `api` rather than `implementation` because the client's public
+    // surface is full of core types - Minecraft.world is a World, screens take ItemStacks -
+    // and the jarmod/runClient classpaths need core's classes and its lang/struct resources.
+    api project(':core')
+
     // paulscode sound system + jorbis/jogg, lifted out of the shipped client jar.
     implementation files(rootProject.file('libs/vendor-sound.jar'))
 
@@ -79,6 +84,8 @@ tasks.register('jarmod', Jar) {
     archiveFileName = 'InfdevPlus-Client.jar'
 
     from sourceSets.main.output
+    // The shared game and its lang/struct resources live in :core now.
+    from project(':core').sourceSets.main.output
     from(zipTree(rootProject.file('libs/vendor-common.jar'))) { exclude 'META-INF/**' }
     from(zipTree(rootProject.file('libs/vendor-sound.jar'))) { exclude 'META-INF/**' }
 

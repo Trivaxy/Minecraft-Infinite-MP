@@ -5,8 +5,8 @@ import net.minecraft.game.block.tileentity.TileEntity;
 import net.minecraft.game.entity.Entity;
 import net.minecraft.game.entity.player.Player;
 import net.minecraft.game.world.WorldListener;
-import net.minecraft.network.packet.BlockEventPacket;
-import net.minecraft.network.packet.MusicPacket;
+import net.minecraft.network.packet.world.BlockEventPacket;
+import net.minecraft.network.packet.misc.MusicPacket;
 import net.minecraft.server.MinecraftServer;
 
 public class WorldManager implements WorldListener {

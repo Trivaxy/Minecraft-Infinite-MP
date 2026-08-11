@@ -22,22 +22,22 @@ import net.minecraft.game.item.ItemList;
 import net.minecraft.game.item.ItemStack;
 import net.minecraft.game.item.misc.MapItem;
 import net.minecraft.game.world.mapdata.MapData;
-import net.minecraft.network.packet.EntityMetadataPacket;
-import net.minecraft.network.packet.EntitySpawnPacket;
-import net.minecraft.network.packet.EntityVelocityPacket;
-import net.minecraft.network.packet.ItemEquipPacket;
-import net.minecraft.network.packet.ItemPacket;
-import net.minecraft.network.packet.MobPacket;
+import net.minecraft.network.packet.entity.EntityMetadataPacket;
+import net.minecraft.network.packet.entity.EntitySpawnPacket;
+import net.minecraft.network.packet.entity.EntityVelocityPacket;
+import net.minecraft.network.packet.player.ItemEquipPacket;
+import net.minecraft.network.packet.player.ItemPacket;
+import net.minecraft.network.packet.entity.MobPacket;
 import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.Packet31RelEntityMove;
-import net.minecraft.network.packet.Packet32EntityLook;
-import net.minecraft.network.packet.Packet33RelEntityMoveLook;
-import net.minecraft.network.packet.PaintingPacket;
-import net.minecraft.network.packet.PlayerSpawnPacket;
-import net.minecraft.network.packet.RemoveEntityPacket;
-import net.minecraft.network.packet.RideEntityPacket;
-import net.minecraft.network.packet.RotationPacket;
-import net.minecraft.network.packet.TeleportPacket;
+import net.minecraft.network.packet.entity.MovePacket;
+import net.minecraft.network.packet.entity.LookPacket;
+import net.minecraft.network.packet.entity.MoveLookPacket;
+import net.minecraft.network.packet.misc.PaintingPacket;
+import net.minecraft.network.packet.player.PlayerSpawnPacket;
+import net.minecraft.network.packet.world.RemoveEntityPacket;
+import net.minecraft.network.packet.entity.RideEntityPacket;
+import net.minecraft.network.packet.entity.RotationPacket;
+import net.minecraft.network.packet.world.TeleportPacket;
 import net.minecraft.server.player.EntityPlayerMP;
 import net.minecraft.util.math.MathHelper;
 
@@ -143,11 +143,11 @@ public class EntityTrackerEntry {
                 this.trackedEntity.posZ = i4 / 32.0;
                 object10 = new TeleportPacket(this.trackedEntity.entityId, i2, i3, i4, (byte)i5, (byte)i6);
             } else if (z11 && z12) {
-                object10 = new Packet33RelEntityMoveLook(this.trackedEntity.entityId, (byte)i7, (byte)i8, (byte)i9, (byte)i5, (byte)i6);
+                object10 = new MoveLookPacket(this.trackedEntity.entityId, (byte)i7, (byte)i8, (byte)i9, (byte)i5, (byte)i6);
             } else if (z11) {
-                object10 = new Packet31RelEntityMove(this.trackedEntity.entityId, (byte)i7, (byte)i8, (byte)i9);
+                object10 = new MovePacket(this.trackedEntity.entityId, (byte)i7, (byte)i8, (byte)i9);
             } else if (z12) {
-                object10 = new Packet32EntityLook(this.trackedEntity.entityId, (byte)i5, (byte)i6);
+                object10 = new LookPacket(this.trackedEntity.entityId, (byte)i5, (byte)i6);
             }
 
             if (this.shouldSendMotionUpdates) {

@@ -7,10 +7,10 @@ import net.minecraft.game.block.Block;
 import net.minecraft.game.block.tileentity.TileEntity;
 import net.minecraft.game.world.chunk.ChunkUtils;
 import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.PrepChunkPacket;
-import net.minecraft.network.packet.UpdateBlockPacket;
-import net.minecraft.network.packet.UpdateChunkPacket;
-import net.minecraft.network.packet.UpdateSectionPacket;
+import net.minecraft.network.packet.world.PrepChunkPacket;
+import net.minecraft.network.packet.world.UpdateBlockPacket;
+import net.minecraft.network.packet.world.UpdateChunkPacket;
+import net.minecraft.network.packet.world.UpdateSectionPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.player.EntityPlayerMP;
 

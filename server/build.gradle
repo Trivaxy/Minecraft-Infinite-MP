@@ -1,3 +1,9 @@
+dependencies {
+    // The shared game. `api` so the smoketest source set - which speaks the real protocol
+    // using core's packet classes - sees them transitively.
+    api project(':core')
+}
+
 tasks.register('runServer', JavaExec) {
     group = 'minecraft'
     description = 'Runs the Minecraft Infinite server'
@@ -82,6 +88,8 @@ tasks.register('serverJar', Jar) {
     archiveFileName = 'minecraft-infinite-server.jar'
 
     from sourceSets.main.output
+    // The shared game and its lang/struct resources live in :core now.
+    from project(':core').sourceSets.main.output
     from(zipTree(rootProject.file('libs/vendor-common.jar'))) { exclude 'META-INF/**' }
 
     manifest {

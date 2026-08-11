@@ -24,7 +24,7 @@ import net.minecraft.game.world.WorldSettings;
 import net.minecraft.game.world.WorldType;
 import net.minecraft.game.world.chunk.loader.handler.AnvilSaveHandler;
 import net.minecraft.game.world.util.Position;
-import net.minecraft.network.packet.UpdateTimePacket;
+import net.minecraft.network.packet.world.UpdateTimePacket;
 import net.minecraft.server.commands.CommandUseTimer;
 import net.minecraft.server.commands.ServerCommandFactory;
 import net.minecraft.server.entity.EntityTracker;

@@ -5,5 +5,7 @@ plugins {
 
 rootProject.name = 'minecraft-infinite'
 
+// All the game code that is not a renderer and not a dedicated server.
+include 'core'
 include 'client'
 include 'server'

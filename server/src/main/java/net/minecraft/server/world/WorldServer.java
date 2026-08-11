@@ -15,9 +15,9 @@ import net.minecraft.game.world.chunk.loader.handler.PlayerFileData;
 import net.minecraft.game.world.chunk.loader.handler.SaveHandler;
 import net.minecraft.game.world.dimension.Dimension;
 import net.minecraft.game.world.util.Explosion;
-import net.minecraft.network.packet.EntityStatePacket;
-import net.minecraft.network.packet.ExplosionPacket;
-import net.minecraft.network.packet.PlayNotePacket;
+import net.minecraft.network.packet.entity.EntityStatePacket;
+import net.minecraft.network.packet.world.ExplosionPacket;
+import net.minecraft.network.packet.container.PlayNotePacket;
 import net.minecraft.server.MinecraftServer;
 
 public class WorldServer extends World {

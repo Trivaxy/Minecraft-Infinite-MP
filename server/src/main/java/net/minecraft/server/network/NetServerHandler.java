@@ -26,29 +26,29 @@ import net.minecraft.game.world.util.Position;
 import net.minecraft.localization.Translator;
 import net.minecraft.network.NetworkHandler;
 import net.minecraft.network.NetworkManager;
-import net.minecraft.network.packet.AnimationPacket;
-import net.minecraft.network.packet.ChatPacket;
-import net.minecraft.network.packet.ContainerClosePacket;
-import net.minecraft.network.packet.CustomPayloadPacket;
-import net.minecraft.network.packet.DigPacket;
-import net.minecraft.network.packet.DisconnectPacket;
-import net.minecraft.network.packet.EntityActionPacket;
-import net.minecraft.network.packet.GeneratorPacket;
-import net.minecraft.network.packet.KeepAlivePacket;
+import net.minecraft.network.packet.player.AnimationPacket;
+import net.minecraft.network.packet.misc.ChatPacket;
+import net.minecraft.network.packet.container.ContainerClosePacket;
+import net.minecraft.network.packet.container.CustomPayloadPacket;
+import net.minecraft.network.packet.player.DigPacket;
+import net.minecraft.network.packet.misc.DisconnectPacket;
+import net.minecraft.network.packet.entity.EntityActionPacket;
+import net.minecraft.network.packet.container.GeneratorPacket;
+import net.minecraft.network.packet.misc.KeepAlivePacket;
 import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.Packet102WindowClick;
-import net.minecraft.network.packet.Packet15Place;
-import net.minecraft.network.packet.Packet16BlockItemSwitch;
-import net.minecraft.network.packet.Packet27Position;
-import net.minecraft.network.packet.Packet7UseEntity;
-import net.minecraft.network.packet.PlayerMovementPacket;
-import net.minecraft.network.packet.PlayerStatePacket;
-import net.minecraft.network.packet.PlayerTeleportPacket;
-import net.minecraft.network.packet.RespawnPacket;
-import net.minecraft.network.packet.SignPacket;
-import net.minecraft.network.packet.SlotPacket;
-import net.minecraft.network.packet.TransactionPacket;
-import net.minecraft.network.packet.UpdateBlockPacket;
+import net.minecraft.network.packet.player.ClickPacket;
+import net.minecraft.network.packet.player.PlacePacket;
+import net.minecraft.network.packet.player.ItemSwitchPacket;
+import net.minecraft.network.packet.entity.PositionPacket;
+import net.minecraft.network.packet.player.UsePacket;
+import net.minecraft.network.packet.player.PlayerMovementPacket;
+import net.minecraft.network.packet.player.PlayerStatePacket;
+import net.minecraft.network.packet.player.PlayerTeleportPacket;
+import net.minecraft.network.packet.world.RespawnPacket;
+import net.minecraft.network.packet.container.SignPacket;
+import net.minecraft.network.packet.player.SlotPacket;
+import net.minecraft.network.packet.misc.TransactionPacket;
+import net.minecraft.network.packet.world.UpdateBlockPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerConfigurationManager;
 import net.minecraft.server.player.EntityPlayerMP;
@@ -116,7 +116,7 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
     }
 
     @Override
-    public void handlePosition(Packet27Position packet27Position1) {
+    public void handlePosition(PositionPacket packet27Position1) {
         this.playerEntity
             .setMovementType(
                 packet27Position1.getStrafeMovement(),
@@ -397,7 +397,7 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
     }
 
     @Override
-    public void handlePlace(Packet15Place packet15Place1) {
+    public void handlePlace(PlacePacket packet15Place1) {
         WorldServer worldServer2 = this.mcServer.getWorldManager(this.playerEntity.dimension);
         ItemStack itemStack3 = this.playerEntity.inventory.getCurrentItem();
         if (this.playerEntity.inventory.canUseItem()) {
@@ -512,7 +512,7 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
     }
 
     @Override
-    public void handleBlockItemSwitch(Packet16BlockItemSwitch packet16BlockItemSwitch1) {
+    public void handleBlockItemSwitch(ItemSwitchPacket packet16BlockItemSwitch1) {
         if (packet16BlockItemSwitch1.id >= 0 && packet16BlockItemSwitch1.id <= 9) {
             this.playerEntity.inventory.currentSlot = packet16BlockItemSwitch1.id;
         } else if (packet16BlockItemSwitch1.id == 44) {
@@ -602,7 +602,7 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
     }
 
     @Override
-    public void handleUseEntity(Packet7UseEntity packet7UseEntity1) {
+    public void handleUseEntity(UsePacket packet7UseEntity1) {
         WorldServer worldServer2 = this.mcServer.getWorldManager(this.playerEntity.dimension);
         Entity entity3 = worldServer2.findEntityBasedOnId(packet7UseEntity1.targetEntity);
         this.playerEntity.setUsing(packet7UseEntity1.offHand);
@@ -635,7 +635,7 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
     }
 
     @Override
-    public void handleWindowClick(Packet102WindowClick packet102WindowClick1) {
+    public void handleWindowClick(ClickPacket packet102WindowClick1) {
         if (this.playerEntity.openContainer.windowId == packet102WindowClick1.window_Id && this.playerEntity.openContainer.canUseMP(this.playerEntity)) {
             if (packet102WindowClick1.isActive && packet102WindowClick1.mouseClick >= 2) {
                 this.playerEntity.openContainer.swapWithHotbarSlot(packet102WindowClick1.inventorySlot, packet102WindowClick1.mouseClick - 2, this.playerEntity);

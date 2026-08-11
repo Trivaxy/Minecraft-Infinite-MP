@@ -5,7 +5,7 @@ import java.util.List;
 import net.minecraft.commands.Command;
 import net.minecraft.commands.CommandAccessor;
 import net.minecraft.commands.CommandSource;
-import net.minecraft.network.packet.ChatPacket;
+import net.minecraft.network.packet.misc.ChatPacket;
 
 public class CommandTell extends Command {
     @Override

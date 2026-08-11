@@ -1,0 +1,9 @@
+// The shared game: blocks, items, entities, world generation, containers, recipes, the
+// protocol, and the lang/struct resources both builds read.
+//
+// Nothing in here may reference net.minecraft.client or net.minecraft.server. That rule is
+// what makes the split real rather than a naming convention, and the compiler enforces it:
+// core does not depend on either module, so a reference simply will not resolve.
+//
+// Everything this module needs - the Java 8 toolchain, the repositories, and
+// libs/vendor-common.jar - comes from the `subprojects` block in the root build.gradle.
