@@ -186,7 +186,8 @@ public class EntityPlayerMP extends Player implements ContainerListener {
 
     @Override
     public void onDeath(DamageSource entity1) {
-        this.inventory.clearContents(true);
+        super.onDeath(entity1);
+        this.resetHeight();
         this.score /= 2;
         String died = entity1.getDeathMsg(this);
         this.mcServer.configManager.sendPacketToAll(new ChatPacket(died));

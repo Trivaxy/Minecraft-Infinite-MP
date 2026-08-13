@@ -207,6 +207,7 @@ public class ServerConfigurationManager implements ConfigManager {
         );
         entityPlayerMP4.entityId = entityPlayerMP1.entityId;
         entityPlayerMP4.playerNetServerHandler = entityPlayerMP1.playerNetServerHandler;
+        entityPlayerMP4.clone(entityPlayerMP1, false);
         WorldServer worldServer5 = this.mcServer.getWorldManager(entityPlayerMP1.dimension);
         if (chunkCoordinates3 != null) {
             Position chunkCoordinates6 = Player.wakeUpPlayer(

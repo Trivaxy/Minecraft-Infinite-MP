@@ -1043,15 +1043,10 @@ public class Player extends Mob {
 
         if (!keepStats && player.inventory != null && player.properties.getBabyMode()) {
             this.inventory = player.inventory;
-            if (((PlayerContainer)player.container).quiverContents != null) {
-                ((PlayerContainer)this.container).quiverContents = ((PlayerContainer)player.container).quiverContents;
-            }
-
-            if (((PlayerContainer)player.container).backpackContents != null) {
-                ((PlayerContainer)this.container).backpackContents = ((PlayerContainer)player.container).backpackContents;
-            }
-
-            this.container = player.container;
+            this.inventory.player = this;
+            this.container = new PlayerContainer(this.inventory, this);
+            this.openContainer = this.container;
+            // backpack and quiver contents ride in the accessory item's nbt, so they come back with it
             if (player.inventory.accessorySlots[2] != null && player.inventory.accessorySlots[2].hasTag()) {
                 ((PlayerContainer)this.container).loadContents(player.inventory.accessorySlots[2]);
             }
