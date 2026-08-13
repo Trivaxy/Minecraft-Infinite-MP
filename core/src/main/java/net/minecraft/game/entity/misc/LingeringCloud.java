@@ -14,20 +14,31 @@ public class LingeringCloud extends Entity {
     private int time;
     private int maxTime;
     private int dmg;
+    private boolean tinted;
 
     public LingeringCloud(World world) {
         super(world);
+        this.setSize(0.0F, 0.0F);
+        this.produceFootsteps = false;
+        this.maxTime = (int)(40.0 / (Math.random() * 0.8 + 0.2));
     }
 
     public LingeringCloud(World level, double x, double y, double z, EffectData effect, int damage) {
-        super(level);
-        this.setSize(0.0F, 0.0F);
+        this(level);
         this.setPosition(x + 0.5, y + 0.1, z + 0.5);
         this.yOffset = 1.5F;
-        this.produceFootsteps = false;
-        this.maxTime = (int)(40.0 / (Math.random() * 0.8 + 0.2));
         this.effect = effect;
+        this.tinted = effect != null;
         this.dmg = damage;
+    }
+
+    public short getSpawnData() {
+        return (short)(this.tinted ? this.dmg & 0x7FFF : -1);
+    }
+
+    public void applySpawnData(short data) {
+        this.tinted = data >= 0;
+        this.dmg = this.tinted ? data : 0;
     }
 
     @Override
@@ -42,7 +53,7 @@ public class LingeringCloud extends Entity {
 
         for (int n = 0; n < 4; n++) {
             if (Math.random() > aliveTime) {
-                if (this.effect != null) {
+                if (this.tinted) {
                     double red = (EffectList.effects[potion].getLiquidColor() >> 16 & 0xFF) / 255.0;
                     double green = (EffectList.effects[potion].getLiquidColor() >> 8 & 0xFF) / 255.0;
                     double blue = (EffectList.effects[potion].getLiquidColor() >> 0 & 0xFF) / 255.0;
@@ -56,7 +67,7 @@ public class LingeringCloud extends Entity {
             }
         }
 
-        if (this.time++ > this.maxTime) {
+        if (this.time++ > this.maxTime && !this.world.isOnline) {
             this.setDead();
         }
     }
@@ -91,6 +102,7 @@ public class LingeringCloud extends Entity {
             byte amp = effectTag.getByte("Amplifier");
             int dur = effectTag.getInteger("Duration");
             this.effect = new EffectData(id, dur, amp);
+            this.tinted = true;
         }
 
         this.time = tag.getInteger("AliveTime");

@@ -68,14 +68,14 @@ public class VoidCrystal extends Entity {
                 }
 
                 this.beamTarget = closest;
-                if (this.beamTarget != null) {
+                if (this.beamTarget != null && !this.world.isOnline) {
                     this.beamTarget.damageEntity(DamageSource.magic, 4);
                     if (player != null) {
                         player.triggerAchievement(AchievementList.crystal);
                     }
                 }
             }
-        } else if (this.world.getBlockId(x, y - 1, z) != BlockList.fire.id) {
+        } else if (!this.world.isOnline && this.world.getBlockId(x, y - 1, z) != BlockList.fire.id) {
             this.world.setBlockWithNotify(x, y, z, BlockList.fire.id);
         }
     }

@@ -137,7 +137,10 @@ public class EntitySpawnPacket extends Packet {
         ARROW(60),
         FALLING_BLOCK(70),
         BOBBER(80),
-        BOAT(90);
+        BOAT(90),
+        LIGHTNING(100),
+        CLOUD(110),
+        CRYSTAL(120);
 
         public final byte id;
 

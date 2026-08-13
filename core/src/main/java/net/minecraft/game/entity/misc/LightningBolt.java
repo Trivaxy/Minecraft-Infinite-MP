@@ -20,7 +20,7 @@ public class LightningBolt extends Entity {
         this.lightningState = 2;
         this.boltVertex = this.rand.nextLong();
         this.boltLivingTime = this.rand.nextInt(3) + 1;
-        if (world.chunksInRadiusExist(MathHelper.floor_double(x), MathHelper.floor_double(y), MathHelper.floor_double(z), 10)) {
+        if (!world.isOnline && world.chunksInRadiusExist(MathHelper.floor_double(x), MathHelper.floor_double(y), MathHelper.floor_double(z), 10)) {
             int blockX = MathHelper.floor_double(x);
             int blockY = MathHelper.floor_double(y);
             int blockZ = MathHelper.floor_double(z);
@@ -57,8 +57,9 @@ public class LightningBolt extends Entity {
                 this.boltLivingTime--;
                 this.lightningState = 1;
                 this.boltVertex = this.rand.nextLong();
-                if (this.world
-                    .chunksInRadiusExist(MathHelper.floor_double(this.posX), MathHelper.floor_double(this.posY), MathHelper.floor_double(this.posZ), 10)) {
+                if (!this.world.isOnline
+                    && this.world
+                        .chunksInRadiusExist(MathHelper.floor_double(this.posX), MathHelper.floor_double(this.posY), MathHelper.floor_double(this.posZ), 10)) {
                     int x = MathHelper.floor_double(this.posX);
                     int y = MathHelper.floor_double(this.posY);
                     int z = MathHelper.floor_double(this.posZ);
@@ -70,23 +71,25 @@ public class LightningBolt extends Entity {
         }
 
         if (this.lightningState >= 0) {
-            double bbOffset = 3.0;
-            List<Entity> entities = this.world
-                .getEntities(
-                    this,
-                    BoundingBox.getBoundingBox(
-                        this.posX - bbOffset,
-                        this.posY - bbOffset,
-                        this.posZ - bbOffset,
-                        this.posX + bbOffset,
-                        this.posY + 6.0 + bbOffset,
-                        this.posZ + bbOffset
-                    )
-                );
+            if (!this.world.isOnline) {
+                double bbOffset = 3.0;
+                List<Entity> entities = this.world
+                    .getEntities(
+                        this,
+                        BoundingBox.getBoundingBox(
+                            this.posX - bbOffset,
+                            this.posY - bbOffset,
+                            this.posZ - bbOffset,
+                            this.posX + bbOffset,
+                            this.posY + 6.0 + bbOffset,
+                            this.posZ + bbOffset
+                        )
+                    );
 
-            for (int i = 0; i < entities.size(); i++) {
-                Entity entity = entities.get(i);
-                entity.onStruckByLightning(this);
+                for (int i = 0; i < entities.size(); i++) {
+                    Entity entity = entities.get(i);
+                    entity.onStruckByLightning(this);
+                }
             }
 
             this.world.lightningStrikeTime = 2;

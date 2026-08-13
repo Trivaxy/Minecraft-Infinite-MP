@@ -47,6 +47,16 @@ public class WorldServer extends World {
     }
 
     @Override
+    public boolean addWeatherEffect(Entity entity1) {
+        if (!super.addWeatherEffect(entity1)) {
+            return false;
+        } else {
+            this.obtainEntitySkin(entity1);
+            return true;
+        }
+    }
+
+    @Override
     public ChunkLoader getChunkProvider() {
         FileLoader var1 = this.saveHandler.getChunkLoader(this.currDim);
         this.chunkProviderServer = new ChunkProviderServer(this, var1, this.currDim.getChunkProvider());

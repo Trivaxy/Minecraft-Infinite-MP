@@ -12,7 +12,10 @@ import net.minecraft.game.entity.hanging.Painting;
 import net.minecraft.game.entity.minecart.Minecart;
 import net.minecraft.game.entity.misc.DroppedItem;
 import net.minecraft.game.entity.misc.FallingBlock;
+import net.minecraft.game.entity.misc.LightningBolt;
+import net.minecraft.game.entity.misc.LingeringCloud;
 import net.minecraft.game.entity.misc.PrimedTNT;
+import net.minecraft.game.entity.misc.VoidCrystal;
 import net.minecraft.game.entity.mob.Mob;
 import net.minecraft.game.entity.player.Player;
 import net.minecraft.game.entity.projectile.Bobber;
@@ -317,6 +320,14 @@ public class EntityTrackerEntry {
             return var2;
         } else if (this.trackedEntity instanceof Painting) {
             return new PaintingPacket((Painting)this.trackedEntity);
+        } else if (this.trackedEntity instanceof LightningBolt) {
+            return new EntitySpawnPacket(this.trackedEntity, EntitySpawnPacket.EntityType.LIGHTNING);
+        } else if (this.trackedEntity instanceof LingeringCloud) {
+            return new EntitySpawnPacket(this.trackedEntity, EntitySpawnPacket.EntityType.CLOUD, ((LingeringCloud)this.trackedEntity).getSpawnData());
+        } else if (this.trackedEntity instanceof VoidCrystal) {
+            return new EntitySpawnPacket(
+                this.trackedEntity, EntitySpawnPacket.EntityType.CRYSTAL, (short)(((VoidCrystal)this.trackedEntity).playerPlaced ? 1 : 0)
+            );
         } else {
             throw new IllegalArgumentException("Spawn packet case missing for" + this.trackedEntity.getClass() + "!");
         }

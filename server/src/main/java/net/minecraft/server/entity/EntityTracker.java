@@ -12,7 +12,10 @@ import net.minecraft.game.entity.hanging.Painting;
 import net.minecraft.game.entity.minecart.Minecart;
 import net.minecraft.game.entity.misc.DroppedItem;
 import net.minecraft.game.entity.misc.FallingBlock;
+import net.minecraft.game.entity.misc.LightningBolt;
+import net.minecraft.game.entity.misc.LingeringCloud;
 import net.minecraft.game.entity.misc.PrimedTNT;
+import net.minecraft.game.entity.misc.VoidCrystal;
 import net.minecraft.game.entity.mob.Mob;
 import net.minecraft.game.entity.projectile.Bobber;
 import net.minecraft.game.entity.projectile.Projectile;
@@ -65,6 +68,12 @@ public class EntityTracker {
             this.trackEntity(entity1, 160, Integer.MAX_VALUE, false);
         } else if (entity1 instanceof Bobber) {
             this.trackEntity(entity1, 64, 20, false);
+        } else if (entity1 instanceof LightningBolt) {
+            this.trackEntity(entity1, 512, Integer.MAX_VALUE, false);
+        } else if (entity1 instanceof LingeringCloud) {
+            this.trackEntity(entity1, 160, Integer.MAX_VALUE, false);
+        } else if (entity1 instanceof VoidCrystal) {
+            this.trackEntity(entity1, 256, Integer.MAX_VALUE, false);
         }
     }
 

@@ -1124,6 +1124,7 @@ public class World implements WorldSource {
             entity.onTick();
             if (entity.isDead) {
                 this.weatherEffects.remove(index--);
+                this.releaseEntitySkin(entity);
             }
         }
 

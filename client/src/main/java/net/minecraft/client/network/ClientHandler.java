@@ -45,7 +45,10 @@ import net.minecraft.game.entity.minecart.Minecart;
 import net.minecraft.game.entity.minecart.StorageMinecart;
 import net.minecraft.game.entity.misc.DroppedItem;
 import net.minecraft.game.entity.misc.FallingBlock;
+import net.minecraft.game.entity.misc.LightningBolt;
+import net.minecraft.game.entity.misc.LingeringCloud;
 import net.minecraft.game.entity.misc.PrimedTNT;
+import net.minecraft.game.entity.misc.VoidCrystal;
 import net.minecraft.game.entity.mob.Mob;
 import net.minecraft.game.entity.mob.monster.Monster;
 import net.minecraft.game.entity.player.Player;
@@ -173,6 +176,11 @@ public class ClientHandler extends NetworkHandler {
         double x = packt.xPosition / 32.0;
         double y = packt.yPosition / 32.0;
         double z = packt.zPosition / 32.0;
+        if (packt.type == EntitySpawnPacket.EntityType.LIGHTNING) {
+            this.world.addWeatherEffect(new LightningBolt(this.world, x, y, z));
+            return;
+        }
+
         Entity entity = null;
         switch (packt.type) {
             case MINECART:
@@ -208,6 +216,17 @@ public class ClientHandler extends NetworkHandler {
                 Projectile projectile = ProjectileType.byId(packt.metadata).create(this.world);
                 projectile.setPosition(x, y, z);
                 entity = projectile;
+                break;
+            case CLOUD:
+                LingeringCloud cloud = new LingeringCloud(this.world);
+                cloud.setPosition(x, y, z);
+                cloud.applySpawnData(packt.metadata);
+                entity = cloud;
+                break;
+            case CRYSTAL:
+                VoidCrystal crystal = new VoidCrystal(this.world, x, y, z);
+                crystal.playerPlaced = packt.metadata == 1;
+                entity = crystal;
         }
 
         if (entity != null) {
