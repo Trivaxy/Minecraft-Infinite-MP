@@ -269,6 +269,8 @@ public class Player extends Mob {
         }
 
         super.onTick();
+        // not in mobTick: RemotePlayer replaces that method outright, and a remote player still has to animate
+        this.swingArms();
         if (!this.world.isOnline && this.openContainer != null && !this.openContainer.canUse(this)) {
             this.closeScreen();
             this.openContainer = this.container;
@@ -704,7 +706,6 @@ public class Player extends Mob {
             this.triggerAchievement(AchievementList.cloud);
         }
 
-        this.swingArms();
         this.switchDimension(0, false);
     }
 
