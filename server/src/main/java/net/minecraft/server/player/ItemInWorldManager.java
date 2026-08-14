@@ -95,7 +95,7 @@ public class ItemInWorldManager {
     public boolean hitBlock(int i1, int i2, int i3) {
         int i4 = this.thisWorld.getBlockId(i1, i2, i3);
         int i5 = this.thisWorld.getBlockMetadata(i1, i2, i3);
-        this.thisWorld.playEffect(this.thisPlayer, 2001, i1, i2, i3, i4 + this.thisWorld.getBlockMetadata(i1, i2, i3) * 256);
+        this.thisWorld.playEffect(this.thisPlayer, 2001, i1, i2, i3, i5 << 12 | i4);
         ItemStack itemStack7 = this.thisPlayer.getCurrentEquippedItem();
         if (this.thisPlayer.getUsing()) {
             itemStack7 = this.thisPlayer.inventory.getOffHandItem();
