@@ -178,7 +178,9 @@ public class NetLoginHandler extends NetworkHandler {
                     level.getSeed(),
                     (byte)player.dimension,
                     (byte)this.mcServer.configManager.getMaxPlayers(),
-                    (byte)level.getMaxSections()
+                    (byte)level.getMaxSections(),
+                    (byte)level.getSettings().getType().id,
+                    level.getSettings().getSingleBiome() != null ? level.getSettings().getSingleBiome().id : 0
                 )
             );
             csnh.sendPacket(new SpawnPacket(pos.x, pos.y, pos.z));

@@ -15,6 +15,11 @@ public class WorldInfo {
     private String worldName;
     public String saveFolder;
     private String saveVersion;
+    // Defaulted to "all enabled" by WorldInfo(): a multiplayer client constructs
+    // WorldInfo(seed, name, null) and never touches this array, yet World hands it straight
+    // to BiomeList.enabledBiomes, so an all-false array made every BiomesLayer pick fall back
+    // to biomeDefault - which is what pinned every client-side F3 biome read (and the sky
+    // color that follows it) at Valley Hills (B-34). Every ctor must chain through this().
     public boolean[] biomes = new boolean[256];
     private int spawnX;
     private int spawnY;
@@ -145,6 +150,7 @@ public class WorldInfo {
     }
 
     public WorldInfo(long seed, String name, WorldSettings settings) {
+        this();
         this.randomSeed = seed;
         this.worldName = name;
         if (settings != null) {
@@ -367,6 +373,10 @@ public class WorldInfo {
         return this.worldType;
     }
 
+    public void setType(WorldType type) {
+        this.worldType = type;
+    }
+
     public byte getGamemode() {
         return this.gamemode;
     }
@@ -421,6 +431,10 @@ public class WorldInfo {
 
     public Biome getSingleBiome() {
         return this.singleBiome;
+    }
+
+    public void setSingleBiome(Biome biome) {
+        this.singleBiome = biome;
     }
 
     public boolean getIsThundering() {

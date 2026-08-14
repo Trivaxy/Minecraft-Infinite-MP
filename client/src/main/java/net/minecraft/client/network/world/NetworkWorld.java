@@ -7,6 +7,8 @@ import java.util.Set;
 import net.minecraft.client.network.ClientHandler;
 import net.minecraft.game.entity.Entity;
 import net.minecraft.game.world.World;
+import net.minecraft.game.world.WorldType;
+import net.minecraft.game.world.biomes.Biome;
 import net.minecraft.game.world.chunk.ChunkLoader;
 import net.minecraft.game.world.dimension.Dimension;
 import net.minecraft.game.world.util.Position;
@@ -21,7 +23,17 @@ public class NetworkWorld extends World {
     private Set<Entity> entityMemory = new HashSet<>();
 
     public NetworkWorld(ClientHandler conn, long seed, int dim) {
+        this(conn, seed, dim, WorldType.DEFAULT, null);
+    }
+
+    public NetworkWorld(ClientHandler conn, long seed, int dim, WorldType type, Biome singleBiome) {
         super(new SaveHandlerMP(), "MpServer", seed, Dimension.getDimension(dim));
+        this.getSettings().setType(type);
+        if (singleBiome != null) {
+            this.getSettings().setSingleBiome(singleBiome);
+        }
+
+        this.currDim.init(this);
         this.connection = conn;
         this.setSpawnPoint(new Position(8, this.getWorldHeight() / 2, 8));
     }

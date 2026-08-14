@@ -14,6 +14,8 @@ public class LoginPacket extends Packet {
     public byte dimension;
     public byte maxPlayers;
     public byte maxSections;
+    public byte worldType;
+    public int singleBiomeId;
 
     public LoginPacket() {
     }
@@ -23,13 +25,15 @@ public class LoginPacket extends Packet {
         this.protocolVersion = i2;
     }
 
-    public LoginPacket(String string1, int i2, long j3, byte b5, byte par8, byte maxSections) {
+    public LoginPacket(String string1, int i2, long j3, byte b5, byte par8, byte maxSections, byte worldType, int singleBiomeId) {
         this.username = string1;
         this.protocolVersion = i2;
         this.mapSeed = j3;
         this.dimension = b5;
         this.maxPlayers = par8;
         this.maxSections = maxSections;
+        this.worldType = worldType;
+        this.singleBiomeId = singleBiomeId;
     }
 
     @Override
@@ -40,6 +44,8 @@ public class LoginPacket extends Packet {
         this.dimension = dataInputStream1.readByte();
         this.maxPlayers = dataInputStream1.readByte();
         this.maxSections = dataInputStream1.readByte();
+        this.worldType = dataInputStream1.readByte();
+        this.singleBiomeId = dataInputStream1.readInt();
     }
 
     @Override
@@ -50,6 +56,8 @@ public class LoginPacket extends Packet {
         dataOutputStream1.writeByte(this.dimension);
         dataOutputStream1.writeByte(this.maxPlayers);
         dataOutputStream1.writeByte(this.maxSections);
+        dataOutputStream1.writeByte(this.worldType);
+        dataOutputStream1.writeInt(this.singleBiomeId);
     }
 
     @Override
@@ -59,6 +67,6 @@ public class LoginPacket extends Packet {
 
     @Override
     public int getPacketSize() {
-        return 4 + this.username.length() + 4 + 7;
+        return 4 + this.username.length() + 4 + 7 + 5;
     }
 }

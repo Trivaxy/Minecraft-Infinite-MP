@@ -23,6 +23,8 @@ import net.minecraft.client.network.world.NetworkWorld;
 import net.minecraft.client.particle.special.PickupAnimation;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.game.block.tileentity.TileEntity;
+import net.minecraft.game.world.WorldType;
+import net.minecraft.game.world.biomes.Biome;
 import net.minecraft.game.block.tileentity.container.BarrelEntity;
 import net.minecraft.game.block.tileentity.container.BookcaseEntity;
 import net.minecraft.game.block.tileentity.other.SignEntity;
@@ -147,7 +149,9 @@ public class ClientHandler extends NetworkHandler {
     @Override
     public void handleLogin(LoginPacket packet) {
         this.mc.gamemode = new MultiplayerMode(this.mc, this);
-        this.world = new NetworkWorld(this, packet.mapSeed, packet.dimension);
+        WorldType worldType = WorldType.fromNumber(packet.worldType);
+        Biome singleBiome = worldType == WorldType.BIOME ? Biome.findById(packet.singleBiomeId) : null;
+        this.world = new NetworkWorld(this, packet.mapSeed, packet.dimension, worldType, singleBiome);
         this.world.isOnline = true;
         this.mc.changeWorld(this.world, "");
         this.mc.setScreen(new LoginScreen(this));
