@@ -818,6 +818,9 @@ public abstract class Mob extends Entity {
 
         this.limbYaw = this.limbYaw + (dist - this.limbYaw) * 0.4F;
         this.limbSwing = this.limbSwing + this.limbYaw;
+        if (this.world.isOnline && !(this instanceof Player)) {
+            this.updateFootstep(distX, distZ);
+        }
     }
 
     public boolean canClimb(Block id) {

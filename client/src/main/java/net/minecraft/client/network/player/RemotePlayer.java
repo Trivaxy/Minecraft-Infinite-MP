@@ -69,6 +69,8 @@ public class RemotePlayer extends Player {
 
         this.limbYaw = this.limbYaw + (dist - this.limbYaw) * 0.4F;
         this.limbSwing = this.limbSwing + this.limbYaw;
+        this.onGround = this.world.getBoundingBoxes(this, this.boundingBox.getOffsetBoundingBox(0.0, -0.1, 0.0)).size() > 0;
+        this.updateFootstep(x, z);
         if (!this.itemInUse && this.isEating() && this.inventory.mainInventory[this.inventory.currentSlot] != null) {
             ItemStack stack = this.inventory.mainInventory[this.inventory.currentSlot];
             this.setItemInUse(this.inventory.mainInventory[this.inventory.currentSlot], ItemList.items[stack.itemID].getMaxUseDuration(stack));

@@ -69,7 +69,7 @@ public class Farmland extends Block {
 
     @Override
     public void onEntityWalking(World world, int xCoord, int yCoord, int zCoord, Entity entity) {
-        if (entity.jumping) {
+        if (entity.jumping && !world.isOnline) {
             world.setBlockWithNotify(xCoord, yCoord, zCoord, BlockList.dirt.id);
         }
     }

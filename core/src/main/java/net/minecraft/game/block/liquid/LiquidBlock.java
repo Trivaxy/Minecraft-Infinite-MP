@@ -34,6 +34,7 @@ public abstract class LiquidBlock extends Block {
     @Override
     public void onEntityWalking(World world, int xCoord, int yCoord, int zCoord, Entity entity) {
         if ((this.material == MaterialList.water || this.material == MaterialList.lava)
+            && !world.isOnline
             && entity instanceof Player
             && world.getBlockId(xCoord, yCoord + 1, zCoord) == 0
             && ((Player)entity).inventory.accessorySlots[0] != null

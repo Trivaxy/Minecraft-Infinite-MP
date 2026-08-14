@@ -548,24 +548,7 @@ public abstract class Entity {
 
             double oldX = this.posX - x;
             double oldY = this.posZ - z;
-            if (this.produceFootsteps && !sneaking && !this.crawling && !this.flying && !this.gliding && this.onGround && !this.isGliding()) {
-                this.distance = (float)(this.distance + MathHelper.sqrt_double(oldX * oldX + oldY * oldY) * 0.6);
-                int blockX = MathHelper.floor_double(this.posX);
-                int blockY = MathHelper.floor_double(this.posY - 0.2F - this.yOffset);
-                int blockZ = MathHelper.floor_double(this.posZ);
-                int blockID = this.world.getBlockId(blockX, blockY, blockZ);
-                if (this.world.getBlockId(blockX, blockY - 1, blockZ) == BlockList.fence.id || this.world.getBlock(blockX, blockY - 1, blockZ) instanceof Wall) {
-                    blockID = this.world.getBlockId(blockX, blockY - 1, blockZ);
-                }
-
-                if (this.distance > this.nextStep && blockID > 0) {
-                    this.nextStep++;
-                    this.playStepSound();
-                    BlockList.blocks[blockID].onEntityWalking(this.world, blockX, blockY, blockZ, this);
-                }
-
-                this.walkOnBlock();
-            }
+            this.updateFootstep(oldX, oldY);
 
             this.colHeight *= 0.4F;
             if (this.world.containsFire(this.boundingBox) && !this.isRiding()) {
@@ -594,6 +577,38 @@ public abstract class Entity {
     }
 
     public void walkOnBlock() {
+    }
+
+    public boolean isSneaking() {
+        return this.sneaking;
+    }
+
+    public void setSneaking(boolean flag) {
+        this.sneaking = flag;
+    }
+
+    public void updateFootstep(double dx, double dz) {
+        if (this.produceFootsteps && !this.sneaking && !this.crawling && !this.flying && !this.gliding && this.onGround && !this.isGliding() && !this.isRiding() && !this.isInWater()) {
+            double horizDist = MathHelper.sqrt_double(dx * dx + dz * dz);
+            if (horizDist > 0.0 && horizDist < 1.0) {
+                this.distance = (float)(this.distance + horizDist * 0.6);
+                int blockX = MathHelper.floor_double(this.posX);
+                int blockY = MathHelper.floor_double(this.posY - 0.2F - this.yOffset);
+                int blockZ = MathHelper.floor_double(this.posZ);
+                int blockID = this.world.getBlockId(blockX, blockY, blockZ);
+                if (this.world.getBlockId(blockX, blockY - 1, blockZ) == BlockList.fence.id || this.world.getBlock(blockX, blockY - 1, blockZ) instanceof Wall) {
+                    blockID = this.world.getBlockId(blockX, blockY - 1, blockZ);
+                }
+
+                if (this.distance > this.nextStep && blockID > 0) {
+                    this.nextStep = (int)this.distance + 1;
+                    this.playStepSound();
+                    BlockList.blocks[blockID].onEntityWalking(this.world, blockX, blockY, blockZ, this);
+                }
+
+                this.walkOnBlock();
+            }
+        }
     }
 
     public void playStepSound() {
