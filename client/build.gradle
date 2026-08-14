@@ -54,7 +54,9 @@ tasks.register('runClient', JavaExec) {
     }
 
     // The game treats user.dir as its .minecraft folder (minecraft.useAppData=false).
-    workingDir = rootProject.file('run/client')
+    // Override with mcGameDir so multiple clients can run side by side without
+    // fighting over the same logs/*.lck file and options.properties.
+    workingDir = rootProject.file(project.findProperty('mcGameDir') ?: 'run/client')
 
     jvmArgs = [
         "-Djava.library.path=${nativesDir.get().asFile}",
