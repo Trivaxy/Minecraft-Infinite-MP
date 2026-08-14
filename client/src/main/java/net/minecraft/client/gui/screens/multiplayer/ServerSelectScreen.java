@@ -242,7 +242,7 @@ public class ServerSelectScreen extends GuiScreen {
         if (this.serverList.isEmpty()) {
             this.mc
                 .fontRenderer
-                .drawStringWithShadow(Translator.getInstance().translateKey("multiplayer.no"), this.width / 2 - 75, this.height / 2 - 20, 16733525);
+                .drawStringWithShadow(Translator.getInstance().translateKey("multiplayer.no"), this.width / 2 - 100 , this.height / 2 - 20, 16776960);
         }
 
         super.drawScreen(mouseX, mouseY, partialTicks);
