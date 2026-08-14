@@ -80,7 +80,7 @@ gui.credits=Not associated with Mojang or Microsoft
 
 misc.unknown=Unknown
 
-multiplayer.no=Multiplayer is not supported
+multiplayer.no=Multiplayer is a heavy work-in-progress
 
 menu.singleplayer=Singleplayer
 menu.multiplayer=Multiplayer
