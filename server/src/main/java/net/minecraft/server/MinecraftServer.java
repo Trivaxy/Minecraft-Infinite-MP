@@ -119,17 +119,19 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
         }
 
         logger.info("Loading properties");
-        this.properties = new PropertiesConfig(new File("server.properties"), "Minecraft server properties");
+        File propertiesFile = new File("server.properties");
+        boolean freshInstall = !propertiesFile.exists();
+        this.properties = new PropertiesConfig(propertiesFile, "Minecraft server properties");
         this.serverName = this.properties.get("server-name", "An Infdev+ Server");
         this.motd = this.properties.get("motd", "Yup... still an infdev+ server");
         this.quitOnException = this.properties.get("quit-server-on-exception", false);
         this.spawnProtectionRadius = this.properties.get("spawn-protection-radius", -1);
         this.autosaveinterval = this.properties.get("autosave-interval-ticks", 256);
         String string2 = this.properties.get("server-ip", "");
-        // Defaults to false: the session.minecraft.net endpoints this build authenticates
-        // against are long dead, so online-mode=true can never succeed. Kept as a working
-        // config switch so it can be rewired to modern auth endpoints later.
-        this.onlineMode = this.properties.get("online-mode", false);
+        this.onlineMode = this.properties.get("online-mode", true);
+        if (freshInstall) {
+            this.properties.set("online-mode", this.onlineMode);
+        }
         this.spawnPeacefulMobs = this.properties.get("spawn-animals", true);
         this.pvpOn = this.properties.get("pvp", true);
         this.allowFlight = this.properties.get("allow-flight", false);

@@ -2,6 +2,8 @@ dependencies {
     // The shared game. `api` so the smoketest source set - which speaks the real protocol
     // using core's packet classes - sees them transitively.
     api project(':core')
+
+    implementation project(':client')
 }
 
 tasks.register('runServer', JavaExec) {
@@ -29,6 +31,15 @@ tasks.register('runServer', JavaExec) {
 
     doFirst {
         workingDir.mkdirs()
+
+        // dev servers need offline mode or the smoke suite cannot connect; never overrides an
+        // explicit setting
+        def props = file("${workingDir}/server.properties")
+        def text = props.exists() ? props.text : ''
+        if (!(text =~ /(?m)^online-mode\s*=/)) {
+            props << "${text.endsWith('\n') || text.isEmpty() ? '' : '\n'}online-mode=false\n"
+            logger.lifecycle('runServer: wrote online-mode=false into run/server/server.properties')
+        }
     }
 }
 

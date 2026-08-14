@@ -1,12 +1,13 @@
 package net.minecraft.client.network;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -120,6 +121,7 @@ import net.minecraft.network.packet.world.UpdateSectionPacket;
 import net.minecraft.network.packet.world.UpdateTimePacket;
 import net.minecraft.network.packet.world.WorldEventPacket;
 import net.minecraft.util.math.MathHelper;
+import org.json.JSONObject;
 
 public class ClientHandler extends NetworkHandler {
     private Minecraft mc;
@@ -534,28 +536,41 @@ public class ClientHandler extends NetworkHandler {
     public void handleHandshake(HandshakePacket packet) {
         if (packet.username.equals("-")) {
             this.sendPacket(new LoginPacket(this.mc.session.username, SharedConstants.PROTOCOL_VERSION));
+        } else if (!this.mc.session.canAuthenticate()) {
+            this.connection
+                .networkShutdown("disconnect.loginFailedInfo", "This server is in online mode. Launch from a launcher signed in to a Minecraft account.");
         } else {
             try {
-                URL url = new URL(
-                    "https://session.minecraft.net/game/joinserver.jsp?user="
-                        + this.mc.session.username
-                        + "&sessionId="
-                        + this.mc.session.sessionId
-                        + "&serverId="
-                        + packet.username
-                );
-                BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
-                String msg = reader.readLine();
-                reader.close();
-                if (msg.equalsIgnoreCase("ok")) {
-                    this.sendPacket(new LoginPacket(this.mc.session.username, SharedConstants.PROTOCOL_VERSION));
-                } else {
-                    this.connection.networkShutdown("disconnect.loginFailedInfo", msg);
-                }
+                this.joinServer(packet.username);
+                this.sendPacket(new LoginPacket(this.mc.session.username, SharedConstants.PROTOCOL_VERSION));
             } catch (Exception ex) {
                 ex.printStackTrace();
                 this.connection.networkShutdown("disconnect.genericReason", "Internal client error: " + ex.toString());
             }
+        }
+    }
+
+    private void joinServer(String serverId) throws IOException {
+        JSONObject body = new JSONObject();
+        body.put("accessToken", this.mc.session.accessToken);
+        body.put("selectedProfile", this.mc.session.uuid);
+        body.put("serverId", serverId);
+
+        HttpURLConnection http = (HttpURLConnection)new URL("https://sessionserver.mojang.com/session/minecraft/join").openConnection();
+        http.setRequestMethod("POST");
+        http.setRequestProperty("Content-Type", "application/json");
+        http.setConnectTimeout(15000);
+        http.setReadTimeout(15000);
+        http.setDoOutput(true);
+
+        OutputStream out = http.getOutputStream();
+        out.write(body.toString().getBytes(StandardCharsets.UTF_8));
+        out.close();
+
+        int code = http.getResponseCode();
+        http.disconnect();
+        if (code != 204 && code != 200) {
+            throw new IOException("Mojang rejected the join request (HTTP " + code + ")");
         }
     }
 

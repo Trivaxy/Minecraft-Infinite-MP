@@ -8,9 +8,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -32,6 +34,7 @@ import net.minecraft.network.packet.world.UpdateTimePacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.player.EntityPlayerMP;
 import net.minecraft.server.world.WorldServer;
+import org.json.JSONObject;
 
 public class NetLoginHandler extends NetworkHandler {
     public static Logger logger = Logger.getLogger("Minecraft");
@@ -112,17 +115,7 @@ public class NetLoginHandler extends NetworkHandler {
                     @Override
                     public void run() {
                         try {
-                            String string1 = NetLoginHandler.this.serverId;
-                            URL uRL2 = new URL(
-                                "https://session.minecraft.net/game/checkserver.jsp?user="
-                                    + URLEncoder.encode(packet1Login1.username, "UTF-8")
-                                    + "&serverId="
-                                    + URLEncoder.encode(string1, "UTF-8")
-                            );
-                            BufferedReader bufferedReader3 = new BufferedReader(new InputStreamReader(uRL2.openStream()));
-                            String string4 = bufferedReader3.readLine();
-                            bufferedReader3.close();
-                            if (string4.equals("YES")) {
+                            if (NetLoginHandler.this.hasJoined(packet1Login1.username)) {
                                 NetLoginHandler.this.packet1login = packet1Login1;
                             } else {
                                 NetLoginHandler.this.kickUser("Failed to verify username!");
@@ -135,6 +128,43 @@ public class NetLoginHandler extends NetworkHandler {
                 })
                 .start();
         }
+    }
+
+    // 200 with a profile means Mojang saw them join under our serverId, 204 means they never did
+    private boolean hasJoined(String name) throws IOException {
+        URL url = new URL(
+            "https://sessionserver.mojang.com/session/minecraft/hasJoined?username="
+                + URLEncoder.encode(name, "UTF-8")
+                + "&serverId="
+                + URLEncoder.encode(this.serverId, "UTF-8")
+        );
+        HttpURLConnection http = (HttpURLConnection)url.openConnection();
+        http.setConnectTimeout(15000);
+        http.setReadTimeout(15000);
+
+        if (http.getResponseCode() != 200) {
+            http.disconnect();
+            return false;
+        }
+
+        StringBuilder payload = new StringBuilder();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(http.getInputStream(), StandardCharsets.UTF_8));
+
+        String line;
+        while ((line = reader.readLine()) != null) {
+            payload.append(line);
+        }
+
+        reader.close();
+        http.disconnect();
+
+        JSONObject profile = new JSONObject(payload.toString());
+        if (!profile.optString("name", "").equalsIgnoreCase(name)) {
+            return false;
+        }
+
+        logger.info("Authenticated " + profile.optString("name") + " (" + profile.optString("id") + ")");
+        return true;
     }
 
     public void doLogin(LoginPacket packet1Login1) {

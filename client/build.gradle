@@ -100,3 +100,13 @@ tasks.register('jarmod', Jar) {
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+
+tasks.register('prismExport', Zip) {
+    group = 'minecraft'
+    description = 'Builds a Prism/MultiMC instance export around the jarmod'
+    archiveFileName = 'MinecraftInfinite-Prism.zip'
+    destinationDirectory = layout.buildDirectory.dir('dist')
+
+    from rootProject.file('dist/prism')
+    from(tasks.named('jarmod')) { into 'jarmods' }
+}

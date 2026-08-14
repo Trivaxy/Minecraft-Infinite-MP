@@ -1,0 +1,13 @@
+{
+    "formatVersion": 1,
+    "jarMods": [
+        {
+            "MMC-displayname": "InfdevPlus-Client",
+            "MMC-filename": "InfdevPlus-Client.jar",
+            "MMC-hint": "local",
+            "name": "org.multimc.jarmods:InfdevPlus-Client:1"
+        }
+    ],
+    "name": "Infdev+ Client",
+    "uid": "custom.jarmod.infdev-plus"
+}

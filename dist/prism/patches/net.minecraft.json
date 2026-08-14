@@ -1,0 +1,36 @@
+{
+    "+traits": [
+        "texturepacks"
+    ],
+    "assetIndex": {
+        "id": "empty",
+        "sha1": "5a48d9fc5877b925eaa65ddef68cb5dbaee9df64",
+        "size": 15,
+        "totalSize": 0,
+        "url": "https://files.betacraft.uk/launcher/v2/assets/indexes/empty.json"
+    },
+    "formatVersion": 1,
+    "mainJar": {
+        "downloads": {
+            "artifact": {
+                "sha1": "e5838277b3bb193e58408713f1fc6e005c5f3c0c",
+                "size": 749244,
+                "url": "https://launcher.mojang.com/v1/objects/e5838277b3bb193e58408713f1fc6e005c5f3c0c/client.jar"
+            }
+        },
+        "name": "com.mojang:minecraft:a1.0.4:client"
+    },
+    "mainClass": "net.minecraft.client.Minecraft",
+    "name": "Minecraft",
+    "releaseTime": "2010-07-09T00:00:00+02:00",
+    "requires": [
+        {
+            "suggests": "2.9.4-nightly-20150209",
+            "uid": "org.lwjgl"
+        }
+    ],
+    "type": "old_alpha",
+    "uid": "net.minecraft",
+    "version": "",
+    "minecraftArguments": "${auth_player_name} ${auth_session}"
+}
