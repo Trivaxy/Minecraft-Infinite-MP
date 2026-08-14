@@ -229,7 +229,7 @@ public class TextureLoader {
             data.complete = true;
         }
 
-        return data != null && data.name >= 0 ? data.name : this.getTexture(name);
+        return data != null && data.name >= 0 ? data.name : (name == null ? -1 : this.getTexture(name));
     }
 
     public TextureLoader.ImageData obtainData(String name, TextureLoader.ImageDownloader downloader, boolean isSkin) {
