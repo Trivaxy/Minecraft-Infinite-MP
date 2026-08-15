@@ -7,3 +7,35 @@
 //
 // Everything this module needs - the Java 8 toolchain, the repositories, and
 // libs/vendor-common.jar - comes from the `subprojects` block in the root build.gradle.
+
+// nightly versioning bc the build date is the version
+def generatedVersionDir = layout.buildDirectory.dir('generated/sources/version')
+
+tasks.register('generateBuildVersion') {
+    group = 'build'
+    description = 'Writes BuildVersion.java stamped with the current date'
+
+    outputs.dir(generatedVersionDir)
+    outputs.upToDateWhen { false }
+
+    doLast {
+        def date = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern('ddMMyy'))
+        def out = generatedVersionDir.get().file('net/minecraft/BuildVersion.java').asFile
+        out.parentFile.mkdirs()
+        out.text = """package net.minecraft;
+
+public final class BuildVersion {
+    public static final String DATE = "${date}";
+
+    private BuildVersion() {
+    }
+}
+"""
+    }
+}
+
+sourceSets.main.java.srcDir generatedVersionDir
+
+tasks.named('compileJava') {
+    dependsOn 'generateBuildVersion'
+}

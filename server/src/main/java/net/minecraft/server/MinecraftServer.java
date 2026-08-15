@@ -112,7 +112,7 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
         };
         thred.setDaemon(true);
         thred.start();
-        logger.info("Starting minecraft server version Minecraft Infinite v1.0");
+        logger.info("Starting minecraft server version " + SharedConstants.FULL_VER_STRING);
         if (Runtime.getRuntime().maxMemory() / 1024L / 1024L < 512L) {
             logger.warning("**** NOT ENOUGH RAM!");
             logger.warning("To start the server with more ram, launch it as \"java -Xmx1024M -Xms1024M -jar minecraft_server.jar\"");

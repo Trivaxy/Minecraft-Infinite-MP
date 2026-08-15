@@ -13,9 +13,9 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import net.minecraft.SharedConstants;
 
 public class BanList {
     private final BanList.LowerStringMap<BanEntry> theBanList = new BanList.LowerStringMap<>();
@@ -97,7 +97,7 @@ public class BanList {
         try {
             PrintWriter var2 = new PrintWriter(new FileWriter(this.fileName, false));
             if (par1) {
-                var2.println("# Updated " + new SimpleDateFormat().format(new Date()) + " by " + "Minecraft Infinite v1.0");
+                var2.println("# Updated " + new SimpleDateFormat().format(new Date()) + " by " + SharedConstants.FULL_VER_STRING);
                 var2.println("# victim name | ban date | banned by | banned until | reason");
                 var2.println();
             }

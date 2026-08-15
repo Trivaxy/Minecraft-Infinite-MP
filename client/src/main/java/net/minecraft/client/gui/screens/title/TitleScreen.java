@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Random;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.gui.button.Button;
 import net.minecraft.client.gui.screens.GuiScreen;
 import net.minecraft.client.gui.screens.multiplayer.ServerSelectScreen;
@@ -287,7 +288,7 @@ public class TitleScreen extends GuiScreen {
         GL11.glPopMatrix();
         String disclaimer = Translator.getInstance().translateKey("gui.credits");
         this.drawString(this.fontRenderer, disclaimer, this.width - this.fontRenderer.getStringWidth(disclaimer) - 2, this.height - 10, 16777215);
-        this.drawString(this.fontRenderer, "Minecraft Infinite v1.0", 2, this.height - 10, 16777215);
+        this.drawString(this.fontRenderer, SharedConstants.FULL_VER_STRING, 2, this.height - 10, 16777215);
         this.drawCenteredString(this.fontRenderer, resource, this.width / 2, 10, 16777215);
         super.drawScreen(x, y, tickDelta);
     }

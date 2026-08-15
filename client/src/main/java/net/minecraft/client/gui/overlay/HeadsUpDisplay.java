@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import net.minecraft.Profiler;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gamemode.CreativeMode;
 import net.minecraft.client.gui.GuiComponent;
@@ -165,7 +166,7 @@ public class HeadsUpDisplay extends GuiComponent {
     }
 
     private void renderDebugText(Font font, float tickDelta, int width, int height) {
-        font.drawStringWithBackground("Minecraft Infinite v1.0", 2, 2, 16777215);
+        font.drawStringWithBackground(SharedConstants.FULL_VER_STRING, 2, 2, 16777215);
         font.drawStringWithBackground(this.mc.debugString, 2, 12, 16777215);
         font.drawStringWithBackground(this.mc.debugInfoRenders(), 2, 32, 16777215);
         font.drawStringWithBackground(this.mc.debugInfoEntities(), 2, 42, 16777215);

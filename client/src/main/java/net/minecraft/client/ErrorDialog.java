@@ -27,6 +27,7 @@ import javax.swing.UIManager;
 import javax.swing.border.BevelBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
+import net.minecraft.SharedConstants;
 import net.minecraft.util.logging.Logging;
 import org.lwjgl.Sys;
 
@@ -63,7 +64,7 @@ public class ErrorDialog extends JFrame {
         stacktrace = stacktrace + "---- S T A C K   T R A C E ----\n";
         stacktrace = stacktrace + this.throwableAsString(exception) + "\n";
         stacktrace = stacktrace + "---- S Y S T E M   I N F O ----\n";
-        stacktrace = stacktrace + "Version: Minecraft Infinite v1.0\n";
+        stacktrace = stacktrace + "Version: " + SharedConstants.FULL_VER_STRING + "\n";
         stacktrace = stacktrace + "OS: " + System.getProperty("os.name") + " " + System.getProperty("os.arch") + "\n";
 
         try {

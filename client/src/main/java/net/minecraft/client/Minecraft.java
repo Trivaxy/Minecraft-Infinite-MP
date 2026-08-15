@@ -192,7 +192,7 @@ public class Minecraft implements Runnable, CommandAccessor {
             Display.setDisplayMode(new DisplayMode(this.displayWidth, this.displayHeight));
         }
 
-        Display.setTitle("Minecraft Infinite v1.0");
+        Display.setTitle(SharedConstants.FULL_VER_STRING);
 
         try {
             Display.setIcon(SharedConstants.loadDisplayIcons(Minecraft.class.getResource("/icon32.png"), Minecraft.class.getResource("/icon16.png")));
@@ -810,7 +810,7 @@ public class Minecraft implements Runnable, CommandAccessor {
             this.statistics = new StatWriter(((SaveHandlerBase)handler).saveDirectory);
             World world = new World(handler, worldname, seed, settings);
             world.settings.saveFolder = filename;
-            world.settings.setVersion("v1.0");
+            world.settings.setVersion(SharedConstants.VERSION_STRING);
             String str = "gui.loadlvl";
             if (world.newlyGenerated) {
                 str = "gui.generatelvl";

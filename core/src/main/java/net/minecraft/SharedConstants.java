@@ -14,9 +14,9 @@ import java.util.List;
 import javax.imageio.ImageIO;
 
 public class SharedConstants {
-    public static final String VERSION_STRING = "v1.0";
+    public static final String VERSION_STRING = "1.0-" + BuildVersion.DATE;
     public static final String PREFIX = "Minecraft Infinite";
-    public static final String FULL_VER_STRING = "Minecraft Infinite v1.0";
+    public static final String FULL_VER_STRING = PREFIX + " " + VERSION_STRING;
     public static final int PROTOCOL_VERSION = 20260814;
     public static final char COLOR_CODE = '§';
     public static final String COLOR_CODE_STR = "§";

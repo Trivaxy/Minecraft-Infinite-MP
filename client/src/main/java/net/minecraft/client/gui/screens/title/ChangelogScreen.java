@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiList;
 import net.minecraft.client.gui.button.Button;
@@ -55,7 +56,11 @@ public class ChangelogScreen extends GuiScreen {
     public void drawScreen(int x, int y, float tickDelta) {
         this.changelog.draw(x, y, tickDelta);
         this.drawCenteredString(
-            this.fontRenderer, "Minecraft Infinite v1.0 " + Translator.getInstance().translateKey("menu.changelog"), this.width / 2, 12, 16777215
+            this.fontRenderer,
+            SharedConstants.FULL_VER_STRING + " " + Translator.getInstance().translateKey("menu.changelog"),
+            this.width / 2,
+            12,
+            16777215
         );
         super.drawScreen(x, y, tickDelta);
     }
