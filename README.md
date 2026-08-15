@@ -20,7 +20,7 @@ Lastly, I won't be adding any new content, mechanics or features that aren't nec
 
 ## Installing and running
 
-Follow the instructions [here](https://github.com/VesuviusVenox/Minecraft-Infinite), just be sure to download the MultiMC/Prism instance from this repo's releases instead. The dedicated server jar is also available, which you'll need to host.
+Follow the instructions [here](https://github.com/VesuviusVenox/Minecraft-Infinite), just be sure to download the MultiMC/Prism instance from [this repo's releases](https://github.com/Trivaxy/Minecraft-Infinite-MP/releases) instead. The dedicated server jar is also available, which you'll need to host.
 
 As for how to host, search up port forwarding or rely on something like Radmin/ZeroTier.
 
