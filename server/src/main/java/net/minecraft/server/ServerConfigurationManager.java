@@ -24,6 +24,7 @@ import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.player.PlayerInfoPacket;
 import net.minecraft.network.packet.world.RespawnPacket;
 import net.minecraft.network.packet.world.UpdateTimePacket;
+import net.minecraft.network.packet.world.WeatherPacket;
 import net.minecraft.network.packet.world.WorldEventPacket;
 import net.minecraft.server.network.NetLoginHandler;
 import net.minecraft.server.player.EntityPlayerMP;
@@ -514,6 +515,8 @@ public class ServerConfigurationManager implements ConfigManager {
 
     public void updateWorldTimeForPlayers(EntityPlayerMP entityPlayerMP1, WorldServer worldServer2) {
         entityPlayerMP1.playerNetServerHandler.sendPacket(new UpdateTimePacket(worldServer2.getWorldTime()));
+        entityPlayerMP1.playerNetServerHandler
+            .sendPacket(new WeatherPacket(worldServer2.getSettings().getIsRaining(), worldServer2.getSettings().getIsThundering()));
     }
 
     public void updateCrafting(EntityPlayerMP entityPlayerMP1) {

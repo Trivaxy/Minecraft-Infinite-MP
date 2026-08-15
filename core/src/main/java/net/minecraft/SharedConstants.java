@@ -17,7 +17,7 @@ public class SharedConstants {
     public static final String VERSION_STRING = "1.0-" + BuildVersion.DATE;
     public static final String PREFIX = "Minecraft Infinite";
     public static final String FULL_VER_STRING = PREFIX + " " + VERSION_STRING;
-    public static final int PROTOCOL_VERSION = 20260814;
+    public static final int PROTOCOL_VERSION = 20260815;
     public static final char COLOR_CODE = '§';
     public static final String COLOR_CODE_STR = "§";
     public static final String COLOR_CHARS = "0123456789abcdefgh";

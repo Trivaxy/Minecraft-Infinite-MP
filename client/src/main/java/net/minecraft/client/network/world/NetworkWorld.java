@@ -41,6 +41,7 @@ public class NetworkWorld extends World {
     @Override
     public void tick() {
         this.setTime(this.getWorldTime() + 1L);
+        this.updateWeatherStrength();
         int skyLight = this.getSkyBrightness(1.0F);
         if (skyLight != this.skylightSubtracted) {
             this.skylightSubtracted = skyLight;

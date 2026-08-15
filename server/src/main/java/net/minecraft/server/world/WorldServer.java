@@ -26,11 +26,27 @@ public class WorldServer extends World {
     public boolean levelSaving;
     private MinecraftServer mcServer;
     private Int2ObjectOpenHashMap<Entity> hashMap = new Int2ObjectOpenHashMap<>();
+    private boolean sentRaining;
+    private boolean sentThundering;
 
     public WorldServer(MinecraftServer minecraftServer1, SaveHandler var2, String string3, int i4, long j5, WorldSettings ws) {
         super(var2, string3, j5, ws, Dimension.getDimension(i4));
         this.mcServer = minecraftServer1;
         this.saveInterval = this.mcServer.autosaveinterval;
+        this.sentRaining = this.settings.getIsRaining();
+        this.sentThundering = this.settings.getIsThundering();
+    }
+
+    public boolean weatherChanged() {
+        boolean raining = this.settings.getIsRaining();
+        boolean thundering = this.settings.getIsThundering();
+        if (raining == this.sentRaining && thundering == this.sentThundering) {
+            return false;
+        }
+
+        this.sentRaining = raining;
+        this.sentThundering = thundering;
+        return true;
     }
 
     @Override

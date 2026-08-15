@@ -25,6 +25,7 @@ import net.minecraft.game.world.WorldType;
 import net.minecraft.game.world.chunk.loader.handler.AnvilSaveHandler;
 import net.minecraft.game.world.util.Position;
 import net.minecraft.network.packet.world.UpdateTimePacket;
+import net.minecraft.network.packet.world.WeatherPacket;
 import net.minecraft.server.commands.CommandUseTimer;
 import net.minecraft.server.commands.ServerCommandFactory;
 import net.minecraft.server.entity.EntityTracker;
@@ -415,6 +416,12 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
 
             worldServer7.tickEntities();
             worldServer7.tick();
+            if (worldServer7.weatherChanged()) {
+                this.configManager
+                    .sendPacketToAllDimension(
+                        new WeatherPacket(worldServer7.getSettings().getIsRaining(), worldServer7.getSettings().getIsThundering()), i6
+                    );
+            }
         }
 
         // Every world advances its own clock, so without this Hell drifts away from the

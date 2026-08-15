@@ -2529,6 +2529,10 @@ public class World implements WorldSource {
             }
         }
 
+        this.updateWeatherStrength();
+    }
+
+    public void updateWeatherStrength() {
         this.prevRainingStrength = this.rainingStrength;
         if (this.settings.getIsRaining()) {
             this.rainingStrength = (float)(this.rainingStrength + 0.01);

@@ -119,6 +119,7 @@ import net.minecraft.network.packet.world.UpdateBlockPacket;
 import net.minecraft.network.packet.world.UpdateChunkPacket;
 import net.minecraft.network.packet.world.UpdateSectionPacket;
 import net.minecraft.network.packet.world.UpdateTimePacket;
+import net.minecraft.network.packet.world.WeatherPacket;
 import net.minecraft.network.packet.world.WorldEventPacket;
 import net.minecraft.util.math.MathHelper;
 import org.json.JSONObject;
@@ -604,6 +605,12 @@ public class ClientHandler extends NetworkHandler {
     @Override
     public void handleUpdateTime(UpdateTimePacket packet) {
         this.mc.world.setTime(packet.time);
+    }
+
+    @Override
+    public void handleWeather(WeatherPacket packet) {
+        this.mc.world.getSettings().setIsRaining(packet.raining);
+        this.mc.world.getSettings().setIsThundering(packet.thundering);
     }
 
     @Override

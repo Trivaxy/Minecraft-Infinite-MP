@@ -77,6 +77,7 @@ import net.minecraft.network.packet.world.UpdateBlockPacket;
 import net.minecraft.network.packet.world.UpdateChunkPacket;
 import net.minecraft.network.packet.world.UpdateSectionPacket;
 import net.minecraft.network.packet.world.UpdateTimePacket;
+import net.minecraft.network.packet.world.WeatherPacket;
 import net.minecraft.network.packet.world.WorldEventPacket;
 import net.minecraft.util.logging.LoggingUtils;
 
@@ -242,6 +243,7 @@ public abstract class Packet {
         map(61, Packet.Flow.SERVER_TO_CLIENT, BlockEventPacket.class);
         map(69, Packet.Flow.SERVER_TO_CLIENT, MusicPacket.class);
         map(70, Packet.Flow.SERVER_TO_CLIENT, WorldEventPacket.class);
+        map(71, Packet.Flow.SERVER_TO_CLIENT, WeatherPacket.class);
         map(91, Packet.Flow.BOTH, GeneratorPacket.class);
         map(100, Packet.Flow.SERVER_TO_CLIENT, ContainerOpenPacket.class);
         map(101, Packet.Flow.BOTH, ContainerClosePacket.class);

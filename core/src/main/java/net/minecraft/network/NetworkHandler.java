@@ -62,6 +62,7 @@ import net.minecraft.network.packet.world.UpdateBlockPacket;
 import net.minecraft.network.packet.world.UpdateChunkPacket;
 import net.minecraft.network.packet.world.UpdateSectionPacket;
 import net.minecraft.network.packet.world.UpdateTimePacket;
+import net.minecraft.network.packet.world.WeatherPacket;
 import net.minecraft.network.packet.world.WorldEventPacket;
 
 public abstract class NetworkHandler {
@@ -267,6 +268,10 @@ public abstract class NetworkHandler {
 
     public void handleGameEvent(WorldEventPacket var1) {
         this.registerPacket(var1);
+    }
+
+    public void handleWeather(WeatherPacket packet) {
+        this.registerPacket(packet);
     }
 
     public void handleAttackDirection(AttackDirectionPacket attackedDirection) {
