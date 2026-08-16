@@ -348,6 +348,8 @@ public class EntityPlayerMP extends Player implements ContainerListener {
             this.mcServer
                 .getEntityTracker(this.dimension)
                 .sendPacketToTrackedPlayersAndTrackedEntity(this, new SleepPacket(this, 0, var1, var2, var3));
+            // moves lastPos* onto the bed, feet-first because teleportTo adds the sleeper's yOffset back on
+            this.playerNetServerHandler.teleportTo(this.posX, this.posY - this.yOffset, this.posZ, this.yaw, this.pitch);
         }
 
         return var4;

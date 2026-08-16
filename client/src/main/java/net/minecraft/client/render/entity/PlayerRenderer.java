@@ -514,7 +514,8 @@ public class PlayerRenderer extends MobRenderer<Player> {
 
                 if (!player.sneaking) {
                     if (player.isPlayerSleeping()) {
-                        this.renderLabel(player, label, x, y - 1.5, z, 64);
+                        // vanilla's -1.5 assumes posY is the eye line; a remote player here is anchored at the feet
+                        this.renderLabel(player, label, x, y + 0.6, z, 64);
                     } else {
                         this.renderLabel(player, label, x, y + 2.15, z, 64);
                     }
