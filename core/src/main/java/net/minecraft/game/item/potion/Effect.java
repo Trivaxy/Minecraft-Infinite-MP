@@ -44,6 +44,8 @@ public class Effect {
             if (!(living instanceof Player) || living.health > 1) {
                 living.damageEntity(DamageSource.magic, 1);
             }
+        } else if (this.id == EffectList.wither.id) {
+            living.damageEntity(DamageSource.wither, 1);
         } else if (this.id == EffectList.hunger.id && living instanceof Player) {
             ((Player)living).addExhaustion(0.025F * (amplifier + 1));
         } else if (this.id == EffectList.heal.id) {
@@ -72,7 +74,17 @@ public class Effect {
     }
 
     public boolean isReady(int i, int j) {
-        int i3 = 25 >> j;
+        int i3;
+        if (this.id == EffectList.regeneration.id) {
+            i3 = 50 >> j;
+        } else if (this.id == EffectList.poison.id) {
+            i3 = 25 >> j;
+        } else if (this.id == EffectList.wither.id) {
+            i3 = 40 >> j;
+        } else {
+            return this.id == EffectList.hunger.id;
+        }
+
         return i3 > 0 ? i % i3 == 0 : true;
     }
 

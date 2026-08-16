@@ -19,6 +19,7 @@ public class DamageSource {
     public static final DamageSource generic = new DamageSource("generic");
     public static final DamageSource explosion = new DamageSource("explosion");
     public static final DamageSource magic = new DamageSource("magic").bypassArmor();
+    public static final DamageSource wither = new DamageSource("wither").bypassArmor();
     public String damageType;
     private boolean isBlockable = false;
     private boolean creativeDamage = false;

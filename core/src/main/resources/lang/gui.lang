@@ -243,6 +243,7 @@ death.outOfWorld=%s fell out of the world.
 death.generic=%s died.
 death.explosion=%s was exploded into millions of tiny pieces.
 death.magic=%s died to magic.
+death.wither=%s withered away.
 death.mob=%s was killed by %s.
 death.player=%s was killed by %s.
 death.arrow=%s was shot to death by %s.
