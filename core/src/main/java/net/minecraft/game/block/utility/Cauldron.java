@@ -102,7 +102,7 @@ public class Cauldron extends ContainerBlock {
                     }
 
                     world.markForUpdate(x, y, z);
-                    world.playBlockSound(x, y, z, "random.emptyBucket", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 1.2F));
+                    world.playBlockSound(player, x, y, z, "random.emptyBucket", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 1.2F));
                 }
 
                 return true;

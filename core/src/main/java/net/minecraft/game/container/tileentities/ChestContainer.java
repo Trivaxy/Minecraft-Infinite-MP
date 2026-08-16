@@ -12,6 +12,7 @@ public class ChestContainer extends Container {
 
     public ChestContainer(Inventory playerInventory, Inventory chestContents) {
         this.inventory = chestContents;
+        chestContents.open();
         this.size = chestContents.getSize() / 9;
         int yOffset = (this.size - 4) * 18;
 
@@ -60,5 +61,11 @@ public class ChestContainer extends Container {
         }
 
         return stack;
+    }
+
+    @Override
+    public void onClose(Player player) {
+        super.onClose(player);
+        this.inventory.close();
     }
 }

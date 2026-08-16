@@ -113,6 +113,7 @@ import net.minecraft.network.packet.world.MobSpawnerPacket;
 import net.minecraft.network.packet.world.PrepChunkPacket;
 import net.minecraft.network.packet.world.RemoveEntityPacket;
 import net.minecraft.network.packet.world.RespawnPacket;
+import net.minecraft.network.packet.world.SoundPacket;
 import net.minecraft.network.packet.world.SpawnPacket;
 import net.minecraft.network.packet.world.TeleportPacket;
 import net.minecraft.network.packet.world.UpdateBlockPacket;
@@ -819,6 +820,19 @@ public class ClientHandler extends NetworkHandler {
     @Override
     public void handleBlockEvent(BlockEventPacket packet) {
         this.mc.world.playEffect(packet.sfx, packet.x, packet.y, packet.z, packet.data);
+    }
+
+    @Override
+    public void handleSound(SoundPacket packet) {
+        if (packet.soundName != null && !packet.soundName.isEmpty()) {
+            if (packet.soundType == SoundPacket.TYPE_BLOCK) {
+                this.mc.sndManager.playBlockSound(packet.soundName, (float)packet.x, (float)packet.y, (float)packet.z, packet.volume, packet.pitch);
+            } else if (packet.soundType == SoundPacket.TYPE_MOB) {
+                this.mc.sndManager.playMobSound(packet.soundName, -1, (float)packet.x, (float)packet.y, (float)packet.z, packet.volume, packet.pitch);
+            } else {
+                this.mc.sndManager.playSound(packet.soundName, (float)packet.x, (float)packet.y, (float)packet.z, packet.volume, packet.pitch);
+            }
+        }
     }
 
     @Override

@@ -56,6 +56,7 @@ import net.minecraft.network.packet.world.MobSpawnerPacket;
 import net.minecraft.network.packet.world.PrepChunkPacket;
 import net.minecraft.network.packet.world.RemoveEntityPacket;
 import net.minecraft.network.packet.world.RespawnPacket;
+import net.minecraft.network.packet.world.SoundPacket;
 import net.minecraft.network.packet.world.SpawnPacket;
 import net.minecraft.network.packet.world.TeleportPacket;
 import net.minecraft.network.packet.world.UpdateBlockPacket;
@@ -323,6 +324,10 @@ public abstract class NetworkHandler {
     }
 
     public void handleServerIcon(ServerIconPacket packet) {
+        this.registerPacket(packet);
+    }
+
+    public void handleSound(SoundPacket packet) {
         this.registerPacket(packet);
     }
 }

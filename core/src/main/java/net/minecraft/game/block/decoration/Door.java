@@ -237,9 +237,9 @@ public class Door extends Block {
             world.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, meta ^ 4);
             world.markBlocksDirty(xCoord, yCoord - 1, zCoord, xCoord, yCoord, zCoord);
             if (meta < 4) {
-                world.playBlockSound(xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, "random.door_open", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
+                world.playBlockSound(player, xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, "random.door_open", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
             } else {
-                world.playBlockSound(xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, "random.door_close", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
+                world.playBlockSound(player, xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, "random.door_close", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
             }
 
             player.addStat(StatList.doorUse, 1);
@@ -367,5 +367,10 @@ public class Door extends Block {
 
     public boolean isOpen(WorldSource world, int x, int y, int z) {
         return (this.getFullMetadata(world, x, y, z) & 4) != 0;
+    }
+
+    @Override
+    public int getMaxMeta() {
+        return 15;
     }
 }

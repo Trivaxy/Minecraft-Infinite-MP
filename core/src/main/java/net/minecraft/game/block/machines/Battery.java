@@ -124,4 +124,9 @@ public class Battery extends Block {
     public int dropMeta(int id) {
         return id;
     }
+
+    @Override
+    public int getMaxMeta() {
+        return 255;
+    }
 }

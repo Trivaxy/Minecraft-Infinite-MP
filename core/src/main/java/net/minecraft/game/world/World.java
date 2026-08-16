@@ -838,9 +838,13 @@ public class World implements WorldSource {
     }
 
     public void playBlockSound(double x, double y, double z, String snd, float vol, float pitch) {
+        this.playBlockSound(null, x, y, z, snd, vol, pitch);
+    }
+
+    public void playBlockSound(Player player, double x, double y, double z, String snd, float vol, float pitch) {
         try {
             for (WorldListener worldAccess : this.worldListeners) {
-                worldAccess.playBlockSound(snd, x, y, z, vol, pitch);
+                worldAccess.playBlockSound(player, snd, x, y, z, vol, pitch);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -848,9 +852,13 @@ public class World implements WorldSource {
     }
 
     public void playSoundEffect(double xCoord, double yCoord, double zCoord, String soundName, float volume, float pitch) {
+        this.playSoundEffect(null, xCoord, yCoord, zCoord, soundName, volume, pitch);
+    }
+
+    public void playSoundEffect(Player player, double xCoord, double yCoord, double zCoord, String soundName, float volume, float pitch) {
         try {
             for (WorldListener worldAccess : this.worldListeners) {
-                worldAccess.playSound(soundName, xCoord, yCoord, zCoord, volume, pitch);
+                worldAccess.playSound(player, soundName, xCoord, yCoord, zCoord, volume, pitch);
             }
         } catch (Exception ex) {
             ex.printStackTrace();

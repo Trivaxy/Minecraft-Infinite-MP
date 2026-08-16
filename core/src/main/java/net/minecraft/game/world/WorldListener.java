@@ -16,6 +16,10 @@ public interface WorldListener {
 
     void playSound(String var1, double var2, double var4, double var6, float var8, float var9);
 
+    default void playSound(Player player, String soundName, double x, double y, double z, float volume, float pitch) {
+        this.playSound(soundName, x, y, z, volume, pitch);
+    }
+
     void spawnParticle(ParticleType var1, double var2, double var4, double var6, double var8, double var10, double var12);
 
     void obtainEntitySkin(Entity var1);
@@ -27,6 +31,10 @@ public interface WorldListener {
     void playMobSound(String var1, int var2, double var3, double var5, double var7, float var9, float var10);
 
     void playBlockSound(String var1, double var2, double var4, double var6, float var8, float var9);
+
+    default void playBlockSound(Player player, String soundName, double x, double y, double z, float volume, float pitch) {
+        this.playBlockSound(soundName, x, y, z, volume, pitch);
+    }
 
     void playAmbienceSound(String var1, float var2, float var3);
 

@@ -105,9 +105,9 @@ public class FenceGate extends Block {
         }
 
         if (isOpen(metadata)) {
-            world.playBlockSound(x + 0.5F, y + 0.5F, z + 0.5F, "random.door_open", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
+            world.playBlockSound(player, x + 0.5F, y + 0.5F, z + 0.5F, "random.door_open", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
         } else {
-            world.playBlockSound(x + 0.5F, y + 0.5F, z + 0.5F, "random.door_close", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
+            world.playBlockSound(player, x + 0.5F, y + 0.5F, z + 0.5F, "random.door_close", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
         }
 
         return true;

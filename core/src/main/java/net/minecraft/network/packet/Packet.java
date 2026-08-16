@@ -71,6 +71,7 @@ import net.minecraft.network.packet.world.MobSpawnerPacket;
 import net.minecraft.network.packet.world.PrepChunkPacket;
 import net.minecraft.network.packet.world.RemoveEntityPacket;
 import net.minecraft.network.packet.world.RespawnPacket;
+import net.minecraft.network.packet.world.SoundPacket;
 import net.minecraft.network.packet.world.SpawnPacket;
 import net.minecraft.network.packet.world.TeleportPacket;
 import net.minecraft.network.packet.world.UpdateBlockPacket;
@@ -241,6 +242,7 @@ public abstract class Packet {
         map(54, Packet.Flow.SERVER_TO_CLIENT, PlayNotePacket.class);
         map(60, Packet.Flow.SERVER_TO_CLIENT, ExplosionPacket.class);
         map(61, Packet.Flow.SERVER_TO_CLIENT, BlockEventPacket.class);
+        map(62, Packet.Flow.SERVER_TO_CLIENT, SoundPacket.class);
         map(69, Packet.Flow.SERVER_TO_CLIENT, MusicPacket.class);
         map(70, Packet.Flow.SERVER_TO_CLIENT, WorldEventPacket.class);
         map(71, Packet.Flow.SERVER_TO_CLIENT, WeatherPacket.class);

@@ -6,6 +6,7 @@ import net.minecraft.game.entity.Entity;
 import net.minecraft.game.entity.player.Player;
 import net.minecraft.game.world.WorldListener;
 import net.minecraft.network.packet.world.BlockEventPacket;
+import net.minecraft.network.packet.world.SoundPacket;
 import net.minecraft.network.packet.misc.MusicPacket;
 import net.minecraft.server.MinecraftServer;
 
@@ -35,6 +36,14 @@ public class WorldManager implements WorldListener {
 
     @Override
     public void playSound(String string1, double d2, double d4, double d6, float f8, float f9) {
+        this.playSound(null, string1, d2, d4, d6, f8, f9);
+    }
+
+    @Override
+    public void playSound(Player player, String string1, double d2, double d4, double d6, float f8, float f9) {
+        double radius = f8 > 1.0F ? (16.0F * f8) : 16.0;
+        this.mcServer.configManager.sendPacketToPlayerCoord(player, d2, d4, d6, radius, this.dimension,
+            new SoundPacket(string1, d2, d4, d6, f8, f9, SoundPacket.TYPE_SOUND));
     }
 
     @Override
@@ -67,10 +76,21 @@ public class WorldManager implements WorldListener {
 
     @Override
     public void playMobSound(String string2, int i, double posX, double f, double posZ, float f3, float f4) {
+        double radius = f3 > 1.0F ? (16.0F * f3) : 16.0;
+        this.mcServer.configManager.sendPacketToPlayerCoord(null, posX, f, posZ, radius, this.dimension,
+            new SoundPacket(string2, posX, f, posZ, f3, f4, SoundPacket.TYPE_MOB));
     }
 
     @Override
     public void playBlockSound(String string2, double posX, double f, double posZ, float f3, float f4) {
+        this.playBlockSound(null, string2, posX, f, posZ, f3, f4);
+    }
+
+    @Override
+    public void playBlockSound(Player player, String string2, double posX, double f, double posZ, float f3, float f4) {
+        double radius = f3 > 1.0F ? (16.0F * f3) : 16.0;
+        this.mcServer.configManager.sendPacketToPlayerCoord(player, posX, f, posZ, radius, this.dimension,
+            new SoundPacket(string2, posX, f, posZ, f3, f4, SoundPacket.TYPE_BLOCK));
     }
 
     @Override

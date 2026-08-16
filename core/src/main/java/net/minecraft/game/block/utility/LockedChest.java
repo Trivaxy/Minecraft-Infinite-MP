@@ -103,7 +103,7 @@ public class LockedChest extends ContainerBlock {
             }
         } else {
             if (player.getCurrentEquippedItem() == null || player.getCurrentEquippedItem().getItem() != ItemList.key) {
-                world.playBlockSound(xCoord, yCoord, zCoord, "random.locked", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
+                world.playBlockSound(player, xCoord, yCoord, zCoord, "random.locked", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
             }
 
             return false;
