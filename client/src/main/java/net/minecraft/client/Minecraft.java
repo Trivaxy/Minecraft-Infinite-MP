@@ -934,6 +934,7 @@ public class Minecraft implements Runnable, CommandAccessor {
         this.changeWorld(world, message);
         this.player.clone(player, true);
         this.player.world = world;
+        // todo: enterNether/enterAether/enterVoid score is client-only — dimension transfer isn't server-authoritative yet
         switch (dimension) {
             case 1:
                 this.player.triggerAchievement(AchievementList.enterNether);

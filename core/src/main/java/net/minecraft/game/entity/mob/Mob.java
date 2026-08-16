@@ -584,11 +584,7 @@ public abstract class Mob extends Entity {
         boolean luck = entity != null ? entity.getLuckModifier() : false;
         int lootingModifier = 0;
         if (entity != null) {
-            if (!this.world.bloodMoon && !luck) {
-                entity.addScore(this, this.scoreValue);
-            } else {
-                entity.addScore(this, this.scoreValue * 2);
-            }
+            this.awardKillScore(entity, luck);
 
             if (entity instanceof Player) {
                 Player player = (Player)entity;
@@ -624,6 +620,14 @@ public abstract class Mob extends Entity {
         }
 
         this.world.updateServerEntity(this, (byte)3);
+    }
+
+    protected void awardKillScore(Entity killer, boolean luck) {
+        if (!this.world.bloodMoon && !luck) {
+            killer.addScore(this, this.scoreValue);
+        } else {
+            killer.addScore(this, this.scoreValue * 2);
+        }
     }
 
     public void dropSpecialItem(DamageSource ds, boolean luck) {

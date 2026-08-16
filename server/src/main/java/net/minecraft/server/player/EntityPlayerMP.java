@@ -4,8 +4,11 @@ import com.mojang.nbt.tag.Tag;
 import com.mojang.nbt.tag.special.CompoundTag;
 import com.mojang.nbt.tag.special.ListTag;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import net.minecraft.game.block.BlockList;
 import net.minecraft.game.block.decoration.Bed;
 import net.minecraft.game.block.tileentity.TileEntity;
 import net.minecraft.game.block.tileentity.smelters.FurnaceEntity;
@@ -29,11 +32,19 @@ import net.minecraft.game.entity.player.Player;
 import net.minecraft.game.item.Item;
 import net.minecraft.game.item.ItemList;
 import net.minecraft.game.item.ItemStack;
+import net.minecraft.game.item.food.FoodItem;
 import net.minecraft.game.item.misc.MapItem;
 import net.minecraft.game.item.potion.EffectData;
 import net.minecraft.game.world.World;
+import net.minecraft.game.world.biomes.Biome;
+import net.minecraft.game.world.biomes.BiomeList;
+import net.minecraft.game.world.biomes.hell.HellBiome;
+import net.minecraft.game.world.biomes.sky.SkyBiome;
 import net.minecraft.game.world.chunk.ChunkUtils;
 import net.minecraft.game.world.util.Position;
+import net.minecraft.statistics.Stat;
+import net.minecraft.statistics.achievement.Achievement;
+import net.minecraft.statistics.achievement.AchievementList;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.network.packet.player.AnimationPacket;
 import net.minecraft.network.packet.player.AttackDirectionPacket;
@@ -71,6 +82,12 @@ public class EntityPlayerMP extends Player implements ContainerListener {
     private int lastFood = -99999999;
     private float lastSaturation = -99999999.0F;
     private int lastScore = -99999999;
+    private Set<Integer> awardedAchievementScores = new HashSet<>();
+    private Set<Integer> eatenFoodItems = new HashSet<>();
+    private Set<Integer> biomesExplored = new HashSet<>();
+    private Set<Integer> biomesExploredHell = new HashSet<>();
+    private Set<Integer> biomesExploredHeaven = new HashSet<>();
+    private int stoneMined = 0;
     private int ticksOfInvuln = 60;
     private ItemStack[] playerInventory = new ItemStack[]{null, null, null, null, null, null};
     private int currentWindowId = 0;
@@ -236,6 +253,12 @@ public class EntityPlayerMP extends Player implements ContainerListener {
         super.writeToNBT(nbtTagCompound);
         nbtTagCompound.setInteger("Score", this.score);
         nbtTagCompound.setTag("Inventory", this.inventory.saveContents(new ListTag<>()));
+        nbtTagCompound.setIntArray("AwardedAchievementScores", toIntArray(this.awardedAchievementScores));
+        nbtTagCompound.setIntArray("EatenFoodItems", toIntArray(this.eatenFoodItems));
+        nbtTagCompound.setIntArray("BiomesExplored", toIntArray(this.biomesExplored));
+        nbtTagCompound.setIntArray("BiomesExploredHell", toIntArray(this.biomesExploredHell));
+        nbtTagCompound.setIntArray("BiomesExploredHeaven", toIntArray(this.biomesExploredHeaven));
+        nbtTagCompound.setInteger("StoneMined", this.stoneMined);
     }
 
     @Override
@@ -244,10 +267,121 @@ public class EntityPlayerMP extends Player implements ContainerListener {
         this.score = nbtTagCompound.getInteger("Score");
         ListTag<? extends Tag> nBTTagList2 = nbtTagCompound.getTagList("Inventory");
         this.inventory.loadContents(nBTTagList2);
+        fillFromIntArray(this.awardedAchievementScores, nbtTagCompound.getIntArray("AwardedAchievementScores"));
+        fillFromIntArray(this.eatenFoodItems, nbtTagCompound.getIntArray("EatenFoodItems"));
+        fillFromIntArray(this.biomesExplored, nbtTagCompound.getIntArray("BiomesExplored"));
+        fillFromIntArray(this.biomesExploredHell, nbtTagCompound.getIntArray("BiomesExploredHell"));
+        fillFromIntArray(this.biomesExploredHeaven, nbtTagCompound.getIntArray("BiomesExploredHeaven"));
+        this.stoneMined = nbtTagCompound.getInteger("StoneMined");
+    }
+
+    private static int[] toIntArray(Set<Integer> set) {
+        int[] array = new int[set.size()];
+        int index = 0;
+
+        for (int value : set) {
+            array[index++] = value;
+        }
+
+        return array;
+    }
+
+    private static void fillFromIntArray(Set<Integer> set, int[] array) {
+        set.clear();
+
+        for (int value : array) {
+            set.add(value);
+        }
+    }
+
+    @Override
+    public void addStat(Stat stat, int amount) {
+        if (stat instanceof Achievement) {
+            Achievement achievement = (Achievement)stat;
+            int scoreAmount;
+            if (achievement.getSpecial()) {
+                scoreAmount = 1000;
+            } else if (achievement.getGoal()) {
+                scoreAmount = 500;
+            } else {
+                scoreAmount = 100;
+            }
+
+            if (this.awardedAchievementScores.add(achievement.statId)) {
+                this.score += scoreAmount;
+            }
+        }
+    }
+
+    @Override
+    public void onFoodEaten() {
+        if (this.itemInUse != null) {
+            this.eatenFoodItems.add(this.itemInUse.itemID);
+        }
+
+        int validFoodCount = 0;
+        int totalFoodCount = 0;
+
+        for (int index = 4096; index < 10240; index++) {
+            if (ItemList.items[index] instanceof FoodItem) {
+                totalFoodCount++;
+                if (this.eatenFoodItems.contains(index)) {
+                    validFoodCount++;
+                }
+            }
+        }
+
+        if (validFoodCount >= totalFoodCount) {
+            this.triggerAchievement(AchievementList.diet);
+        }
+    }
+
+    private void updateBiomesExplored() {
+        Biome currentBiome = this.world.getBiomeAt(MathHelper.floor(this.posX), MathHelper.floor(this.posZ));
+        if (currentBiome.climateBiome) {
+            this.biomesExplored.add(currentBiome.id);
+        }
+
+        if (currentBiome instanceof HellBiome) {
+            this.biomesExploredHell.add(currentBiome.id);
+        }
+
+        if (currentBiome instanceof SkyBiome) {
+            this.biomesExploredHeaven.add(currentBiome.id);
+        }
+
+        if (this.biomesExplored.size() >= BiomeList.climateBiomes.length) {
+            this.triggerAchievement(AchievementList.adventure);
+        }
+
+        if (this.biomesExploredHell.size() >= 8) {
+            this.triggerAchievement(AchievementList.adventure2);
+        }
+
+        if (this.biomesExploredHeaven.size() >= 8) {
+            this.triggerAchievement(AchievementList.adventure3);
+        }
+    }
+
+    public void onBlockMined(int blockId) {
+        if (blockId == BlockList.stone.id) {
+            this.stoneMined++;
+            if (this.stoneMined >= 3456) {
+                this.triggerAchievement(AchievementList.cobble);
+            }
+        }
+    }
+
+    private void updateSpyglass() {
+        if (this.inventory.accessorySlots[0] != null && this.inventory.accessorySlots[0].getItem() == ItemList.spyGlass) {
+            this.triggerAchievement(AchievementList.spyglass);
+        }
     }
 
     public void onUpdateEntity(boolean z1) {
         super.onTick();
+        this.updateBiomesExplored();
+        this.updateSpyglass();
         if (z1 && !this.loadedChunks.isEmpty()) {
             long chunkCoordIntPair7 = this.loadedChunks.get(0);
             boolean z8 = false;

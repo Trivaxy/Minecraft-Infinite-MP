@@ -117,6 +117,10 @@ public class ItemInWorldManager {
         }
 
         boolean z6 = this.removeBlock(i1, i2, i3);
+        if (z6) {
+            ((EntityPlayerMP)this.thisPlayer).onBlockMined(i4);
+        }
+
         if (z6 && z8) {
             BlockList.blocks[i4].dropItem(this.thisWorld, this.thisPlayer, i1, i2, i3, i5);
             ((EntityPlayerMP)this.thisPlayer).playerNetServerHandler.sendPacket(new UpdateBlockPacket(i1, i2, i3, this.thisWorld));

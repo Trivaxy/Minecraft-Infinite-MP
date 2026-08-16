@@ -947,6 +947,8 @@ public class Player extends Mob {
 
         Entity entity = ds.getEntity();
         if (entity != null) {
+            this.awardKillScore(entity, entity.getLuckModifier());
+
             this.motionX = -MathHelper.cos((this.attackAngle + this.yaw) * (float) Math.PI / 180.0F) * 0.1F;
             this.motionZ = -MathHelper.sin((this.attackAngle + this.yaw) * (float) Math.PI / 180.0F) * 0.1F;
         } else {
