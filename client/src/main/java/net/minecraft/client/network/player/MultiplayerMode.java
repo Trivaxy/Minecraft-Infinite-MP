@@ -28,31 +28,6 @@ public class MultiplayerMode extends SurvivalMode {
     }
 
     @Override
-    public boolean removeBlock(int x, int y, int z, int side) {
-        int id = this.mc.world.getBlockId(x, y, z);
-        ItemStack heldItem = this.mc.player.getCurrentEquippedItem();
-        if (this.mc.player.getUsing()) {
-            heldItem = this.mc.player.inventory.getOffHandItem();
-        }
-
-        if (heldItem != null) {
-            if (BlockList.blocks[id].hardness > 0.0F) {
-                heldItem.onDestroyBlock(id, x, y, z, this.mc.player);
-            }
-
-            if (heldItem.stackSize == 0) {
-                if (this.mc.player.getUsing()) {
-                    this.mc.player.destroyOffhandItem();
-                } else {
-                    this.mc.player.destroyCurrentEquippedItem();
-                }
-            }
-        }
-
-        return super.removeBlock(x, y, z, side);
-    }
-
-    @Override
     public void clickBlock(int x, int y, int z, int side) {
         if (!this.isHittingBlock || x != this.hitX || y != this.hitY || z != this.hitZ) {
             this.networkHandler.sendPacket(new DigPacket(0, x, y, z, side));
