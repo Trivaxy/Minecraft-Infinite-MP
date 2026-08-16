@@ -48,6 +48,7 @@ import net.minecraft.network.packet.entity.EntityStatePacket;
 import net.minecraft.network.packet.player.ItemEquipPacket;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.player.PickupPacket;
+import net.minecraft.network.packet.player.ScorePacket;
 import net.minecraft.network.packet.entity.RemoveEffectPacket;
 import net.minecraft.network.packet.entity.RideEntityPacket;
 import net.minecraft.network.packet.player.SleepPacket;
@@ -69,6 +70,7 @@ public class EntityPlayerMP extends Player implements ContainerListener {
     private int lastHealth = -99999999;
     private int lastFood = -99999999;
     private float lastSaturation = -99999999.0F;
+    private int lastScore = -99999999;
     private int ticksOfInvuln = 60;
     private ItemStack[] playerInventory = new ItemStack[]{null, null, null, null, null, null};
     private int currentWindowId = 0;
@@ -276,6 +278,11 @@ public class EntityPlayerMP extends Player implements ContainerListener {
             this.lastHealth = this.health;
             this.lastFood = food;
             this.lastSaturation = saturation;
+        }
+
+        if (this.score != this.lastScore) {
+            this.playerNetServerHandler.sendPacket(new ScorePacket(this.score));
+            this.lastScore = this.score;
         }
     }
 
@@ -536,6 +543,7 @@ public class EntityPlayerMP extends Player implements ContainerListener {
         this.lastHealth = -99999999;
         this.lastFood = -99999999;
         this.lastSaturation = -99999999.0F;
+        this.lastScore = -99999999;
     }
 
     @Override

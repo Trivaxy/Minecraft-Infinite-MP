@@ -104,6 +104,7 @@ import net.minecraft.network.packet.player.PlayerInfoPacket;
 import net.minecraft.network.packet.player.PlayerMovementPacket;
 import net.minecraft.network.packet.player.PlayerSpawnPacket;
 import net.minecraft.network.packet.player.PlayerStatePacket;
+import net.minecraft.network.packet.player.ScorePacket;
 import net.minecraft.network.packet.player.SleepPacket;
 import net.minecraft.network.packet.player.SlotPacket;
 import net.minecraft.network.packet.world.BlockEventPacket;
@@ -650,6 +651,11 @@ public class ClientHandler extends NetworkHandler {
         this.mc.player.setHealth(packet.healthMP);
         this.mc.player.getFoodStats().setHunger(packet.food);
         this.mc.player.getFoodStats().setSaturation(packet.foodSaturation);
+    }
+
+    @Override
+    public void handleScore(ScorePacket packet) {
+        this.mc.player.score = packet.score;
     }
 
     @Override

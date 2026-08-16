@@ -61,6 +61,7 @@ import net.minecraft.network.packet.player.PlayerPositionPacket;
 import net.minecraft.network.packet.player.PlayerSpawnPacket;
 import net.minecraft.network.packet.player.PlayerStatePacket;
 import net.minecraft.network.packet.player.PlayerTeleportPacket;
+import net.minecraft.network.packet.player.ScorePacket;
 import net.minecraft.network.packet.player.SleepPacket;
 import net.minecraft.network.packet.player.SlotPacket;
 import net.minecraft.network.packet.player.UsePacket;
@@ -246,6 +247,7 @@ public abstract class Packet {
         map(69, Packet.Flow.SERVER_TO_CLIENT, MusicPacket.class);
         map(70, Packet.Flow.SERVER_TO_CLIENT, WorldEventPacket.class);
         map(71, Packet.Flow.SERVER_TO_CLIENT, WeatherPacket.class);
+        map(72, Packet.Flow.SERVER_TO_CLIENT, ScorePacket.class);
         map(91, Packet.Flow.BOTH, GeneratorPacket.class);
         map(100, Packet.Flow.SERVER_TO_CLIENT, ContainerOpenPacket.class);
         map(101, Packet.Flow.BOTH, ContainerClosePacket.class);

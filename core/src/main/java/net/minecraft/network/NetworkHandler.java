@@ -46,6 +46,7 @@ import net.minecraft.network.packet.player.PlayerInfoPacket;
 import net.minecraft.network.packet.player.PlayerMovementPacket;
 import net.minecraft.network.packet.player.PlayerSpawnPacket;
 import net.minecraft.network.packet.player.PlayerStatePacket;
+import net.minecraft.network.packet.player.ScorePacket;
 import net.minecraft.network.packet.player.SleepPacket;
 import net.minecraft.network.packet.player.SlotPacket;
 import net.minecraft.network.packet.player.UsePacket;
@@ -197,6 +198,10 @@ public abstract class NetworkHandler {
 
     public void handleHealth(EntityHealthPacket packet8UpdateHealth1) {
         this.registerPacket(packet8UpdateHealth1);
+    }
+
+    public void handleScore(ScorePacket packetScore1) {
+        this.registerPacket(packetScore1);
     }
 
     public void handleRespawn(RespawnPacket packet9Respawn1) {
