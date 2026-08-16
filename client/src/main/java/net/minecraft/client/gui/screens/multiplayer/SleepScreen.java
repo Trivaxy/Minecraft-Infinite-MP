@@ -52,6 +52,7 @@ public class SleepScreen extends ChatScreen {
         if (this.mc.player instanceof NetworkPlayer) {
             ClientHandler clientHandler = ((NetworkPlayer)this.mc.player).connection;
             clientHandler.sendPacket(new EntityActionPacket(this.mc.player, 3));
+            return;
         }
 
         this.mc.player.wakeUpPlayer(true, true, false);

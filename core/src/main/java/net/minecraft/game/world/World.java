@@ -2309,11 +2309,17 @@ public class World implements WorldSource {
 
     protected void triggerSleep() {
         this.allPlayersSleeping = false;
+        boolean passNight = false;
 
         for (Player playa : this.players) {
             if (playa.isPlayerSleeping()) {
+                passNight |= playa.preventSleeping();
                 playa.wakeUpPlayer(false, false, true);
             }
+        }
+
+        if (passNight) {
+            this.setTime(this.getWorldTime() + (int)this.settings.dayLength / 2);
         }
 
         this.stopAllWeather();

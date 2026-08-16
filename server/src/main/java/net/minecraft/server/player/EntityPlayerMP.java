@@ -334,33 +334,39 @@ public class EntityPlayerMP extends Player implements ContainerListener {
     }
 
     @Override
+    public void addChatMessage(String msg) {
+        if (this.playerNetServerHandler != null) {
+            this.playerNetServerHandler.sendPacket(new ChatPacket(msg));
+        }
+    }
+
+
+    @Override
     public Bed.Status goToSleep(int var1, int var2, int var3) {
         Bed.Status var4 = super.goToSleep(var1, var2, var3);
         if (var4 == Bed.Status.OK) {
-            this.mcServer.getEntityTracker(this.dimension).sendPacketToTrackedPlayers(this, new SleepPacket(this, 0, var1, var2, var3));
+            this.mcServer
+                .getEntityTracker(this.dimension)
+                .sendPacketToTrackedPlayersAndTrackedEntity(this, new SleepPacket(this, 0, var1, var2, var3));
         }
 
         return var4;
     }
 
     @Override
-    public boolean preventSleeping() {
-        return this.world.isDaytime();
-    }
-
-    @Override
-    protected boolean awaken() {
-        return this.world.isDaytime();
-    }
-
-    @Override
     public void wakeUpPlayer(boolean var1, boolean var2, boolean var3) {
         if (this.isPlayerSleeping()) {
-            this.mcServer.getEntityTracker(this.dimension).sendPacketToTrackedPlayersAndTrackedEntity(this, new AnimationPacket(this, 3));
+            // 3 slept through, 6 got out early. The waking player is in this broadcast too, and
+            // its client runs the same wakeUpPlayer - tell it which one, or a cancelled sleep
+            // charges the client the full rest cooldown the server never charged.
+            this.mcServer.getEntityTracker(this.dimension).sendPacketToTrackedPlayersAndTrackedEntity(this, new AnimationPacket(this, var1 ? 6 : 3));
         }
 
         super.wakeUpPlayer(var1, var2, var3);
-        this.playerNetServerHandler.teleportTo(this.posX, this.posY, this.posZ, this.yaw, this.pitch);
+        // readFromNBT wakes a player who logged out in bed, before there is a connection to tell
+        if (this.playerNetServerHandler != null) {
+            this.playerNetServerHandler.teleportTo(this.posX, this.posY, this.posZ, this.yaw, this.pitch);
+        }
     }
 
     @Override

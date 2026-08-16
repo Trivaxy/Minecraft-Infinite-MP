@@ -517,6 +517,9 @@ public class ClientHandler extends NetworkHandler {
             } else if (packet.animate == 3) {
                 player = (Player)entity;
                 player.wakeUpPlayer(false, false, false);
+            } else if (packet.animate == 6) {
+                player = (Player)entity;
+                player.wakeUpPlayer(true, false, false);
             } else if (packet.animate == 4) {
                 player = (Player)entity;
                 player.swingOffhandItem();
@@ -529,7 +532,9 @@ public class ClientHandler extends NetworkHandler {
     public void handleSleep(SleepPacket packet) {
         Entity entity = this.getEntityByID(packet.entityID);
         if (entity != null && packet.state == 0) {
-            ((Player)entity).goToSleep(packet.bedX, packet.bedY, packet.bedZ);
+            // putToBed, not goToSleep: the server has decided, and re-running the checks here just
+            // gives the client a second opinion to disagree with
+            ((Player)entity).putToBed(packet.bedX, packet.bedY, packet.bedZ);
         }
     }
 

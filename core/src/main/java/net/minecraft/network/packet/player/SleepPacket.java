@@ -22,7 +22,7 @@ public class SleepPacket extends Packet {
         this.entityID = var1.readInt();
         this.state = var1.readByte();
         this.bedX = var1.readInt();
-        this.bedY = var1.readByte();
+        this.bedY = var1.readInt();
         this.bedZ = var1.readInt();
     }
 
@@ -31,7 +31,7 @@ public class SleepPacket extends Packet {
         var1.writeInt(this.entityID);
         var1.writeByte(this.state);
         var1.writeInt(this.bedX);
-        var1.writeByte(this.bedY);
+        var1.writeInt(this.bedY);
         var1.writeInt(this.bedZ);
     }
 
@@ -42,7 +42,7 @@ public class SleepPacket extends Packet {
 
     @Override
     public int getPacketSize() {
-        return 14;
+        return 17;
     }
 
     public SleepPacket(Entity var1, int var2, int var3, int var4, int var5) {

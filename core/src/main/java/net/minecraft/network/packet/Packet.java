@@ -209,7 +209,7 @@ public abstract class Packet {
         map(14, Packet.Flow.CLIENT_TO_SERVER, DigPacket.class);
         map(15, Packet.Flow.CLIENT_TO_SERVER, PlacePacket.class);
         map(16, Packet.Flow.CLIENT_TO_SERVER, ItemSwitchPacket.class);
-        map(17, Packet.Flow.CLIENT_TO_SERVER, SleepPacket.class);
+        map(17, Packet.Flow.SERVER_TO_CLIENT, SleepPacket.class);
         map(18, Packet.Flow.BOTH, AnimationPacket.class);
         map(19, Packet.Flow.CLIENT_TO_SERVER, EntityActionPacket.class);
         map(20, Packet.Flow.SERVER_TO_CLIENT, PlayerSpawnPacket.class);

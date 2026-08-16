@@ -573,7 +573,8 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
     @Override
     public void handleEntityAction(EntityActionPacket packet19EntityAction1) {
         if (packet19EntityAction1.state == 3) {
-            this.playerEntity.wakeUpPlayer(false, true, true);
+            // resetTimer, or leaving the bed early skips the night the same way sleeping through it does
+            this.playerEntity.wakeUpPlayer(true, true, true);
             this.hasMoved = false;
         } else if (packet19EntityAction1.state == 4) {
             this.playerEntity.setSprinting(true);

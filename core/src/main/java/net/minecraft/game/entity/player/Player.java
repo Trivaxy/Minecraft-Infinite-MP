@@ -248,7 +248,7 @@ public class Player extends Mob {
                 this.sleepTimer = 100;
             }
 
-            if (!this.isInBed()) {
+            if (!this.world.isOnline && !this.isInBed()) {
                 this.wakeUpPlayer(true, true, false);
             } else if (!this.world.isOnline && this.awaken()) {
                 this.wakeUpPlayer(false, true, true);
@@ -2029,41 +2029,7 @@ public class Player extends Mob {
 
             if ((this.timeWithoutRest <= 0 || !this.preventSleeping()) && this.world.settings.getEvent() <= 0) {
                 if (Math.abs(this.posX - x) <= 3.0 && Math.abs(this.posY - y) <= 2.0 && Math.abs(this.posZ - z) <= 3.0) {
-                    this.setSize(0.2F, 0.2F);
-                    this.yOffset = 0.2F;
-                    if (this.world.blockExists(x, y, z)) {
-                        int meta = this.world.getBlockMetadata(x, y, z);
-                        int bedDirection = Bed.getDirection(meta);
-                        double xOffset = 0.5;
-                        double zOffset = 0.5;
-                        switch (bedDirection) {
-                            case 0:
-                                zOffset = 0.9;
-                                break;
-                            case 1:
-                                xOffset = 0.1;
-                                break;
-                            case 2:
-                                zOffset = 0.1;
-                                break;
-                            case 3:
-                                xOffset = 0.9;
-                        }
-
-                        this.rotatePlayerModel(bedDirection);
-                        this.setPosition(x + xOffset, y + 0.9375, z + zOffset);
-                    } else {
-                        this.setPosition(x + 0.5, y + 0.9375, z + 0.5);
-                    }
-
-                    this.sleeping = true;
-                    this.sleepTimer = 0;
-                    this.bedPosition = new Position(x, y, z);
-                    this.motionX = this.motionZ = this.motionY = 0.0;
-                    if (!this.world.isOnline) {
-                        this.world.wakePlayers();
-                    }
-
+                    this.putToBed(x, y, z);
                     return Bed.Status.OK;
                 } else {
                     return Bed.Status.TOO_FAR_AWAY;
@@ -2089,6 +2055,49 @@ public class Player extends Mob {
             }
 
             return Bed.Status.SET_POSITION;
+        }
+    }
+
+    /**
+     * Lies the player in the bed at these coordinates, with none of goToSleep's checks. A
+     * multiplayer client never makes the decision - it is handed the answer as a SleepPacket and
+     * applies it here, because every check it could re-run reads state the server owns.
+     */
+    public void putToBed(int x, int y, int z) {
+        this.setSize(0.2F, 0.2F);
+        this.yOffset = 0.2F;
+        if (this.world.blockExists(x, y, z)) {
+            int meta = this.world.getBlockMetadata(x, y, z);
+            int bedDirection = Bed.getDirection(meta);
+            double xOffset = 0.5;
+            double zOffset = 0.5;
+            switch (bedDirection) {
+                case 0:
+                    zOffset = 0.9;
+                    break;
+                case 1:
+                    xOffset = 0.1;
+                    break;
+                case 2:
+                    zOffset = 0.1;
+                    break;
+                case 3:
+                    xOffset = 0.9;
+            }
+
+            this.rotatePlayerModel(bedDirection);
+            this.setPosition(x + xOffset, y + 0.9375, z + zOffset);
+        } else {
+            this.setPosition(x + 0.5, y + 0.9375, z + 0.5);
+        }
+
+        this.sleeping = true;
+        this.sleepTimer = 0;
+        this.bedPosition = new Position(x, y, z);
+        this.motionX = this.motionZ = this.motionY = 0.0;
+        this.resetKeys();
+        if (!this.world.isOnline) {
+            this.world.wakePlayers();
         }
     }
 
@@ -2135,9 +2144,8 @@ public class Player extends Mob {
                 return;
             }
 
+            // the clock itself is World.triggerSleep's job, not each sleeper's
             this.timeWithoutRest = (int)this.world.settings.dayLength / 2;
-            long time = this.world.settings.getWorldTime() + (int)this.world.settings.dayLength / 2;
-            this.world.setTime(time);
         } else {
             this.sleepTimer = 0;
         }

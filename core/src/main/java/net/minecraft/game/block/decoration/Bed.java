@@ -42,6 +42,12 @@ public class Bed extends Block {
             metadata = world.getBlockMetadata(x, y, z);
         }
 
+        // A multiplayer client does not decide this. The click is already on its way to the server
+        // as a PlacePacket; the answer comes back as a SleepPacket, or as the refusal in chat.
+        if (world.isOnline) {
+            return true;
+        }
+
         if (isOccupied(metadata)) {
             player.addChatMessage(Translator.getInstance().translateKey("tile.bed.occupied"));
             return true;
@@ -54,15 +60,23 @@ public class Bed extends Block {
             return true;
         }
 
-        if (state == Bed.Status.SET_POSITION) {
-            player.addChatMessage(Translator.getInstance().translateKey("tile.bed.setPosition"));
-            return true;
-        }
-
-        if (state == Bed.Status.NOT_POSSIBLE_NOW) {
-            player.addChatMessage(Translator.getInstance().translateKey("tile.bed.noSleep"));
-        } else if (state == Bed.Status.NOT_POSSIBLE_HERE) {
-            player.addChatMessage(Translator.getInstance().translateKey("tile.bed.cursed"));
+        // Every refusal names itself. The client stopped keeping a second opinion, so anything that
+        // falls through here silently is a right-click that does nothing and explains nothing.
+        switch (state) {
+            case SET_POSITION:
+                player.addChatMessage(Translator.getInstance().translateKey("tile.bed.setPosition"));
+                break;
+            case NOT_POSSIBLE_NOW:
+                player.addChatMessage(Translator.getInstance().translateKey("tile.bed.noSleep"));
+                break;
+            case NOT_POSSIBLE_HERE:
+                player.addChatMessage(Translator.getInstance().translateKey("tile.bed.cursed"));
+                break;
+            case TOO_FAR_AWAY:
+                player.addChatMessage(Translator.getInstance().translateKey("tile.bed.tooFar"));
+                break;
+            default:
+                player.addChatMessage(Translator.getInstance().translateKey("tile.bed.cannot"));
         }
 
         return true;
