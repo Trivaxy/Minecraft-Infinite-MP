@@ -22,7 +22,7 @@ public class GabrielStaff extends Staff {
         if (canUseStaff && stack.isNotBroken()) {
             Projectile orb = new Orb(world, player, -1);
             world.spawnEntity(orb);
-            world.playSoundEffect(player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
+            world.playSoundEffect(player, player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
             if (player.inventory.canUseItem() && player.inventory.getOffHandItem().getItem() == stack.getItem()) {
                 player.swingOffhandItem();
             } else {

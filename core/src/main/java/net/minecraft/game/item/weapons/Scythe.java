@@ -29,7 +29,7 @@ public class Scythe extends Item {
             Projectile head = new ScytheHead(world, player, 7);
             head.setSize(3.0F, 3.0F);
             world.spawnEntity(head);
-            world.playSoundEffect(player.posX, player.posY, player.posZ, "mob.ghast.shoot", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
+            world.playSoundEffect(player, player.posX, player.posY, player.posZ, "mob.ghast.shoot", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
             if (player.inventory.canUseItem() && player.inventory.getOffHandItem().getItem() == stack.getItem()) {
                 player.swingOffhandItem();
             } else {

@@ -106,7 +106,7 @@ public class FlagItem extends Item {
         }
 
         StepSound snd = BlockList.flag.getStepSound(0);
-        world.playBlockSound(xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
+        world.playBlockSound(player, xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
         player.addStat(StatList.useStats[this.id], 1);
         return true;
     }

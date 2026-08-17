@@ -57,7 +57,7 @@ public class NatureStaff extends Staff {
             }
 
             if (condition) {
-                world.playSoundEffect(player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
+                world.playSoundEffect(player, player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
                 stack.damageItem(1, player);
                 player.addStat(StatList.useStats[this.id], 1);
                 this.showParticles(world, x, y, z);

@@ -63,7 +63,7 @@ public class FoodItem extends Item {
         if (canPlaceHere && world.getBlockId(x, y + 1, z) == 0) {
             world.setBlockWithNotify(x, y + 1, z, placeID);
             StepSound snd = sndBlock.getStepSound(0);
-            world.playBlockSound(x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
+            world.playBlockSound(player, x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
             if (player.properties.gamemode != 1) {
                 stack.stackSize--;
             }

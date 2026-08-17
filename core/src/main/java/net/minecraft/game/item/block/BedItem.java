@@ -54,7 +54,7 @@ public class BedItem extends Item {
             world.setBlockAndMetadataWithNotify(x, y, z, bed.id, playerFacing);
             world.setBlockAndMetadataWithNotify(x + xOffset, y, z + zOffset, bed.id, playerFacing + 8);
             StepSound snd = bed.getStepSound(0);
-            world.playBlockSound(x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
+            world.playBlockSound(player, x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
             if (player.properties.gamemode != 1) {
                 stack.stackSize--;
             }

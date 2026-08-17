@@ -94,7 +94,7 @@ public class ThrowableItem extends Item {
                 if (world.setBlockAndMetadataWithNotify(x, y, z, BlockList.pebble.id, meta)) {
                     block.onPlaced(world, player, x, y, z, side);
                     StepSound snd = block.getStepSound(0);
-                    world.playBlockSound(x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
+                    world.playBlockSound(player, x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
                     if (player.properties.gamemode != 1) {
                         stack.stackSize--;
                     }

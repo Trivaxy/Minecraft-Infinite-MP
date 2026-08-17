@@ -75,13 +75,13 @@ public class Pickaxe extends Tool {
             && !(BlockList.blocks[id] instanceof ContainerBlock)) {
             world.spawnEntity(new FallingBlock(world, x + 0.5, y + 0.5, z + 0.5, id, meta, player));
             StepSound snd = block.getStepSound(meta);
-            world.playSoundEffect(offsetX, offsetY, offsetZ, snd.getSound(), (snd.volume + 1.0F) / 2.0F, snd.pitch * 0.8F);
+            world.playSoundEffect(player, offsetX, offsetY, offsetZ, snd.getSound(), (snd.volume + 1.0F) / 2.0F, snd.pitch * 0.8F);
             world.setBlockWithNotify(x, y, z, 0);
             player.addStat(StatList.useStats[this.id], 1);
             return true;
         } else if (block instanceof Slab && ((Slab)block).doubleSlab) {
             StepSound snd = block.getStepSound(meta);
-            world.playSoundEffect(offsetX, offsetY, offsetZ, snd.getSound(), (snd.volume + 1.0F) / 2.0F, snd.pitch * 0.8F);
+            world.playSoundEffect(player, offsetX, offsetY, offsetZ, snd.getSound(), (snd.volume + 1.0F) / 2.0F, snd.pitch * 0.8F);
             world.setBlockAndMetadataWithNotify(x, y, z, block.dropID(id, world.rand), meta);
             BlockItem.getSlab(id).dropBlock(world, x, y, z, meta);
             stack.damageItem(1, player);

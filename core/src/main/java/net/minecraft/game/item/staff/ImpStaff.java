@@ -39,7 +39,7 @@ public class ImpStaff extends Staff {
             imp.setPosAndRot(player.posX + 1.0, player.posY, player.posZ, player.pitch, player.yaw);
             imp.tamed = true;
             world.spawnEntity(imp);
-            world.playSoundEffect(player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
+            world.playSoundEffect(player, player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
 
             for (int i = 0; i < 20; i++) {
                 world.spawnParticle(

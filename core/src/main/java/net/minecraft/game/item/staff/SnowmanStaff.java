@@ -20,7 +20,7 @@ public class SnowmanStaff extends Staff {
             Snowman snowman = new Snowman(world);
             snowman.setPosAndRot(player.posX + 1.0, player.posY, player.posZ, player.pitch, player.yaw);
             world.spawnEntity(snowman);
-            world.playSoundEffect(player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
+            world.playSoundEffect(player, player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
 
             for (int i = 0; i < 20; i++) {
                 world.spawnParticle(

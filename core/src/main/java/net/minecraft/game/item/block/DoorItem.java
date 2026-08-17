@@ -30,7 +30,7 @@ public class DoorItem extends Item {
         }
 
         int facing = MathHelper.floor_double((player.yaw + 180.0F) * 4.0F / 360.0F - 0.5) & 3;
-        placeDoorBlock(world, xCoord, yCoord, zCoord, facing, this.door);
+        placeDoorBlock(world, xCoord, yCoord, zCoord, facing, this.door, player);
         if (player.properties.gamemode != 1) {
             stack.stackSize--;
         }
@@ -40,6 +40,10 @@ public class DoorItem extends Item {
     }
 
     public static void placeDoorBlock(World world, int xCoord, int yCoord, int zCoord, int orientation, Block door) {
+        placeDoorBlock(world, xCoord, yCoord, zCoord, orientation, door, null);
+    }
+
+    public static void placeDoorBlock(World world, int xCoord, int yCoord, int zCoord, int orientation, Block door, Player player) {
         byte xOffset = 0;
         byte zOffset = 0;
         if (orientation == 0) {
@@ -83,7 +87,7 @@ public class DoorItem extends Item {
         world.setBlockWithNotify(xCoord, yCoord + 1, zCoord, door.id);
         world.setBlockMetadataWithNotify(xCoord, yCoord + 1, zCoord, orientation + 8);
         StepSound snd = door.getStepSound(0);
-        world.playBlockSound(xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
+        world.playBlockSound(player, xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
     }
 
     @Override

@@ -30,7 +30,7 @@ public class Axe extends Tool {
         Block block = BlockList.log;
         StepSound snd = block.getStepSound(meta);
         if (cutBlock == BlockList.wood) {
-            world.playBlockSound(x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), snd.volume, snd.pitch * 0.8F);
+            world.playBlockSound(player, x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), snd.volume, snd.pitch * 0.8F);
             world.setBlockAndMetadataWithNotify(x, y, z, block.id, meta);
             if (meta == 16) {
                 float offset = 0.7F;
@@ -47,7 +47,7 @@ public class Axe extends Tool {
             return true;
         } else {
             if (cutBlock instanceof Chair) {
-                world.playBlockSound(x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), snd.volume, snd.pitch * 0.8F);
+                world.playBlockSound(player, x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), snd.volume, snd.pitch * 0.8F);
                 world.setBlockMetadataWithNotify(x, y, z, meta & 248 | 4);
                 itemStack.damageItem(1, player);
                 player.addStat(StatList.useStats[this.id], 1);
@@ -55,7 +55,7 @@ public class Axe extends Tool {
             }
 
             if (cutBlock == BlockList.fence && meta < 128) {
-                world.playBlockSound(x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), snd.volume, snd.pitch * 0.8F);
+                world.playBlockSound(player, x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), snd.volume, snd.pitch * 0.8F);
                 meta += 128;
                 world.setBlockAndMetadataWithNotify(x, y, z, BlockList.fence.id, meta);
                 itemStack.damageItem(1, player);
@@ -64,7 +64,7 @@ public class Axe extends Tool {
             }
 
             if (cutBlock == BlockList.pumpkin && meta == 0) {
-                world.playBlockSound(x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), snd.volume, snd.pitch * 0.8F);
+                world.playBlockSound(player, x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), snd.volume, snd.pitch * 0.8F);
                 int side = MathHelper.floor_double(player.yaw * 4.0F / 360.0F + 0.5) & 3;
                 if (side == 0) {
                     world.setBlockMetadataWithNotify(x, y, z, 2);
@@ -93,7 +93,7 @@ public class Axe extends Tool {
                 itemStack.damageItem(1, player);
                 return true;
             } else if (cutBlock == BlockList.doubleSlabWood) {
-                world.playBlockSound(x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), snd.volume, snd.pitch * 0.8F);
+                world.playBlockSound(player, x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), snd.volume, snd.pitch * 0.8F);
                 world.setBlockAndMetadataWithNotify(x, y, z, BlockList.slabWood.id, meta);
                 BlockList.slabWood.dropBlock(world, x, y, z, meta);
                 itemStack.damageItem(1, player);

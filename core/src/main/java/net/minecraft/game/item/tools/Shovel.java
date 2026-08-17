@@ -26,7 +26,7 @@ public class Shovel extends Tool {
         if (id == BlockList.grass.id && meta == 0 && !material.isSolid()) {
             Block block = BlockList.pathBlock;
             StepSound snd = block.getStepSound(0);
-            world.playBlockSound(xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
+            world.playBlockSound(player, xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
             if (world.isOnline) {
                 return true;
             }

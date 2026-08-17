@@ -113,7 +113,7 @@ public class BlockItem extends Item {
                     && world.getBlockMetadata(targetX, targetY, targetZ) == 0
                     && target.sideHit == 1) {
                     world.setBlockAndMetadataWithNotify(targetX, targetY + 1, targetZ, this.blockID, heldStack.itemDmg);
-                    world.playBlockSound(targetX, targetY + 1, targetZ, "step.grass", 1.0F, 0.8F);
+                    world.playBlockSound(player, targetX, targetY + 1, targetZ, "step.grass", 1.0F, 0.8F);
                     player.swingItem();
                     if (player.properties.gamemode != 1) {
                         heldStack.stackSize--;
@@ -240,7 +240,7 @@ public class BlockItem extends Item {
                 && world.setBlockAndMetadataWithNotify(xCoord, yValue, zCoord, this.blockID, stack.getItemDamage())) {
                 this.block.onPlaced(world, player, xCoord, yValue, zCoord, side);
                 StepSound snd = this.block.getStepSound(stack.getItemDamage());
-                world.playBlockSound(xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
+                world.playBlockSound(player, xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
                 if (player.properties.gamemode != 1) {
                     stack.stackSize--;
                 }
@@ -262,7 +262,7 @@ public class BlockItem extends Item {
         if ((side != 0 || world.getBlockMetadata(x, y, z) > 127) && (side != 1 || world.getBlockMetadata(x, y, z) <= 127)) {
             if (world.getBlockId(x, y, z) == block.id && placedMeta == meta) {
                 StepSound snd = this.block.getStepSound(stack.getItemDamage());
-                world.playBlockSound(x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
+                world.playBlockSound(player, x + 0.5F, y + 0.5F, z + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
                 if (player.properties.gamemode != 1) {
                     stack.stackSize--;
                 }

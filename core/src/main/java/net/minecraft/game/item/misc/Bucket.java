@@ -70,7 +70,7 @@ public class Bucket extends Item {
                         player.swingItem();
                     }
 
-                    world.playBlockSound(hitX, hitY, hitZ, "mob.slimeattack", 1.0F, 1.0F / (rand.nextFloat() * 0.4F + 1.2F));
+                    world.playBlockSound(player, hitX, hitY, hitZ, "mob.slimeattack", 1.0F, 1.0F / (rand.nextFloat() * 0.4F + 1.2F));
                     if (player.properties.gamemode != 1) {
                         return new ItemStack(ItemList.bucketEmpty);
                     }
@@ -78,7 +78,7 @@ public class Bucket extends Item {
 
                 if (world.getBlockMaterial(hitX, hitY, hitZ) == MaterialList.water && world.getBlockMetadata(hitX, hitY, hitZ) == 0) {
                     world.setBlockWithNotify(hitX, hitY, hitZ, 0);
-                    world.playBlockSound(hitX, hitY, hitZ, "random.waterBucket", 1.0F, 1.0F / (rand.nextFloat() * 0.4F + 1.2F));
+                    world.playBlockSound(player, hitX, hitY, hitZ, "random.waterBucket", 1.0F, 1.0F / (rand.nextFloat() * 0.4F + 1.2F));
                     player.addStat(StatList.useStats[this.id], 1);
                     if (player.properties.gamemode == 1) {
                         return stack;
@@ -98,7 +98,7 @@ public class Bucket extends Item {
 
                 if (world.getBlockMaterial(hitX, hitY, hitZ) == MaterialList.lava && world.getBlockMetadata(hitX, hitY, hitZ) == 0) {
                     world.setBlockWithNotify(hitX, hitY, hitZ, 0);
-                    world.playBlockSound(hitX, hitY, hitZ, "random.lavaBucket", 1.0F, 1.0F / (rand.nextFloat() * 0.4F + 1.2F));
+                    world.playBlockSound(player, hitX, hitY, hitZ, "random.lavaBucket", 1.0F, 1.0F / (rand.nextFloat() * 0.4F + 1.2F));
                     player.addStat(StatList.useStats[this.id], 1);
                     if (player.properties.gamemode == 1) {
                         return stack;
@@ -144,7 +144,7 @@ public class Bucket extends Item {
                 if (world.getBlockId(hitX, hitY, hitZ) == 0 || !world.getBlockMaterial(hitX, hitY, hitZ).isSolid()) {
                     if (world.currDim instanceof HellDimension && this.liquidID == BlockList.waterMoving.id) {
                         world.playSoundEffect(
-                            hitX + 0.5, hitY + 0.5, hitZ + 0.5, "random.fizz", 0.5F, 2.6F + (world.rand.nextFloat() - world.rand.nextFloat()) * 0.8F
+                            player, hitX + 0.5, hitY + 0.5, hitZ + 0.5, "random.fizz", 0.5F, 2.6F + (world.rand.nextFloat() - world.rand.nextFloat()) * 0.8F
                         );
 
                         for (int i = 0; i < 8; i++) {
@@ -152,7 +152,7 @@ public class Bucket extends Item {
                         }
                     } else if (world.currDim instanceof SkyDimension && this.liquidID == BlockList.lavaMoving.id) {
                         world.playSoundEffect(
-                            hitX + 0.5, hitY + 0.5, hitZ + 0.5, "random.fizz", 0.5F, 2.6F + (world.rand.nextFloat() - world.rand.nextFloat()) * 0.8F
+                            player, hitX + 0.5, hitY + 0.5, hitZ + 0.5, "random.fizz", 0.5F, 2.6F + (world.rand.nextFloat() - world.rand.nextFloat()) * 0.8F
                         );
 
                         for (int i = 0; i < 8; i++) {
@@ -168,7 +168,7 @@ public class Bucket extends Item {
                         world.spawnEntity(fish);
                     }
 
-                    world.playBlockSound(hitX, hitY, hitZ, "random.emptyBucket", 1.0F, 1.0F / (rand.nextFloat() * 0.4F + 1.2F));
+                    world.playBlockSound(player, hitX, hitY, hitZ, "random.emptyBucket", 1.0F, 1.0F / (rand.nextFloat() * 0.4F + 1.2F));
                     if (player.properties.gamemode != 1) {
                         return new ItemStack(ItemList.bucketEmpty);
                     }
@@ -248,7 +248,7 @@ public class Bucket extends Item {
                         cube.world.spawnEntity(drop);
                     }
 
-                    cube.world.playBlockSound(cube.posX, cube.posY, cube.posZ, "mob.slimeattack", 1.0F, 1.0F / (rand.nextFloat() * 0.4F + 1.2F));
+                    cube.world.playBlockSound(player, cube.posX, cube.posY, cube.posZ, "mob.slimeattack", 1.0F, 1.0F / (rand.nextFloat() * 0.4F + 1.2F));
                     targetMob.isDead = true;
                 } else if (returnItem == ItemList.bucketMilk) {
                     player.triggerAchievement(AchievementList.milkCow);

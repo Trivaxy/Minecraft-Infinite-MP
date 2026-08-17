@@ -48,7 +48,7 @@ public class FireStriker extends Item {
             return false;
         }
 
-        world.playSoundEffect(xCoord + 0.5, yCoord + 0.5, zCoord + 0.5, "fire.ignite", 1.0F, rand.nextFloat() * 0.4F + 0.8F);
+        world.playSoundEffect(player, xCoord + 0.5, yCoord + 0.5, zCoord + 0.5, "fire.ignite", 1.0F, rand.nextFloat() * 0.4F + 0.8F);
         if (world.getBlock(xCoord, yCoord - 1, zCoord) != BlockList.slowSand && world.getBlock(xCoord, yCoord - 1, zCoord) != BlockList.soulSoil) {
             world.setBlockWithNotify(xCoord, yCoord, zCoord, BlockList.fire.id);
         } else {

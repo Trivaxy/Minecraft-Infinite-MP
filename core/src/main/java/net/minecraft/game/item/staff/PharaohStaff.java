@@ -28,7 +28,7 @@ public class PharaohStaff extends Staff {
             world.spawnEntity(human2);
             world.spawnEntity(human3);
             world.spawnEntity(human4);
-            world.playSoundEffect(player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
+            world.playSoundEffect(player, player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
 
             for (int i = 0; i < 20; i++) {
                 double offsetX = world.rand.nextGaussian() * 0.02;

@@ -63,7 +63,7 @@ public class Fertilizer extends Item {
 
             player.addStat(StatList.useStats[this.id], 1);
             player.triggerAchievement(AchievementList.fertilizer);
-            world.playBlockSound(x, y, z, "random.bonemeal", 1.0F, 1.0F / (this.itemRand.nextFloat() * 0.4F + 1.2F));
+            world.playBlockSound(player, x, y, z, "random.bonemeal", 1.0F, 1.0F / (this.itemRand.nextFloat() * 0.4F + 1.2F));
         }
 
         return condition;

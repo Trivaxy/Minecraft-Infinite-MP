@@ -124,7 +124,7 @@ public final class Barrel extends ContainerBlock {
     @Override
     public final boolean blockActivated(World world, int x, int y, int z, Player player) {
         BarrelEntity barrel = (BarrelEntity)world.getTileEntity(x, y, z);
-        world.playBlockSound(x, y, z, "random.barrelOpen", 0.5F, world.rand.nextFloat() * 0.1F + 0.9F);
+        world.playBlockSound(player, x, y, z, "random.barrelOpen", 0.5F, world.rand.nextFloat() * 0.1F + 0.9F);
         if (!world.isOnline) {
             player.displayGUIBarrel(barrel);
         }

@@ -28,7 +28,7 @@ public class RaphaelRing extends Item {
         if (player.itemUseCooldown == 0 && stack.isNotBroken()) {
             Projectile head = new Ring(world, player);
             world.spawnEntity(head);
-            world.playSoundEffect(player.posX, player.posY, player.posZ, "mob.ghast.shoot", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
+            world.playSoundEffect(player, player.posX, player.posY, player.posZ, "mob.ghast.shoot", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
             if (player.inventory.canUseItem() && player.inventory.getOffHandItem().getItem() == stack.getItem()) {
                 player.swingOffhandItem();
             } else {

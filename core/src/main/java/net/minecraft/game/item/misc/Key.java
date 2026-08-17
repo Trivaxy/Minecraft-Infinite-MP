@@ -60,7 +60,7 @@ public class Key extends Item {
         int meta = world.getBlockMetadata(xCoord, yCoord, zCoord);
         if (id == BlockList.lockedChest.id && meta == 1) {
             world.setBlockMetadata(xCoord, yCoord, zCoord, 0);
-            world.playSoundEffect(xCoord, yCoord, zCoord, "random.unlocked", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
+            world.playSoundEffect(player, xCoord, yCoord, zCoord, "random.unlocked", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
             if (player.properties.gamemode != 1) {
                 stack.stackSize--;
             }

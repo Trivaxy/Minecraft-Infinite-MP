@@ -16,7 +16,7 @@ public class HealingStaff extends Staff {
         if (stack.itemDmg < stack.getItem().getMaxDamage() - 16 && player.itemUseCooldown <= 0) {
             player.heal(10);
             player.itemUseCooldown = player.maxDelay = 20;
-            world.playSoundEffect(player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
+            world.playSoundEffect(player, player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
             stack.damageItem(16, player);
             player.addStat(StatList.useStats[this.id], 1);
         }

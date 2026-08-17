@@ -110,7 +110,7 @@ public class Screwdriver extends Item {
 
         itemStack.damageItem(1, player);
         player.addStat(StatList.useStats[this.id], 1);
-        world.playBlockSound(x, y, z, "random.screwdriver", 0.5F, 1.0F / (rand.nextFloat() * 0.4F + 1.2F));
+        world.playBlockSound(player, x, y, z, "random.screwdriver", 0.5F, 1.0F / (rand.nextFloat() * 0.4F + 1.2F));
     }
 
     @Override

@@ -29,7 +29,7 @@ public class Seeds extends Item {
         if (id == BlockList.tilledField.id && world.getBlockId(xCoord, yCoord + 1, zCoord) == 0) {
             world.setBlockWithNotify(xCoord, yCoord + 1, zCoord, this.blockType);
             StepSound snd = BlockList.susGravel.getStepSound(0);
-            world.playBlockSound(xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
+            world.playBlockSound(player, xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
             if (player.properties.gamemode != 1) {
                 stack.stackSize--;
             }

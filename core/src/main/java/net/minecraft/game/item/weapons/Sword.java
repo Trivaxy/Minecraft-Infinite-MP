@@ -129,7 +129,7 @@ public class Sword extends Tool {
             if (world.getBlockId(xCoord, yCoord, zCoord) == 0) {
                 Block cock = BlockList.cloth;
                 StepSound snd = cock.getStepSound(0);
-                world.playSoundEffect(xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
+                world.playSoundEffect(player, xCoord + 0.5F, yCoord + 0.5F, zCoord + 0.5F, snd.getSound(), (snd.getVolume() + 1.0F) / 2.0F, snd.getPitch() * 0.8F);
                 world.setBlockWithNotify(xCoord, yCoord, zCoord, BlockList.cobweb.id);
                 player.addStat(StatList.useStats[this.id], 1);
                 stack.damageItem(1, player);
@@ -170,7 +170,7 @@ public class Sword extends Tool {
             }
 
             player.itemUseCooldown = player.maxDelay = 20;
-            world.playSoundEffect(player.posX, player.posY, player.posZ, "mob.ghast.shoot", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
+            world.playSoundEffect(player, player.posX, player.posY, player.posZ, "mob.ghast.shoot", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
             stack.damageItem(5, player);
         } else if (player.inventory.getOffHandItem() == null) {
             player.setItemInUse(stack, this.getMaxUseDuration(stack));

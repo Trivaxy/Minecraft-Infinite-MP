@@ -26,7 +26,7 @@ public class LichStaff extends Staff {
             human1.skinUrl = human2.skinUrl = player.skinUrl;
             world.spawnEntity(human1);
             world.spawnEntity(human2);
-            world.playSoundEffect(player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
+            world.playSoundEffect(player, player.posX, player.posY, player.posZ, "random.breath", 1.0F, 1.0F / (world.rand.nextFloat() * 0.4F + 0.8F));
 
             for (int i = 0; i < 20; i++) {
                 world.spawnParticle(
