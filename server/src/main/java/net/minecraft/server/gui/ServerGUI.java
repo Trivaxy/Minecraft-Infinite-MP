@@ -20,11 +20,9 @@ import javax.swing.UIManager;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 import net.minecraft.SharedConstants;
-import net.minecraft.commands.Command;
-import net.minecraft.commands.CommandSource;
 import net.minecraft.server.MinecraftServer;
 
-public class ServerGUI extends JComponent implements CommandSource {
+public class ServerGUI extends JComponent {
     private static final long serialVersionUID = 0L;
     public static Logger logger = Logger.getLogger("Minecraft");
     private MinecraftServer mcServer;
@@ -109,7 +107,7 @@ public class ServerGUI extends JComponent implements CommandSource {
                         string2 = string2.substring(1);
                     }
 
-                    ServerGUI.this.mcServer.addCommand(string2, ServerGUI.this);
+                    ServerGUI.this.mcServer.addCommand(string2, ServerGUI.this.mcServer::createCommandSource);
                 }
 
                 jTextField4.setText("");
@@ -126,23 +124,4 @@ public class ServerGUI extends JComponent implements CommandSource {
         return jPanel1;
     }
 
-    @Override
-    public void print(String string1) {
-        logger.info(SharedConstants.deleteColorCodes(string1));
-    }
-
-    @Override
-    public String getUsername() {
-        return "CONSOLE";
-    }
-
-    @Override
-    public Command.UserType getType() {
-        return Command.UserType.ADMINISTRATOR;
-    }
-
-    @Override
-    public boolean canRunCommand(Command c) {
-        return true;
-    }
 }

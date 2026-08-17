@@ -45,7 +45,6 @@ import net.minecraft.game.world.chunk.loader.FileLoader;
 import net.minecraft.game.world.chunk.loader.handler.SaveHandler;
 import net.minecraft.game.world.dimension.Dimension;
 import net.minecraft.game.world.dimension.Overworld;
-import net.minecraft.game.world.edit.WorldEdit;
 import net.minecraft.game.world.generation.structures.Structure;
 import net.minecraft.game.world.mapdata.MapData;
 import net.minecraft.game.world.mapdata.MapStorage;
@@ -130,7 +129,6 @@ public class World implements WorldSource {
         this.currDim.init(this);
         this.calculateInitialSkylight();
         this.setWeather();
-        WorldEdit.init();
     }
 
     public World(World world, Dimension dim) {
@@ -167,7 +165,6 @@ public class World implements WorldSource {
         this.setEvent(this.settings.getEvent());
         this.calculateInitialSkylight();
         this.setWeather();
-        WorldEdit.init();
     }
 
     public World(SaveHandler save, String name, long seed, WorldSettings settings) {
@@ -206,7 +203,6 @@ public class World implements WorldSource {
         this.calculateInitialSkylight();
         this.setWeather();
         this.setEvent(this.settings.getEvent());
-        WorldEdit.init();
     }
 
     public void setEvent(int id) {

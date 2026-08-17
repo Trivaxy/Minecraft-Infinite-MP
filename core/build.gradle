@@ -8,6 +8,10 @@
 // Everything this module needs - the Java 8 toolchain, the repositories, and
 // libs/vendor-common.jar - comes from the `subprojects` block in the root build.gradle.
 
+dependencies {
+    api brigadier
+}
+
 // nightly versioning bc the build date is the version
 def generatedVersionDir = layout.buildDirectory.dir('generated/sources/version')
 

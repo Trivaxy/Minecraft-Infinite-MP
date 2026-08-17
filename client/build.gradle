@@ -2,6 +2,11 @@ import org.gradle.internal.os.OperatingSystem
 
 configurations {
     natives
+
+    bundled {
+        canBeConsumed = false
+        canBeResolved = true
+    }
 }
 
 // LWJGL 2 ships its .so/.dll/.dylib inside a per-platform jar.
@@ -30,6 +35,8 @@ dependencies {
 
     natives "org.lwjgl.lwjgl:lwjgl-platform:${lwjglVersion}:${nativeClassifier}"
     natives "net.java.jinput:jinput-platform:2.0.5:${nativeClassifier}"
+
+    bundled brigadier
 }
 
 def nativesDir = layout.buildDirectory.dir('natives')
@@ -90,6 +97,7 @@ tasks.register('jarmod', Jar) {
     from project(':core').sourceSets.main.output
     from(zipTree(rootProject.file('libs/vendor-common.jar'))) { exclude 'META-INF/**' }
     from(zipTree(rootProject.file('libs/vendor-sound.jar'))) { exclude 'META-INF/**' }
+    from({ configurations.bundled.collect { zipTree(it) } }) { exclude 'META-INF/**' }
 
     manifest {
         attributes(

@@ -1,9 +1,18 @@
+configurations {
+    bundled {
+        canBeConsumed = false
+        canBeResolved = true
+    }
+}
+
 dependencies {
     // The shared game. `api` so the smoketest source set - which speaks the real protocol
     // using core's packet classes - sees them transitively.
     api project(':core')
 
     implementation project(':client')
+
+    bundled brigadier
 }
 
 tasks.register('runServer', JavaExec) {
@@ -102,6 +111,7 @@ tasks.register('serverJar', Jar) {
     // The shared game and its lang/struct resources live in :core now.
     from project(':core').sourceSets.main.output
     from(zipTree(rootProject.file('libs/vendor-common.jar'))) { exclude 'META-INF/**' }
+    from({ configurations.bundled.collect { zipTree(it) } }) { exclude 'META-INF/**' }
 
     manifest {
         attributes('Main-Class': 'net.minecraft.server.MinecraftServer')

@@ -12,7 +12,6 @@ import java.util.logging.Logger;
 import net.minecraft.Profiler;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.commands.ClientCommands;
-import net.minecraft.client.commands.ConfigManagerClient;
 import net.minecraft.client.gamemode.AdventureMode;
 import net.minecraft.client.gamemode.CreativeMode;
 import net.minecraft.client.gamemode.GameMode;
@@ -53,8 +52,8 @@ import net.minecraft.client.render.world.WorldRenderer;
 import net.minecraft.client.sound.SoundDownloader;
 import net.minecraft.client.sound.SoundManager;
 import net.minecraft.client.statistics.StatWriter;
-import net.minecraft.commands.CommandAccessor;
-import net.minecraft.commands.ConfigManager;
+import net.minecraft.commands.Commands;
+import net.minecraft.game.player.ConfigManager;
 import net.minecraft.game.block.BlockList;
 import net.minecraft.game.block.material.MaterialList;
 import net.minecraft.game.entity.player.Player;
@@ -77,7 +76,6 @@ import net.minecraft.statistics.achievement.AchievementList;
 import net.minecraft.util.logging.Logging;
 import net.minecraft.util.logging.LoggingUtils;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.property.PropertySource;
 import org.lwjgl.LWJGLException;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
@@ -87,7 +85,7 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.PixelFormat;
 import org.lwjgl.util.glu.GLU;
 
-public class Minecraft implements Runnable, CommandAccessor {
+public class Minecraft implements Runnable {
     private static Minecraft instance;
     public List<Runnable> mainThreadEvents = Collections.synchronizedList(new ArrayList<>());
     private static File directory;
@@ -96,6 +94,7 @@ public class Minecraft implements Runnable, CommandAccessor {
     private SoundDownloader downloadResourcesThread;
     public SoundManager sndManager = new SoundManager();
     private ConfigManagerClient configManager = new ConfigManagerClient(this);
+    private final Commands commands = new Commands();
     public StatWriter statistics;
     private SplashScreen splash;
     public LoadingScreen loadingScreen = new LoadingScreen(this);
@@ -143,7 +142,8 @@ public class Minecraft implements Runnable, CommandAccessor {
         instance = this;
         StatList.init();
         TextureManager.init();
-        ClientCommands.init();
+        ClientCommands.register(this.commands.getDispatcher());
+        Commands.setActive(this.commands);
     }
 
     public static void main(String[] argv) {
@@ -289,7 +289,6 @@ public class Minecraft implements Runnable, CommandAccessor {
         this.setScreen(new TitleScreen());
     }
 
-    @Override
     public void initiateShutdown() {
         this.running = false;
     }
@@ -1108,7 +1107,6 @@ public class Minecraft implements Runnable, CommandAccessor {
         return instance != null && OptionValues.advCoords;
     }
 
-    @Override
     public void clientSetGamemode(int gm) {
         if (this.world != null) {
             this.world.getSettings().setGamemode((byte)gm);
@@ -1146,39 +1144,20 @@ public class Minecraft implements Runnable, CommandAccessor {
         return false;
     }
 
-    @Override
-    public int getWorldCount() {
-        return 1;
-    }
-
-    @Override
     public World getWorld(int dimension) {
         return this.world;
     }
 
-    @Override
     public ConfigManager getConfigManager() {
         return this.configManager;
     }
 
-    @Override
+    public Commands getCommands() {
+        return this.commands;
+    }
+
     public boolean isServer() {
         return false;
-    }
-
-    @Override
-    public PropertySource getProperties() {
-        return new PropertySource.Empty();
-    }
-
-    @Override
-    public void clientSetTimer(float tps) {
-        this.timer.ticksPerSecond = tps;
-    }
-
-    @Override
-    public float clientGetTimer() {
-        return this.timer.ticksPerSecond;
     }
 
     static {

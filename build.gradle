@@ -20,6 +20,8 @@ subprojects {
     group = 'net.minecraft'
     version = '1.0-dev'
 
+    ext.brigadier = 'com.mojang:brigadier:1.3.10'
+
     repositories {
         mavenCentral()
         maven {

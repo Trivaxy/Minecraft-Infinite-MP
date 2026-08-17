@@ -18,8 +18,6 @@ import net.minecraft.client.gui.screens.GuiScreen;
 import net.minecraft.client.localization.Font;
 import net.minecraft.client.network.ClientHandler;
 import net.minecraft.client.network.player.NetworkPlayer;
-import net.minecraft.commands.Command;
-import net.minecraft.commands.CommandsManager;
 import net.minecraft.localization.Translator;
 import net.minecraft.util.math.MathHelper;
 import org.lwjgl.input.Keyboard;
@@ -29,7 +27,6 @@ public class ChatScreen extends GuiScreen {
     private final List<ClientHandler.PlayerInfo> onlinePlayers;
     private List<String> currentSuggestions = new ArrayList<>();
     private String chatText;
-    private String lastCommandSuggestion = null;
     private URI clickedURI;
     protected TextField inputField;
     private int chatHistory;
@@ -75,10 +72,7 @@ public class ChatScreen extends GuiScreen {
     @Override
     protected void keyTyped(char character, int key) {
         if (key == 15) {
-            String msg = this.inputField.getText();
-            if (msg.startsWith("/")) {
-                this.autofillCommand(msg);
-            } else {
+            if (!this.inputField.getText().startsWith("/")) {
                 this.autofillPlayerName();
             }
         } else {
@@ -216,105 +210,6 @@ public class ChatScreen extends GuiScreen {
             this.inputField.writeText(this.onlinePlayers.get(this.playerCursor++).name);
         }
     }
-
-    private void autofillCommand(String msg) {
-        if (msg != null) {
-            int firstSpace = msg.indexOf(32);
-            String firstToken = firstSpace == -1 ? msg : msg.substring(0, firstSpace);
-            String command = firstToken.replace("/", "");
-            int spaces = firstSpace == -1 ? 0 : msg.length() - msg.replace(" ", "").length();
-            if (spaces == 0) {
-                this.autocompleteCommandName(msg);
-            } else {
-                int argIndex = spaces - 1;
-                int lastSpace = msg.lastIndexOf(32);
-                String prefix;
-                if (lastSpace == -1) {
-                    prefix = "";
-                } else if (msg.endsWith(" ")) {
-                    prefix = "";
-                } else {
-                    prefix = msg.substring(lastSpace + 1);
-                }
-
-                for (Command cmd : CommandsManager.COMMANDS) {
-                    if (cmd != null && command.equalsIgnoreCase(cmd.name())) {
-                        List<String[]> suggestions = cmd.suggestions();
-                        if (suggestions == null) {
-                            return;
-                        }
-
-                        if (argIndex >= 0 && argIndex < suggestions.size()) {
-                            String[] rawSug = suggestions.get(argIndex);
-                            if (rawSug != null && rawSug.length != 0) {
-                                if (prefix.equalsIgnoreCase(msg.substring(lastSpace + 1))) {
-                                    prefix = "";
-                                }
-
-                                List<String> matches = new ArrayList<>();
-                                String lowerPrefix = prefix.toLowerCase();
-
-                                for (String s : rawSug) {
-                                    if (s != null && (lowerPrefix.isEmpty() || s.toLowerCase().startsWith(lowerPrefix))) {
-                                        matches.add(s);
-                                    }
-                                }
-
-                                if (matches.isEmpty()) {
-                                    Collections.addAll(matches, rawSug);
-                                }
-
-                                this.currentSuggestions = matches;
-                                this.activeSuggestion = (this.activeSuggestion + 1) % matches.size();
-                                String pick = matches.get(this.activeSuggestion);
-                                String base;
-                                if (lastSpace == -1) {
-                                    base = "";
-                                } else {
-                                    base = msg.substring(0, lastSpace + 1);
-                                }
-
-                                this.inputField.setText(base + pick);
-                                return;
-                            }
-
-                            return;
-                        }
-
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
-    private void autocompleteCommandName(String msg) {
-        String prefix = msg.startsWith("/") ? msg.substring(1) : msg;
-        if (this.lastCommandSuggestion != null && prefix.equalsIgnoreCase(this.lastCommandSuggestion)) {
-            prefix = "";
-        }
-
-        List<String> matches = new ArrayList<>();
-        String lowerPrefix = prefix.toLowerCase();
-
-        for (Command cmd : CommandsManager.COMMANDS) {
-            if (cmd != null && this.mc.player.canRunCommand(cmd)) {
-                String name = cmd.name();
-                if (prefix.isEmpty() || name.toLowerCase().startsWith(lowerPrefix)) {
-                    matches.add(name);
-                }
-            }
-        }
-
-        if (!matches.isEmpty()) {
-            this.currentSuggestions = matches;
-            this.activeSuggestion = (this.activeSuggestion + 1) % matches.size();
-            String pick = matches.get(this.activeSuggestion);
-            this.lastCommandSuggestion = pick;
-            this.inputField.setText("/" + pick);
-        }
-    }
-
     private void getMessageFromHistory(int scrollAmount) {
         int currMessage = this.chatHistory + scrollAmount;
         int chatListSize = this.mc.HUD.chatOverlay.getChatHistory().size();

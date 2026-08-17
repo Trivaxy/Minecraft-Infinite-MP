@@ -1,9 +1,7 @@
 package net.minecraft.game.block.machines;
 
 import java.util.Random;
-import net.minecraft.commands.Command;
-import net.minecraft.commands.CommandHolder;
-import net.minecraft.commands.CommandSource;
+import net.minecraft.commands.Commands;
 import net.minecraft.game.block.material.Material;
 import net.minecraft.game.block.tileentity.TileEntity;
 import net.minecraft.game.block.tileentity.other.CommandBlockEntity;
@@ -12,20 +10,23 @@ import net.minecraft.game.entity.player.Player;
 import net.minecraft.game.texture.IconRegister;
 import net.minecraft.game.world.World;
 
-public class CommandBlock extends ContainerBlock implements CommandSource {
+public class CommandBlock extends ContainerBlock {
     public CommandBlock(int id, Material mat) {
         super(id, mat);
     }
 
     @Override
     public void onTick(World world, int x, int y, int z, Random random) {
-        try {
-            String command = ((CommandBlockEntity)world.getTileEntity(x, y, z)).command.substring(1);
-            if (world.getTileEntity(x, y, z) != null && world.hasNeighborSignal(x, y, z) && !command.isEmpty()) {
-                CommandBlockEntity.CommandsManagerCore.instance
-                    .runCommand(new CommandHolder(command.trim(), this), (CommandBlockEntity)world.getTileEntity(x, y, z));
-            }
-        } catch (Exception var7) {
+        TileEntity tile = world.getTileEntity(x, y, z);
+        if (!(tile instanceof CommandBlockEntity) || !world.hasNeighborSignal(x, y, z)) {
+            return;
+        }
+
+        CommandBlockEntity block = (CommandBlockEntity)tile;
+        String command = block.command.startsWith("/") ? block.command.substring(1) : block.command;
+        Commands commands = Commands.active();
+        if (commands != null && !command.trim().isEmpty()) {
+            commands.perform(command, block.createCommandSource());
         }
     }
 
@@ -50,25 +51,6 @@ public class CommandBlock extends ContainerBlock implements CommandSource {
     @Override
     public TileEntity getBlockEntity() {
         return new CommandBlockEntity();
-    }
-
-    @Override
-    public String getUsername() {
-        return "CommandBlock";
-    }
-
-    @Override
-    public void print(String text) {
-    }
-
-    @Override
-    public Command.UserType getType() {
-        return Command.UserType.OPERATOR;
-    }
-
-    @Override
-    public boolean canRunCommand(Command c) {
-        return true;
     }
 
     @Override

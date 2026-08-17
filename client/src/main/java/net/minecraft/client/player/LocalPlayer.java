@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Session;
-import net.minecraft.client.commands.ClientCommands;
 import net.minecraft.client.gamemode.CreativeMode;
 import net.minecraft.client.gamemode.SpectatorMode;
 import net.minecraft.client.gamemode.SurvivalMode;
@@ -30,9 +29,8 @@ import net.minecraft.client.gui.screens.title.CreditsScreen;
 import net.minecraft.client.options.OptionValues;
 import net.minecraft.client.particle.effect.SoulParticle;
 import net.minecraft.client.particle.special.PickupAnimation;
-import net.minecraft.commands.Command;
-import net.minecraft.commands.CommandHolder;
-import net.minecraft.commands.CommandSource;
+import net.minecraft.commands.CommandOutput;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.game.ParticleType;
 import net.minecraft.game.block.BlockList;
 import net.minecraft.game.block.material.MaterialList;
@@ -68,7 +66,7 @@ import net.minecraft.statistics.achievement.Achievement;
 import net.minecraft.statistics.achievement.AchievementList;
 import net.minecraft.util.math.MathHelper;
 
-public class LocalPlayer extends Player implements CommandSource {
+public class LocalPlayer extends Player implements CommandOutput {
     public PlayerController controller;
     public Minecraft mc;
     public String lastDeath;
@@ -598,7 +596,7 @@ public class LocalPlayer extends Player implements CommandSource {
         }
 
         if (message.startsWith("/")) {
-            ClientCommands.instance.runCommand(new CommandHolder(message.substring(1).trim(), this), this.mc);
+            this.mc.getCommands().perform(message.substring(1), this.createCommandSource());
         } else {
             this.mc.HUD.chatOverlay.addChatMessage("§e<" + this.username + "> " + "§f" + message);
         }
@@ -657,22 +655,12 @@ public class LocalPlayer extends Player implements CommandSource {
     }
 
     @Override
-    public String getUsername() {
-        return this.username;
-    }
-
-    @Override
-    public void print(String text) {
+    public void sendCommandMessage(String text) {
         this.mc.HUD.chatOverlay.addChatMessage(text);
     }
 
-    @Override
-    public Command.UserType getType() {
-        return Command.UserType.OPERATOR;
-    }
-
-    @Override
-    public boolean canRunCommand(Command command) {
-        return this.world.getSettings().getCheats() || command.requiredUserType() == Command.UserType.USER;
+    public CommandSourceStack createCommandSource() {
+        int level = this.world.getSettings().getCheats() ? CommandSourceStack.LEVEL_OWNER : CommandSourceStack.LEVEL_ALL;
+        return CommandSourceStack.of(this, this, level, this.mc.getConfigManager(), false);
     }
 }

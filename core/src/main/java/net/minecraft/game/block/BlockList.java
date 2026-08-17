@@ -132,7 +132,6 @@ import net.minecraft.game.block.plants.TallGrass;
 import net.minecraft.game.block.plants.Vine;
 import net.minecraft.game.block.plants.WaterLily;
 import net.minecraft.game.block.stepsound.StepSoundsList;
-import net.minecraft.game.block.tileentity.other.CommandBlockEntity;
 import net.minecraft.game.block.tileentity.other.SignEntity;
 import net.minecraft.game.block.utility.Anvil;
 import net.minecraft.game.block.utility.Barrel;
@@ -1788,7 +1787,6 @@ public class BlockList {
             }
         }
 
-        CommandBlockEntity.CommandsManagerCore.init();
         StatList.initBlockStats();
     }
 }

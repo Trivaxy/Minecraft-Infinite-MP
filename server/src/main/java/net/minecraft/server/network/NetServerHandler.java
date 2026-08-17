@@ -10,8 +10,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.logging.Logger;
 import net.minecraft.SharedConstants;
-import net.minecraft.commands.Command;
-import net.minecraft.commands.CommandSource;
+import net.minecraft.commands.CommandOutput;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.game.block.tileentity.TileEntity;
 import net.minecraft.game.block.tileentity.other.SignEntity;
 import net.minecraft.game.block.tileentity.smelters.GeneratorEntity;
@@ -58,7 +58,7 @@ import net.minecraft.util.io.IOUtil;
 import net.minecraft.util.logging.LoggingUtils;
 import net.minecraft.util.math.MathHelper;
 
-public class NetServerHandler extends NetworkHandler implements CommandSource {
+public class NetServerHandler extends NetworkHandler implements CommandOutput {
     public static Logger logger = Logger.getLogger("Minecraft");
     public NetworkManager netManager;
     public boolean connectionClosed = false;
@@ -558,7 +558,14 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
     }
 
     private void handleSlashCommand(String string1) {
-        this.mcServer.addCommand(string1.substring(1).trim(), this);
+        this.mcServer.addCommand(string1.substring(1).trim(), this::createCommandSource);
+    }
+
+    public CommandSourceStack createCommandSource() {
+        int level = this.mcServer.configManager.isOp(this.playerEntity.username)
+            ? CommandSourceStack.LEVEL_OP
+            : CommandSourceStack.LEVEL_ALL;
+        return CommandSourceStack.of(this, this.playerEntity, level, this.mcServer.configManager, true);
     }
 
     @Override
@@ -593,13 +600,8 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
     }
 
     @Override
-    public void print(String string1) {
+    public void sendCommandMessage(String string1) {
         this.sendPacket(new ChatPacket("§7" + string1));
-    }
-
-    @Override
-    public String getUsername() {
-        return this.playerEntity.username;
     }
 
     @Override
@@ -790,16 +792,4 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
         return true;
     }
 
-    @Override
-    public Command.UserType getType() {
-        return this.mcServer.configManager.isOp(this.playerEntity.username) ? Command.UserType.OPERATOR : Command.UserType.USER;
-    }
-
-    @Override
-    public boolean canRunCommand(Command c) {
-        return !this.mcServer.configManager.isOp(this.playerEntity.username)
-                || c.requiredUserType() != Command.UserType.OPERATOR && c.requiredUserType() != Command.UserType.USER
-            ? c.requiredUserType() == Command.UserType.USER
-            : true;
-    }
 }

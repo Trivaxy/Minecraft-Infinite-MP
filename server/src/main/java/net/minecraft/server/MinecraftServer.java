@@ -11,14 +11,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.minecraft.SharedConstants;
-import net.minecraft.commands.Command;
-import net.minecraft.commands.CommandAccessor;
-import net.minecraft.commands.CommandHolder;
-import net.minecraft.commands.CommandSource;
-import net.minecraft.commands.ConfigManager;
+import net.minecraft.commands.CommandOutput;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.game.physics.Vector;
+import net.minecraft.game.player.ConfigManager;
 import net.minecraft.game.world.World;
 import net.minecraft.game.world.WorldSettings;
 import net.minecraft.game.world.WorldType;
@@ -26,8 +27,7 @@ import net.minecraft.game.world.chunk.loader.handler.AnvilSaveHandler;
 import net.minecraft.game.world.util.Position;
 import net.minecraft.network.packet.world.UpdateTimePacket;
 import net.minecraft.network.packet.world.WeatherPacket;
-import net.minecraft.server.commands.CommandUseTimer;
-import net.minecraft.server.commands.ServerCommandFactory;
+import net.minecraft.server.commands.ServerCommands;
 import net.minecraft.server.entity.EntityTracker;
 import net.minecraft.server.gui.IUpdatePlayerListBox;
 import net.minecraft.server.gui.ServerGUI;
@@ -40,7 +40,7 @@ import net.minecraft.util.logging.LoggingUtils;
 import net.minecraft.util.property.PropertiesConfig;
 import net.minecraft.util.property.PropertySource;
 
-public class MinecraftServer implements Runnable, CommandAccessor, CommandSource {
+public class MinecraftServer implements Runnable, CommandOutput {
     // Overworld=0, Hell=1, Sky=2, Void=3, Ocean=4. Dense and fixed, so every per-dimension
     // collection below is a plain array indexed straight by dimension id.
     public static final int DIMENSION_COUNT = 5;
@@ -56,7 +56,8 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
     public String currentTask;
     public int percentDone;
     private List<IUpdatePlayerListBox> updatePlayerList = new ArrayList<>();
-    private List<CommandHolder> commands = Collections.synchronizedList(new ArrayList<>());
+    private List<QueuedCommand> commands = Collections.synchronizedList(new ArrayList<>());
+    private final Commands dispatcher = new Commands();
     public EntityTracker[] entityTracker = new EntityTracker[DIMENSION_COUNT];
     public boolean onlineMode;
     public boolean spawnPeacefulMobs;
@@ -72,7 +73,8 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
     public List<Runnable> mainThreadEvents = Collections.synchronizedList(new ArrayList<>());
 
     public MinecraftServer() {
-        ServerCommandFactory.init();
+        ServerCommands.register(this.dispatcher.getDispatcher());
+        Commands.setActive(this.dispatcher);
         new Thread("Timer hack thread") {
             {
                 this.setDaemon(true);
@@ -104,7 +106,7 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
                             string2 = string2.substring(1);
                         }
 
-                        MinecraftServer.this.addCommand(string2, MinecraftServer.this);
+                        MinecraftServer.this.addCommand(string2, MinecraftServer.this::createCommandSource);
                     }
                 } catch (IOException iOException4) {
                     iOException4.printStackTrace();
@@ -194,7 +196,7 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
 
         logger.info("Preparing level \"" + string7 + "\"");
         this.initWorld(string7, j9);
-        logger.info("Done (" + (System.nanoTime() - j5) + "ns)! For help, type \"help\" or \"?\"");
+        logger.info("Done (" + (System.nanoTime() - j5) + "ns)!");
         return true;
     }
 
@@ -325,7 +327,6 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
         }
     }
 
-    @Override
     public void initiateShutdown() {
         this.serverRunning = false;
     }
@@ -434,7 +435,6 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
             this.worlds[d].settings.setWorldTime(worldTime);
         }
 
-        CommandUseTimer.tick();
         this.networkListener.handleNetworkListenThread();
         this.configManager.onTick();
 
@@ -453,15 +453,36 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
         }
     }
 
-    public void addCommand(String string1, CommandSource cs) {
-        this.commands.add(new CommandHolder(string1, cs));
+    public void addCommand(String command, Supplier<CommandSourceStack> source) {
+        this.commands.add(new QueuedCommand(command, source));
     }
 
     public void commandLineParser() {
         while (this.commands.size() > 0) {
-            CommandHolder ch = this.commands.remove(0);
-            ServerCommandFactory.instance.runCommand(ch, this);
+            QueuedCommand queued = this.commands.remove(0);
+            this.dispatcher.perform(queued.command, queued.source.get());
         }
+    }
+
+    public Commands getCommands() {
+        return this.dispatcher;
+    }
+
+    public CommandSourceStack createCommandSource() {
+        World overworld = this.getWorld(0);
+        Position spawn = overworld.getSpawnPoint();
+        return new CommandSourceStack(
+            this,
+            "CONSOLE",
+            CommandSourceStack.LEVEL_OWNER,
+            null,
+            overworld,
+            Vector.createVector(spawn.x + 0.5, spawn.y, spawn.z + 0.5),
+            0.0F,
+            0.0F,
+            this.configManager,
+            true
+        );
     }
 
     public void addPlayerToList(IUpdatePlayerListBox iUpdatePlayerListBox1) {
@@ -488,17 +509,12 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
     }
 
     @Override
-    public void print(String string1) {
+    public void sendCommandMessage(String string1) {
         logger.info(SharedConstants.deleteColorCodes(string1));
     }
 
     public void logWarning(String string1) {
         logger.warning(string1);
-    }
-
-    @Override
-    public String getUsername() {
-        return "CONSOLE";
     }
 
     // Both accessors clamp instead of throwing. Dimension ids reach them from player NBT and
@@ -512,42 +528,29 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
         return this.entityTracker[dimension >= 0 && dimension < this.entityTracker.length ? dimension : 0];
     }
 
-    @Override
     public World getWorld(int dimension) {
         return this.getWorldManager(dimension);
     }
 
-    @Override
     public ConfigManager getConfigManager() {
         return this.configManager;
     }
 
-    @Override
     public boolean isServer() {
         return true;
     }
 
-    @Override
-    public Command.UserType getType() {
-        return Command.UserType.ADMINISTRATOR;
-    }
-
-    @Override
-    public boolean canRunCommand(Command c) {
-        return true;
-    }
-
-    @Override
-    public int getWorldCount() {
-        return this.worlds.length;
-    }
-
-    @Override
-    public PropertySource getProperties() {
-        return this.properties;
-    }
-
     static {
         Logging.init(logger = Logger.getLogger("Minecraft"), workingDirectory, false);
+    }
+
+    private static final class QueuedCommand {
+        final String command;
+        final Supplier<CommandSourceStack> source;
+
+        QueuedCommand(String command, Supplier<CommandSourceStack> source) {
+            this.command = command;
+            this.source = source;
+        }
     }
 }

@@ -11,9 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
-import net.minecraft.commands.Command;
-import net.minecraft.commands.CommandSource;
-import net.minecraft.commands.ConfigManager;
+import net.minecraft.game.player.ConfigManager;
 import net.minecraft.game.block.tileentity.TileEntity;
 import net.minecraft.game.entity.player.Player;
 import net.minecraft.game.world.chunk.loader.handler.PlayerFileData;
@@ -306,11 +304,11 @@ public class ServerConfigurationManager implements ConfigManager {
     }
 
     @Override
-    public void banPlayer(CommandSource src, String[] string1) {
-        BanEntry var4 = new BanEntry(string1[0]);
-        var4.setBannedBy(src.getUsername());
-        if (string1.length >= 2) {
-            var4.setBanReason(Command.joinArgArray(string1, 1));
+    public void banPlayer(String bannedBy, String name, String reason) {
+        BanEntry var4 = new BanEntry(name);
+        var4.setBannedBy(bannedBy);
+        if (reason != null && !reason.isEmpty()) {
+            var4.setBanReason(reason);
         }
 
         this.bannedPlayers.put(var4);
@@ -322,18 +320,29 @@ public class ServerConfigurationManager implements ConfigManager {
     }
 
     @Override
-    public void banIP(CommandSource src, String[] string1) {
-        BanEntry var4 = new BanEntry(string1[0]);
-        var4.setBannedBy(src.getUsername());
-        if (string1.length >= 2) {
-            var4.setBanReason(Command.joinArgArray(string1, 1));
+    public void banIP(String bannedBy, String address, String reason) {
+        BanEntry var4 = new BanEntry(address);
+        var4.setBannedBy(bannedBy);
+        if (reason != null && !reason.isEmpty()) {
+            var4.setBanReason(reason);
         }
 
         this.bannedIPs.put(var4);
 
-        for (EntityPlayerMP player : this.getPlayersWithIP(string1[0])) {
+        for (EntityPlayerMP player : this.getPlayersWithIP(address)) {
             player.playerNetServerHandler.kickPlayer("You have been IP banned.");
         }
+    }
+
+    @Override
+    public Set<String> getPlayerNames() {
+        Set<String> names = new HashSet<>();
+
+        for (EntityPlayerMP player : this.playerEntities) {
+            names.add(player.username);
+        }
+
+        return names;
     }
 
     @Override
