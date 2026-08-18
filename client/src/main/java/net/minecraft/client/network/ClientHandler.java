@@ -740,9 +740,11 @@ public class ClientHandler extends NetworkHandler {
     public void handleSetSlot(SlotPacket packet) {
         if (packet.windowId == -1) {
             this.mc.player.inventory.setItemStack(packet.myItemStack);
-        } else if (packet.windowId == 0 && packet.itemSlot >= 36 && packet.itemSlot < 45) {
+        } else if (packet.windowId == 0) {
             ItemStack stack = this.mc.player.container.getSlot(packet.itemSlot).getStack();
-            if (packet.myItemStack != null && (stack == null || stack.stackSize < packet.myItemStack.stackSize)) {
+            if (packet.itemSlot >= 36 && packet.itemSlot < 45
+                && packet.myItemStack != null
+                && (stack == null || stack.stackSize < packet.myItemStack.stackSize)) {
                 packet.myItemStack.animationsToGo = 5;
             }
 
