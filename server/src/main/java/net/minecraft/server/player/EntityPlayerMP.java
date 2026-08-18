@@ -91,7 +91,6 @@ public class EntityPlayerMP extends Player implements ContainerListener {
     private int ticksOfInvuln = 60;
     private ItemStack[] playerInventory = new ItemStack[]{null, null, null, null, null, null};
     private int currentWindowId = 0;
-    public boolean isChangingQuantityOnly;
     public int ping;
 
     public EntityPlayerMP(MinecraftServer minecraftServer1, World world2, String string3, ItemInWorldManager itemInWorldManager4) {
@@ -599,7 +598,7 @@ public class EntityPlayerMP extends Player implements ContainerListener {
 
     @Override
     public void setStack(Container container1, int i2, ItemStack itemStack3) {
-        if (!(container1.getSlot(i2) instanceof CraftingSlot) && !this.isChangingQuantityOnly) {
+        if (!(container1.getSlot(i2) instanceof CraftingSlot)) {
             this.playerNetServerHandler.sendPacket(new SlotPacket(container1.windowId, i2, itemStack3));
         }
     }
@@ -626,9 +625,7 @@ public class EntityPlayerMP extends Player implements ContainerListener {
     }
 
     public void updateHeldItem() {
-        if (!this.isChangingQuantityOnly) {
-            this.playerNetServerHandler.sendPacket(new SlotPacket(-1, -1, this.inventory.getItemStack()));
-        }
+        this.playerNetServerHandler.sendPacket(new SlotPacket(-1, -1, this.inventory.getItemStack()));
     }
 
     public void closeCraftingGui() {

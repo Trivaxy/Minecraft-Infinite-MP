@@ -468,18 +468,8 @@ public class NetServerHandler extends NetworkHandler implements CommandOutput {
         }
 
         if (itemStack3 == null || itemStack3.getMaxItemUseDuration() == 0) {
-            this.playerEntity.isChangingQuantityOnly = true;
-            if (this.playerEntity.inventory.canUseItem()) {
-                this.playerEntity.inventory.offhandSlot[0] = ItemStack.copyStack(this.playerEntity.inventory.offhandSlot[0]);
-            } else {
-                this.playerEntity.inventory.mainInventory[this.playerEntity.inventory.currentSlot] = ItemStack.copyStack(
-                    this.playerEntity.inventory.mainInventory[this.playerEntity.inventory.currentSlot]
-                );
-            }
-
             Slot slot12 = this.playerEntity.openContainer.getSlotInInventory(this.playerEntity.inventory, this.playerEntity.inventory.currentSlot);
             this.playerEntity.openContainer.updateCraftResults();
-            this.playerEntity.isChangingQuantityOnly = false;
             if (!ItemStack.areItemStacksEqual(this.playerEntity.inventory.getCurrentItem(), packet15Place1.itemStack)) {
                 if (this.playerEntity.inventory.canUseItem()) {
                     this.sendPacket(new SlotPacket(this.playerEntity.openContainer.windowId, slot12.slotNumber, this.playerEntity.inventory.getOffHandItem()));
@@ -651,10 +641,8 @@ public class NetServerHandler extends NetworkHandler implements CommandOutput {
                 .windowClick(packet102WindowClick1.inventorySlot, packet102WindowClick1.mouseClick, packet102WindowClick1.isActive, this.playerEntity);
             if (ItemStack.areItemStacksEqual(packet102WindowClick1.itemStack, itemStack2)) {
                 this.playerEntity.playerNetServerHandler.sendPacket(new TransactionPacket(packet102WindowClick1.window_Id, packet102WindowClick1.action, true));
-                this.playerEntity.isChangingQuantityOnly = true;
                 this.playerEntity.openContainer.updateCraftResults();
                 this.playerEntity.updateHeldItem();
-                this.playerEntity.isChangingQuantityOnly = false;
             } else {
                 this.idMap.put(this.playerEntity.openContainer.windowId, packet102WindowClick1.action);
                 this.playerEntity
