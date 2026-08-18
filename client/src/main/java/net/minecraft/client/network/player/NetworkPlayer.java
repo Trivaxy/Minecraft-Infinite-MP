@@ -30,7 +30,6 @@ public class NetworkPlayer extends LocalPlayer {
     private double oldHeight;
     private float oldRotYaw;
     private float oldRotPitch;
-    private boolean beingDamaged = false;
     private boolean onSolidTile = false;
     private boolean wasSneaking = false;
     private boolean wasCrawling = false;
@@ -205,11 +204,16 @@ public class NetworkPlayer extends LocalPlayer {
 
     @Override
     public void setHealth(int hp) {
-        if (this.beingDamaged) {
-            super.setHealth(hp);
-        } else {
-            this.health = hp;
-            this.beingDamaged = true;
-        }
+        // In multiplayer the server is the only authority on damage: this packet
+        // is the *result*, already armor-reduced and source-filtered. Routing a
+        // health sync back through LocalPlayer.setHealth re-runs
+        // applyDamageMultiplier with DamageSource.generic - which damages armor
+        // for every damage type, even bypass sources like fall that the server
+        // deliberately exempts, then double-applies armor reduction to health,
+        // adds generic's exhaustion and can fantasm the rosary revive. The hurt
+        // flash and sound already arrive separately as EntityStatePacket(2),
+        // broadcast to the player themselves by Mob.damageEntity, so nothing is
+        // lost by accepting the value as-is.
+        this.health = hp;
     }
 }
