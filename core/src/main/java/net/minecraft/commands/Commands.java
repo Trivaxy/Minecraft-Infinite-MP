@@ -1,6 +1,7 @@
 package net.minecraft.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.arguments.ArgumentType;
@@ -45,16 +46,32 @@ public class Commands {
             return 0;
         }
 
+        ParseResults<CommandSourceStack> parse = this.dispatcher.parse(trimmed, source);
+
         try {
-            return this.dispatcher.execute(trimmed, source);
+            return this.dispatcher.execute(parse);
         } catch (CommandSyntaxException e) {
-            reportSyntaxError(e, source);
+            if (this.blockedByPermission(trimmed, source, parse)) {
+                source.sendFailure(CommandMessages.translate("commands.base.noperms"));
+            } else {
+                reportSyntaxError(e, source);
+            }
+
             return 0;
         } catch (Exception e) {
             source.sendFailure(CommandMessages.translate("commands.base.error.internal"));
             logger.log(Level.WARNING, "Uncaught exception running command: " + trimmed, e);
             return 0;
         }
+    }
+
+    private boolean blockedByPermission(String command, CommandSourceStack source, ParseResults<CommandSourceStack> parse) {
+        if (source.hasPermission(CommandSourceStack.LEVEL_OWNER)) {
+            return false;
+        }
+
+        CommandSourceStack elevated = source.withPermission(CommandSourceStack.LEVEL_OWNER);
+        return this.dispatcher.parse(command, elevated).getReader().getCursor() > parse.getReader().getCursor();
     }
 
     private static void reportSyntaxError(CommandSyntaxException e, CommandSourceStack source) {
