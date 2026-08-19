@@ -4,3 +4,7 @@ commands.base.error.internal=Something went wrong running that command.
 commands.base.error.player=That command has to be run by a player.
 commands.base.error.unknownplayer=No such player:
 commands.base.error.position=Expected three coordinates.
+commands.base.error.unknownitem=No such item:
+commands.give.success=Gave %d of item %d to %s
+commands.give.usage=Usage: /give [player] <item id>
+commands.stop.stopping=Stopping the server...

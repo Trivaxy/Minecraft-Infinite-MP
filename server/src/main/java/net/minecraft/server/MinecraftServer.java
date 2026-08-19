@@ -73,7 +73,7 @@ public class MinecraftServer implements Runnable, CommandOutput {
     public List<Runnable> mainThreadEvents = Collections.synchronizedList(new ArrayList<>());
 
     public MinecraftServer() {
-        ServerCommands.register(this.dispatcher.getDispatcher());
+        ServerCommands.register(this.dispatcher.getDispatcher(), this);
         Commands.setActive(this.dispatcher);
         new Thread("Timer hack thread") {
             {

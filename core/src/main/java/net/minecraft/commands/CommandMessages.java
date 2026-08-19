@@ -12,6 +12,7 @@ public final class CommandMessages {
     public static final SimpleCommandExceptionType UNKNOWN_COMMAND = simple("commands.base.unknown");
     public static final DynamicCommandExceptionType UNKNOWN_PLAYER = dynamic("commands.base.error.unknownplayer");
     public static final SimpleCommandExceptionType INCOMPLETE_POSITION = simple("commands.base.error.position");
+    public static final DynamicCommandExceptionType UNKNOWN_ITEM = dynamic("commands.base.error.unknownitem");
 
     private CommandMessages() {
     }
