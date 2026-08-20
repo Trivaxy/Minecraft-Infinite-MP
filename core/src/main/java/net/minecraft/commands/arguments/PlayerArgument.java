@@ -24,7 +24,7 @@ public class PlayerArgument implements ArgumentType<String> {
         String username = context.getArgument(name, String.class);
         Player player = context.getSource().getConfigManager() == null ? null : context.getSource().getConfigManager().getPlayer(username);
         if (player == null) {
-            throw CommandMessages.UNKNOWN_PLAYER.create(username);
+            throw CommandMessages.UNKNOWN_PLAYER.create();
         }
 
         return player;

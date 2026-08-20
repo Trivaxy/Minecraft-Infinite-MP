@@ -11,5 +11,6 @@ public final class ServerCommands {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, MinecraftServer server) {
         StopCommand.register(dispatcher, server);
+        KickCommand.register(dispatcher);
     }
 }
