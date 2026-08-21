@@ -8,6 +8,7 @@ commands.base.error.unknownitem=No such item:
 commands.help.header=Commands you can use:
 commands.give.success=Gave %d of item %d to %s
 commands.give.usage=Usage: /give [player] <item id>
+commands.tp.success=Teleported to %s, %s, %s
 commands.ban.success=Banned %s
 commands.ban.banned=You are banned from this server!
 commands.ban.reason=Reason: %s

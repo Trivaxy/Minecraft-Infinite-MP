@@ -55,7 +55,7 @@ public class CommandSourceStack {
             permissionLevel,
             player,
             player.world,
-            Vector.createVector(player.posX, player.posY, player.posZ),
+            Vector.createVector(player.posX, player.posY - player.yOffset, player.posZ),
             player.yaw,
             player.pitch,
             configManager,
