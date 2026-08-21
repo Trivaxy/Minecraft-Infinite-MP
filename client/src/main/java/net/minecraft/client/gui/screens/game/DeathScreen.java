@@ -3,6 +3,7 @@ package net.minecraft.client.gui.screens.game;
 import net.minecraft.client.gui.button.Button;
 import net.minecraft.client.gui.screens.GuiScreen;
 import net.minecraft.client.gui.screens.title.TitleScreen;
+import net.minecraft.game.entity.player.PlayerProperties;
 import net.minecraft.game.world.World;
 import net.minecraft.game.world.chunk.loader.format.SaveFormat;
 import net.minecraft.localization.Translator;
@@ -50,8 +51,8 @@ public class DeathScreen extends GuiScreen {
     @Override
     protected void buttonClicked(Button button) {
         if (button.id == 1) {
-            if (this.mc.player.properties.getPermadeath()) {
-                this.mc.clientSetGamemode(3);
+            if (this.mc.player.properties.getPermadeath() && !this.mc.world.isOnline) {
+                this.mc.setGamemode(PlayerProperties.SPECTATOR);
             }
 
             this.mc.player.respawnPlayer();

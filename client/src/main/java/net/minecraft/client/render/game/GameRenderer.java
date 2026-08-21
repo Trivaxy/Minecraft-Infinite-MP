@@ -3,7 +3,6 @@ package net.minecraft.client.render.game;
 import java.util.List;
 import net.minecraft.Profiler;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gamemode.SpectatorMode;
 import net.minecraft.client.gui.screens.game.PhotoMode;
 import net.minecraft.client.options.OptionValues;
 import net.minecraft.client.render.Lighting;
@@ -318,7 +317,7 @@ public class GameRenderer {
             Vector target = eye.addVector(0.0, yOff, zOffset);
             TargetingSystem hit = this.mc.world.rayTraceBlocks(eye, target);
             float newYOffset = yOff;
-            if (hit != null && !(this.mc.gamemode instanceof SpectatorMode)) {
+            if (hit != null && !((Player)player).properties.isSpectator()) {
                 double allowedDist = hit.hitVec.distanceTo(eye) - 0.05;
                 Vector dir = target.subtract(eye).normalize();
                 newYOffset = (float)(dir.yCoord * allowedDist);

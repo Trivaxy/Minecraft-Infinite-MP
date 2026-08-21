@@ -1,7 +1,6 @@
 package net.minecraft.client.render.entity;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gamemode.SpectatorMode;
 import net.minecraft.client.localization.Font;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.blocks.BlocksRenderer;
@@ -49,7 +48,7 @@ public class PlayerRenderer extends MobRenderer<Player> {
     }
 
     public void render(Player player, double x, double y, double z, float offset, float tick) {
-        if (!(Minecraft.getMinecraft().gamemode instanceof SpectatorMode)) {
+        if (Minecraft.getMinecraft().player == null || !Minecraft.getMinecraft().player.properties.isSpectator()) {
             ItemStack equippedItem = player.inventory.getCurrentItem();
             if (player.inventory.getOffHandItem() != null && player.inventory.getOffHandItem() == player.itemInUse) {
                 equippedItem = player.inventory.getOffHandItem();

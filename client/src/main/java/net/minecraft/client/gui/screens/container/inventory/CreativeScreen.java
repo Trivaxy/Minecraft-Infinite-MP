@@ -3,7 +3,6 @@ package net.minecraft.client.gui.screens.container.inventory;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import net.minecraft.client.gamemode.CreativeMode;
 import net.minecraft.client.gui.button.Button;
 import net.minecraft.client.gui.button.CategoryButton;
 import net.minecraft.client.gui.button.InvisibleButton;
@@ -29,6 +28,7 @@ public class CreativeScreen extends ContainerScreen {
     private static final BasicInventory inventory = new BasicInventory("creative", 45);
     private List<Slot> backupContainerSlots;
     private Slot binSlot = null;
+    private ItemStack[] lastSent;
     private TextField searchField;
     public static int selectedTabIndex = CreativeTabs.tabNature.getTabIndex();
     private float rotX;
@@ -47,16 +47,17 @@ public class CreativeScreen extends ContainerScreen {
     @Override
     public void update() {
         super.update();
-        if (!(this.mc.gamemode instanceof CreativeMode)) {
+        if (!this.mc.player.properties.isCreative()) {
             this.mc.setScreen(new InventoryScreen(this.mc.player));
         }
 
         this.searchField.updateCursor();
+        this.syncCreativeInventory();
     }
 
     @Override
     public void initGui() {
-        if (this.mc.gamemode instanceof CreativeMode) {
+        if (this.mc.player.properties.isCreative()) {
             super.initGui();
             this.buttons.clear();
             Keyboard.enableRepeatEvents(true);
@@ -137,9 +138,32 @@ public class CreativeScreen extends ContainerScreen {
         }
     }
 
+    private void syncCreativeInventory() {
+        List<Slot> slots = this.mc.player.container.slots;
+        if (this.lastSent == null || this.lastSent.length != slots.size()) {
+            this.lastSent = new ItemStack[slots.size()];
+
+            for (int index = 0; index < slots.size(); index++) {
+                ItemStack held = slots.get(index).getStack();
+                this.lastSent[index] = held == null ? null : held.copy();
+            }
+
+            return;
+        }
+
+        for (int index = 0; index < slots.size(); index++) {
+            ItemStack held = slots.get(index).getStack();
+            if (!ItemStack.areItemStacksEqual(this.lastSent[index], held)) {
+                this.mc.gamemode.setCreativeSlot(index, held);
+                this.lastSent[index] = held == null ? null : held.copy();
+            }
+        }
+    }
+
     @Override
     public void onClose() {
         super.onClose();
+        this.syncCreativeInventory();
         Keyboard.enableRepeatEvents(false);
     }
 

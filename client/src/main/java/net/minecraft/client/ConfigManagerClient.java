@@ -125,6 +125,11 @@ public class ConfigManagerClient implements ConfigManager {
     }
 
     @Override
+    public void setGamemode(Player player, int gamemode) {
+        this.client.setGamemode(gamemode);
+    }
+
+    @Override
     public String getPlayerList() {
         return this.client.player.username;
     }

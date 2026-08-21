@@ -215,6 +215,7 @@ public class NetLoginHandler extends NetworkHandler {
             );
             csnh.sendPacket(new SpawnPacket(pos.x, pos.y, pos.z));
             this.mcServer.configManager.updateWorldTimeForPlayers(player, level);
+            this.mcServer.configManager.syncGamemode(player);
             this.mcServer.configManager.sendPacketToAll(new ChatPacket("§e" + player.username + " joined the game."));
             this.mcServer.configManager.playerLoggedIn(player);
             csnh.teleportTo(player.posX, player.posY, player.posZ, player.yaw, player.pitch);

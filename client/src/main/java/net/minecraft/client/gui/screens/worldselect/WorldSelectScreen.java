@@ -179,10 +179,6 @@ public class WorldSelectScreen extends GuiScreen {
 
     private void loadWorld(Minecraft mc, int worldIndex) {
         String name = this.getSaveFileName(worldIndex);
-        SaveHandler save = mc.getSaveLoader().getSaveLoader(name, false);
-        WorldInfo worldInfo = save.loadWorldInfo();
-        int gamemode = worldInfo.getGamemode();
-        mc.clientSetGamemode(gamemode);
         String worldName = name;
         if (worldName == null) {
             worldName = "World" + worldIndex;

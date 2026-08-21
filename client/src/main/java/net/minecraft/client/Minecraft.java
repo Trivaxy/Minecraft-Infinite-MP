@@ -12,11 +12,7 @@ import java.util.logging.Logger;
 import net.minecraft.Profiler;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.commands.ClientCommands;
-import net.minecraft.client.gamemode.AdventureMode;
-import net.minecraft.client.gamemode.CreativeMode;
 import net.minecraft.client.gamemode.GameMode;
-import net.minecraft.client.gamemode.SpectatorMode;
-import net.minecraft.client.gamemode.SurvivalMode;
 import net.minecraft.client.gui.ScreenRescaler;
 import net.minecraft.client.gui.overlay.HeadsUpDisplay;
 import net.minecraft.client.gui.screens.GuiScreen;
@@ -57,6 +53,7 @@ import net.minecraft.game.player.ConfigManager;
 import net.minecraft.game.block.BlockList;
 import net.minecraft.game.block.material.MaterialList;
 import net.minecraft.game.entity.player.Player;
+import net.minecraft.game.entity.player.PlayerProperties;
 import net.minecraft.game.item.staff.GabrielStaff;
 import net.minecraft.game.physics.TargetingSystem;
 import net.minecraft.game.world.World;
@@ -733,7 +730,7 @@ public class Minecraft implements Runnable {
                     }
 
                     while (this.options.changeModeKey.pressed()) {
-                        if (this.world.settings.getCheats()) {
+                        if (this.world.settings.getCheats() || this.world.isOnline) {
                             this.setScreen(new ModeSwitcher());
                         }
                     }
@@ -829,6 +826,10 @@ public class Minecraft implements Runnable {
 
         this.world = world;
         if (world != null) {
+            if (!world.isOnline) {
+                this.gamemode = new GameMode(this);
+            }
+
             this.gamemode.onWorldChange(world);
             if (!world.isOnline) {
                 this.preloadWorld(name);
@@ -920,7 +921,7 @@ public class Minecraft implements Runnable {
         }
 
         if (!this.world.isOnline) {
-            this.clientSetGamemode(this.world.getSettings().getGamemode());
+            this.setGamemode(this.world.getSettings().getGamemode());
         }
     }
 
@@ -1107,28 +1108,15 @@ public class Minecraft implements Runnable {
         return instance != null && OptionValues.advCoords;
     }
 
-    public void clientSetGamemode(int gm) {
+    public void setGamemode(int gm) {
         if (this.world != null) {
             this.world.getSettings().setGamemode((byte)gm);
         }
 
         if (this.player != null) {
-            this.player.noClip = false;
             this.player.properties.setGamemode(gm);
-        }
-
-        switch (gm) {
-            case 1:
-                this.gamemode = new CreativeMode(this);
-                break;
-            case 2:
-                this.gamemode = new AdventureMode(this);
-                break;
-            case 3:
-                this.gamemode = new SpectatorMode(this);
-                break;
-            default:
-                this.gamemode = new SurvivalMode(this);
+            this.player.noClip = gm == PlayerProperties.SPECTATOR;
+            this.player.flying = gm == PlayerProperties.SPECTATOR;
         }
     }
 

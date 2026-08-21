@@ -98,6 +98,7 @@ import net.minecraft.network.packet.misc.TransactionPacket;
 import net.minecraft.network.packet.player.AnimationPacket;
 import net.minecraft.network.packet.player.AttackDirectionPacket;
 import net.minecraft.network.packet.player.ItemEquipPacket;
+import net.minecraft.network.packet.player.GamemodePacket;
 import net.minecraft.network.packet.player.ItemPacket;
 import net.minecraft.network.packet.player.PickupPacket;
 import net.minecraft.network.packet.player.PlayerInfoPacket;
@@ -921,6 +922,11 @@ public class ClientHandler extends NetworkHandler {
                 spawner.onChanged();
             }
         }
+    }
+
+    @Override
+    public void handleGamemode(GamemodePacket packet) {
+        this.mc.setGamemode(packet.gamemode);
     }
 
     @Override

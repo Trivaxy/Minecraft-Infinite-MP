@@ -7,9 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Session;
-import net.minecraft.client.gamemode.CreativeMode;
-import net.minecraft.client.gamemode.SpectatorMode;
-import net.minecraft.client.gamemode.SurvivalMode;
 import net.minecraft.client.gui.screens.container.ContainerScreen;
 import net.minecraft.client.gui.screens.container.inventory.RecipeScreen;
 import net.minecraft.client.gui.screens.container.tileentity.AnvilScreen;
@@ -49,6 +46,7 @@ import net.minecraft.game.entity.Entity;
 import net.minecraft.game.entity.misc.DroppedItem;
 import net.minecraft.game.entity.mob.DamageSource;
 import net.minecraft.game.entity.player.Player;
+import net.minecraft.game.entity.player.PlayerProperties;
 import net.minecraft.game.item.Item;
 import net.minecraft.game.item.ItemList;
 import net.minecraft.game.item.ItemStack;
@@ -159,9 +157,7 @@ public class LocalPlayer extends Player implements CommandOutput {
         this.armPitch = (float)(this.armPitch + (this.pitch - this.armPitch) * 0.5);
         this.armYaw = (float)(this.armYaw + (this.yaw - this.armYaw) * 0.5);
         this.handleSprinting();
-        if (!this.mc.statistics.hasAchievementUnlocked(AchievementList.getHard)
-            && !(this.mc.gamemode instanceof CreativeMode)
-            && !(this.mc.gamemode instanceof SpectatorMode)) {
+        if (!this.mc.statistics.hasAchievementUnlocked(AchievementList.getHard) && !this.properties.isCreative() && !this.properties.isSpectator()) {
             this.mc.HUD.achievement.queueHint(AchievementList.getHard);
         }
 
@@ -170,7 +166,7 @@ public class LocalPlayer extends Player implements CommandOutput {
     }
 
     private void handleSprinting() {
-        if (this.isSprinting() && this.mc.gamemode instanceof SurvivalMode && !this.hasEffect(EffectList.stamina) && !this.properties.getHunger()) {
+        if (this.isSprinting() && this.properties.gamemode == PlayerProperties.SURVIVAL && !this.hasEffect(EffectList.stamina) && !this.properties.getHunger()) {
             this.stamina--;
             if (this.jumping) {
                 this.stamina--;

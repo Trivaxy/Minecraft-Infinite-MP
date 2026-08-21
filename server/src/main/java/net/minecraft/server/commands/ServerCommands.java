@@ -14,5 +14,7 @@ public final class ServerCommands {
         KickCommand.register(dispatcher);
         BanCommand.register(dispatcher);
         UnbanCommand.register(dispatcher);
+        OpCommand.register(dispatcher);
+        DeopCommand.register(dispatcher);
     }
 }

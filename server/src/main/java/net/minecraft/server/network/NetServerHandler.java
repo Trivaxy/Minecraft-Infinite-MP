@@ -46,6 +46,7 @@ import net.minecraft.network.packet.player.PlayerStatePacket;
 import net.minecraft.network.packet.player.PlayerTeleportPacket;
 import net.minecraft.network.packet.world.RespawnPacket;
 import net.minecraft.network.packet.container.SignPacket;
+import net.minecraft.network.packet.container.CreativeSlotPacket;
 import net.minecraft.network.packet.player.SlotPacket;
 import net.minecraft.network.packet.misc.TransactionPacket;
 import net.minecraft.network.packet.world.UpdateBlockPacket;
@@ -255,13 +256,14 @@ public class NetServerHandler extends NetworkHandler implements CommandOutput {
             }
 
             this.playerEntity.teleportTo(d5, d7, d9, f11, f12);
-            boolean z24 = worldServer2.getBoundingBoxes(this.playerEntity, this.playerEntity.boundingBox.copy().shrink(f21, f21, f21)).size() == 0;
+            boolean z24 = this.playerEntity.properties.isSpectator()
+                || worldServer2.getBoundingBoxes(this.playerEntity, this.playerEntity.boundingBox.copy().shrink(f21, f21, f21)).size() == 0;
             if (z22 && (z23 || !z24) && !this.playerEntity.isPlayerSleeping()) {
                 this.teleportTo(this.lastPosX, this.lastPosY, this.lastPosZ, f11, f12);
                 return;
             }
 
-            if (!this.mcServer.allowFlight) {
+            if (!this.mcServer.allowFlight && !this.playerEntity.properties.isCreative() && !this.playerEntity.properties.isSpectator()) {
                 // Ask the world, not the entity. playerEntity.onGround comes from the moveEntity()
                 // call above, which only sets it when a *downward* move was clipped by a block. A
                 // client walking on flat ground reports the same Y every tick, so the delta
@@ -625,6 +627,21 @@ public class NetServerHandler extends NetworkHandler implements CommandOutput {
     @Override
     public void handleContainerClose(ContainerClosePacket packet101CloseWindow1) {
         this.playerEntity.closeCraftingGui();
+    }
+
+    @Override
+    public void handleCreativeSlot(CreativeSlotPacket packet) {
+        if (packet.slot < 0 || packet.slot >= this.playerEntity.container.slots.size()) {
+            return;
+        }
+
+        if (!this.playerEntity.properties.isCreative()) {
+            this.sendPacket(new SlotPacket(0, packet.slot, this.playerEntity.container.getSlot(packet.slot).getStack()));
+            return;
+        }
+
+        this.playerEntity.container.putStackInSlot(packet.slot, packet.itemStack);
+        this.playerEntity.container.updateCraftResults();
     }
 
     @Override

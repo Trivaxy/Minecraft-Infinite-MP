@@ -26,7 +26,12 @@ public class ModeSwitcher extends GuiScreen {
 
     @Override
     protected void buttonClicked(Button button) {
-        this.mc.clientSetGamemode(button.id);
+        if (this.mc.world.isOnline) {
+            this.mc.player.sendChatMessage("/gamemode " + button.id);
+        } else {
+            this.mc.setGamemode(button.id);
+        }
+
         this.closeScreen();
     }
 

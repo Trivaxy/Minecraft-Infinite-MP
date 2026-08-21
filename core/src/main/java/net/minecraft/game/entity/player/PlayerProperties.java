@@ -3,6 +3,11 @@ package net.minecraft.game.entity.player;
 import com.mojang.nbt.tag.special.CompoundTag;
 
 public class PlayerProperties {
+    public static final int SURVIVAL = 0;
+    public static final int CREATIVE = 1;
+    public static final int ADVENTURE = 2;
+    public static final int SPECTATOR = 3;
+
     private boolean hunger = false;
     private boolean sprint = true;
     private boolean atkCooldown = false;
@@ -126,5 +131,17 @@ public class PlayerProperties {
 
     public void setGamemode(int gamemode) {
         this.gamemode = gamemode;
+    }
+
+    public boolean isCreative() {
+        return this.gamemode == CREATIVE;
+    }
+
+    public boolean isAdventure() {
+        return this.gamemode == ADVENTURE;
+    }
+
+    public boolean isSpectator() {
+        return this.gamemode == SPECTATOR;
     }
 }

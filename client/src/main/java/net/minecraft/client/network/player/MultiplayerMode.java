@@ -1,23 +1,25 @@
 package net.minecraft.client.network.player;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gamemode.SurvivalMode;
+import net.minecraft.client.gamemode.GameMode;
 import net.minecraft.client.network.ClientHandler;
 import net.minecraft.game.block.Block;
 import net.minecraft.game.block.BlockList;
 import net.minecraft.game.block.stepsound.StepSound;
 import net.minecraft.game.entity.Entity;
+import net.minecraft.game.container.player.CreativeContainer;
 import net.minecraft.game.entity.player.Player;
 import net.minecraft.game.item.ItemStack;
 import net.minecraft.game.world.World;
 import net.minecraft.network.packet.container.ContainerClosePacket;
+import net.minecraft.network.packet.container.CreativeSlotPacket;
 import net.minecraft.network.packet.player.ClickPacket;
 import net.minecraft.network.packet.player.DigPacket;
 import net.minecraft.network.packet.player.ItemSwitchPacket;
 import net.minecraft.network.packet.player.PlacePacket;
 import net.minecraft.network.packet.player.UsePacket;
 
-public class MultiplayerMode extends SurvivalMode {
+public class MultiplayerMode extends GameMode {
     private ClientHandler networkHandler;
     private boolean isHittingBlock = false;
     private int currentPlayerItem = 0;
@@ -29,6 +31,16 @@ public class MultiplayerMode extends SurvivalMode {
 
     @Override
     public void clickBlock(int x, int y, int z, int side) {
+        if (this.isSpectator()) {
+            return;
+        }
+
+        if (this.isCreative()) {
+            this.networkHandler.sendPacket(new DigPacket(0, x, y, z, side));
+            super.clickBlock(x, y, z, side);
+            return;
+        }
+
         if (!this.isHittingBlock || x != this.hitX || y != this.hitY || z != this.hitZ) {
             this.networkHandler.sendPacket(new DigPacket(0, x, y, z, side));
             int id = this.mc.world.getBlockId(x, y, z);
@@ -58,6 +70,14 @@ public class MultiplayerMode extends SurvivalMode {
 
     @Override
     public void updateBreakTime(int x, int y, int z, int side) {
+        if (this.isCreative() || this.isSpectator()) {
+            return;
+        }
+
+        if (this.isAdventure() && !this.canHarvestBlock(BlockList.blocks[this.mc.world.getBlockId(x, y, z)], this.mc.world.getBlockMetadata(x, y, z))) {
+            return;
+        }
+
         if (this.isHittingBlock || this.mc.player.getUsing()) {
             this.syncCurrentPlayItem();
             if (this.blockHitDelay > 0) {
@@ -152,10 +172,19 @@ public class MultiplayerMode extends SurvivalMode {
 
     @Override
     public ItemStack windowClick(int windowId, int slot, int click, boolean shift, Player player) {
+        if (player.openContainer instanceof CreativeContainer) {
+            return super.windowClick(windowId, slot, click, shift, player);
+        }
+
         short transId = player.openContainer.updateTransaction(player.inventory);
         ItemStack stack = super.windowClick(windowId, slot, click, shift, player);
         this.networkHandler.sendPacket(new ClickPacket(windowId, slot, click, shift, stack, transId));
         return stack;
+    }
+
+    @Override
+    public void setCreativeSlot(int slot, ItemStack stack) {
+        this.networkHandler.sendPacket(new CreativeSlotPacket(slot, stack));
     }
 
     @Override

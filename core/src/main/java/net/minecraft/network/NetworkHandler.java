@@ -5,6 +5,7 @@ import net.minecraft.network.packet.container.ContainerClosePacket;
 import net.minecraft.network.packet.container.ContainerContentsPacket;
 import net.minecraft.network.packet.container.ContainerDataPacket;
 import net.minecraft.network.packet.container.ContainerOpenPacket;
+import net.minecraft.network.packet.container.CreativeSlotPacket;
 import net.minecraft.network.packet.container.CustomPayloadPacket;
 import net.minecraft.network.packet.container.GeneratorPacket;
 import net.minecraft.network.packet.container.PlayNotePacket;
@@ -39,6 +40,7 @@ import net.minecraft.network.packet.player.ClickPacket;
 import net.minecraft.network.packet.player.DigPacket;
 import net.minecraft.network.packet.player.ItemEquipPacket;
 import net.minecraft.network.packet.player.ItemPacket;
+import net.minecraft.network.packet.player.GamemodePacket;
 import net.minecraft.network.packet.player.ItemSwitchPacket;
 import net.minecraft.network.packet.player.PickupPacket;
 import net.minecraft.network.packet.player.PlacePacket;
@@ -277,6 +279,14 @@ public abstract class NetworkHandler {
     }
 
     public void handleWeather(WeatherPacket packet) {
+        this.registerPacket(packet);
+    }
+
+    public void handleGamemode(GamemodePacket packet) {
+        this.registerPacket(packet);
+    }
+
+    public void handleCreativeSlot(CreativeSlotPacket packet) {
         this.registerPacket(packet);
     }
 

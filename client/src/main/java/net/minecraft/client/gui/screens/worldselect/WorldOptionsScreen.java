@@ -2,7 +2,6 @@ package net.minecraft.client.gui.screens.worldselect;
 
 import java.util.Random;
 import net.minecraft.SharedConstants;
-import net.minecraft.client.gamemode.SurvivalMode;
 import net.minecraft.client.gui.button.Button;
 import net.minecraft.client.gui.button.LockerButton;
 import net.minecraft.client.gui.button.TextField;
@@ -183,7 +182,6 @@ public class WorldOptionsScreen extends SettingsScreen {
                     }
                 }
 
-                this.mc.gamemode = new SurvivalMode(this.mc);
                 this.mc.startWorld(this.worldName, this.nameBox.getText(), seed, this.settings);
                 this.mc.setScreen(null);
             }

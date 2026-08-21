@@ -393,6 +393,10 @@ public class WorldInfo {
         return this.cheats;
     }
 
+    public void setCheats(boolean value) {
+        this.cheats = value;
+    }
+
     public boolean amplified() {
         return this.amplified;
     }

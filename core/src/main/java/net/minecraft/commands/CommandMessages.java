@@ -13,6 +13,7 @@ public final class CommandMessages {
     public static final SimpleCommandExceptionType UNKNOWN_PLAYER = simple("commands.base.error.unknownplayer");
     public static final SimpleCommandExceptionType INCOMPLETE_POSITION = simple("commands.base.error.position");
     public static final DynamicCommandExceptionType UNKNOWN_ITEM = dynamic("commands.base.error.unknownitem");
+    public static final DynamicCommandExceptionType UNKNOWN_GAMEMODE = dynamic("commands.base.error.unknowngamemode");
 
     private CommandMessages() {
     }

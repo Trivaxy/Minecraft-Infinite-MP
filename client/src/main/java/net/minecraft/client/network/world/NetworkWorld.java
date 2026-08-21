@@ -6,6 +6,7 @@ import java.util.LinkedList;
 import java.util.Set;
 import net.minecraft.client.network.ClientHandler;
 import net.minecraft.game.entity.Entity;
+import net.minecraft.game.entity.player.PlayerProperties;
 import net.minecraft.game.world.World;
 import net.minecraft.game.world.WorldType;
 import net.minecraft.game.world.biomes.Biome;
@@ -33,6 +34,8 @@ public class NetworkWorld extends World {
             this.getSettings().setSingleBiome(singleBiome);
         }
 
+        this.getSettings().setGamemode((byte)PlayerProperties.SURVIVAL);
+        this.getSettings().setCheats(false);
         this.currDim.init(this);
         this.connection = conn;
         this.setSpawnPoint(new Position(8, this.getWorldHeight() / 2, 8));

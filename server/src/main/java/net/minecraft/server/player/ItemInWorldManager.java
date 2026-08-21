@@ -52,7 +52,9 @@ public class ItemInWorldManager {
             BlockList.blocks[i5].blockPunched(this.thisWorld, i1, i2, i3, this.thisPlayer);
         }
 
-        if (i5 > 0 && BlockList.blocks[i5].breakStrength(this.thisPlayer, this.thisWorld.getBlockMetadata(i1, i2, i3)) >= 1.0F) {
+        if (i5 > 0
+            && (this.thisPlayer.properties.isCreative()
+                || BlockList.blocks[i5].breakStrength(this.thisPlayer, this.thisWorld.getBlockMetadata(i1, i2, i3)) >= 1.0F)) {
             this.hitBlock(i1, i2, i3);
         } else {
             this.activeX = i1;
@@ -101,8 +103,9 @@ public class ItemInWorldManager {
             itemStack7 = this.thisPlayer.inventory.getOffHandItem();
         }
 
-        boolean z8 = this.thisPlayer.canHarvestBlock(BlockList.blocks[i4]);
-        if (itemStack7 != null) {
+        boolean creative = this.thisPlayer.properties.isCreative();
+        boolean z8 = !creative && this.thisPlayer.canHarvestBlock(BlockList.blocks[i4]);
+        if (itemStack7 != null && !creative) {
             if (BlockList.blocks[i4].hardness > 0.0F) {
                 itemStack7.onDestroyBlock(i4, i1, i2, i3, this.thisPlayer);
             }

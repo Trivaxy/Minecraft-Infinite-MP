@@ -49,6 +49,8 @@ public interface ConfigManager {
 
     void teleportPlayerTo(Player var1, double var2, double var4, double var6, float var8, float var9);
 
+    void setGamemode(Player var1, int var2);
+
     String getPlayerList();
 
     void kickPlayer(Player var1, String var2);

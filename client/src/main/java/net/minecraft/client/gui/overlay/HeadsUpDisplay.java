@@ -6,7 +6,6 @@ import java.util.Random;
 import net.minecraft.Profiler;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gamemode.CreativeMode;
 import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.ScreenRescaler;
 import net.minecraft.client.gui.screens.game.PhotoMode;
@@ -610,7 +609,7 @@ public class HeadsUpDisplay extends GuiComponent {
 
             if (alpha > 8) {
                 int offset;
-                if (this.mc.gamemode instanceof CreativeMode) {
+                if (this.mc.player.properties.isCreative()) {
                     offset = 32;
                 } else if (this.mc.player.health <= 20 && (this.mc.player.getTotalArmorValue(null) <= 0 || !this.mc.player.properties.getHunger())) {
                     offset = 50;

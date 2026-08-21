@@ -19,6 +19,7 @@ import net.minecraft.game.world.util.Position;
 import net.minecraft.network.packet.misc.ChatPacket;
 import net.minecraft.network.packet.misc.OpPacket;
 import net.minecraft.network.packet.Packet;
+import net.minecraft.network.packet.player.GamemodePacket;
 import net.minecraft.network.packet.player.PlayerInfoPacket;
 import net.minecraft.network.packet.world.RespawnPacket;
 import net.minecraft.network.packet.world.UpdateTimePacket;
@@ -236,6 +237,7 @@ public class ServerConfigurationManager implements ConfigManager {
         entityPlayerMP4.onGuiOpened();
         entityPlayerMP4.respawn();
         this.sendPacketToAll(new OpPacket(entityPlayerMP4.entityId, this.isOp(entityPlayerMP4.username)));
+        this.syncGamemode(entityPlayerMP4);
         return entityPlayerMP4;
     }
 
@@ -280,6 +282,16 @@ public class ServerConfigurationManager implements ConfigManager {
     public void kickPlayer(Player player, String reason) {
         EntityPlayerMP serverplayer = (EntityPlayerMP)player;
         serverplayer.playerNetServerHandler.kickPlayer(reason);
+    }
+
+    @Override
+    public void setGamemode(Player player, int gamemode) {
+        player.properties.setGamemode(gamemode);
+        this.syncGamemode((EntityPlayerMP)player);
+    }
+
+    public void syncGamemode(EntityPlayerMP player) {
+        player.playerNetServerHandler.sendPacket(new GamemodePacket(player.properties.gamemode));
     }
 
     @Override

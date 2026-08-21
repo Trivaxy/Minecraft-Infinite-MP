@@ -2,8 +2,6 @@ package net.minecraft.client.player;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshotter;
-import net.minecraft.client.gamemode.CreativeMode;
-import net.minecraft.client.gamemode.SpectatorMode;
 import net.minecraft.client.gui.screens.game.PhotoMode;
 import net.minecraft.client.options.OptionValues;
 import net.minecraft.client.options.OptionsList;
@@ -274,7 +272,7 @@ public class PlayerController {
                         } else {
                             player.clearGliding();
                         }
-                    } else if (this.mc.gamemode instanceof CreativeMode) {
+                    } else if (player.properties.isCreative()) {
                         player.flying = !player.flying;
                     }
 
@@ -292,7 +290,7 @@ public class PlayerController {
                 }
             }
 
-            if (!player.sneaking && this.mc.gamemode instanceof CreativeMode && !player.isRiding()) {
+            if (!player.sneaking && player.properties.isCreative() && !player.isRiding()) {
                 while (this.options.flightKey.pressed()) {
                     player.flying = !player.flying;
                 }
@@ -331,7 +329,7 @@ public class PlayerController {
                 this.mc.player.swingOffhandItem();
             }
 
-            if (this.mc.gamemode instanceof SpectatorMode) {
+            if (this.mc.player.properties.isSpectator()) {
                 this.mc.gameRenderer.cameraMob = this.mc.player;
             }
         }
@@ -432,7 +430,7 @@ public class PlayerController {
     }
 
     public void clickBlock(int buttonClick, boolean canBreakBlock) {
-        if (!(this.mc.gamemode instanceof CreativeMode) && this.mc.player.properties.gamemode != 3) {
+        if (!this.mc.player.properties.isCreative() && !this.mc.player.properties.isSpectator()) {
             if (canBreakBlock && this.mc.selectedObject != null && this.mc.selectedObject.target == TargetingSystem.HitType.TILE && buttonClick == 0) {
                 this.mc
                     .gamemode
