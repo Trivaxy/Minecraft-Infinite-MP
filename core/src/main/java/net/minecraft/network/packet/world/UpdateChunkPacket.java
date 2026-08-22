@@ -116,8 +116,18 @@ public class UpdateChunkPacket extends Packet {
         try {
             deflater.setInput(abyte0, 0, i1);
             deflater.finish();
-            this.chunkData = new byte[i1];
-            this.tempLength = deflater.deflate(this.chunkData);
+            byte[] compressed = new byte[i1 + (i1 >> 12) + (i1 >> 14) + (i1 >> 25) + 32];
+            int written = deflater.deflate(compressed);
+
+            while (!deflater.finished()) {
+                byte[] grown = new byte[compressed.length * 2];
+                System.arraycopy(compressed, 0, grown, 0, written);
+                compressed = grown;
+                written += deflater.deflate(compressed, written, compressed.length - written);
+            }
+
+            this.chunkData = compressed;
+            this.tempLength = written;
         } finally {
             deflater.end();
         }
