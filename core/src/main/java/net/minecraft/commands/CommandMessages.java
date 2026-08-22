@@ -14,6 +14,7 @@ public final class CommandMessages {
     public static final SimpleCommandExceptionType INCOMPLETE_POSITION = simple("commands.base.error.position");
     public static final DynamicCommandExceptionType UNKNOWN_ITEM = dynamic("commands.base.error.unknownitem");
     public static final DynamicCommandExceptionType UNKNOWN_GAMEMODE = dynamic("commands.base.error.unknowngamemode");
+    public static final DynamicCommandExceptionType NEGATIVE_AMOUNT = dynamic("commands.base.error.negativeamount");
 
     private CommandMessages() {
     }

@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.core.GamemodeCommand;
 import net.minecraft.commands.core.GiveCommand;
 import net.minecraft.commands.core.HelpCommand;
+import net.minecraft.commands.core.ScoreCommand;
 import net.minecraft.commands.core.TpCommand;
 
 public final class CoreCommands {
@@ -14,6 +15,7 @@ public final class CoreCommands {
         HelpCommand.register(dispatcher);
         GiveCommand.register(dispatcher);
         GamemodeCommand.register(dispatcher);
+        ScoreCommand.register(dispatcher);
         TpCommand.register(dispatcher);
     }
 }
