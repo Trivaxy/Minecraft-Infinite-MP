@@ -388,7 +388,7 @@ public class Minecraft implements Runnable {
         this.statistics.syncStats();
         if (newScreen == null && this.world == null) {
             newScreen = new TitleScreen();
-        } else if (newScreen == null && this.player.health <= 0) {
+        } else if (newScreen == null && this.player != null && this.player.health <= 0) {
             newScreen = new DeathScreen();
         }
 
@@ -674,7 +674,7 @@ public class Minecraft implements Runnable {
             } else if (this.player.isPlayerSleeping() && this.world != null) {
                 this.setScreen(new SleepScreen());
             }
-        } else if (this.currentScreen != null && this.currentScreen instanceof SleepScreen && !this.player.isPlayerSleeping()) {
+        } else if (this.currentScreen instanceof SleepScreen && (this.player == null || !this.player.isPlayerSleeping())) {
             this.setScreen(null);
         }
 
@@ -690,7 +690,7 @@ public class Minecraft implements Runnable {
                 long var5 = System.currentTimeMillis() - this.systemTime;
                 if (var5 <= 200L) {
                     int whlValue = Mouse.getEventDWheel();
-                    if (whlValue != 0 && this.currentScreen == null) {
+                    if (whlValue != 0 && this.currentScreen == null && this.player != null) {
                         if (OptionValues.scrollInvert) {
                             whlValue *= -1;
                         }
