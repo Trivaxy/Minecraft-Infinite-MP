@@ -166,7 +166,8 @@ public class ChunkProvider implements ChunkLoader {
                 long hash = this.droppedChunks.iterator().nextLong();
                 Chunk chunk = this.chunkMap.get(hash);
                 if (chunk == null) {
-                    return false;
+                    this.droppedChunks.remove(hash);
+                    continue;
                 }
 
                 chunk.onChunkUnload();
@@ -184,6 +185,10 @@ public class ChunkProvider implements ChunkLoader {
             }
 
             Chunk chunk = this.chunkList.get(this.chunkCache++);
+            if (chunk == this.emptyChunk) {
+                continue;
+            }
+
             Player player = this.world.playerInChunks((chunk.xPosition << 4) + 8.0, (chunk.zPosition << 4) + 8.0, 288.0);
             if (player == null) {
                 this.dropChunk(chunk.xPosition, chunk.zPosition);
