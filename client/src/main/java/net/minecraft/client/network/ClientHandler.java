@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.logging.Logger;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.multiplayer.DisconnectedScreen;
@@ -28,11 +29,15 @@ import net.minecraft.game.world.WorldType;
 import net.minecraft.game.world.biomes.Biome;
 import net.minecraft.game.block.tileentity.container.BarrelEntity;
 import net.minecraft.game.block.tileentity.container.BookcaseEntity;
+import net.minecraft.game.block.tileentity.container.CrafterEntity;
+import net.minecraft.game.block.tileentity.other.BeaconEntity;
 import net.minecraft.game.block.tileentity.other.SignEntity;
 import net.minecraft.game.block.tileentity.other.SpawnerEntity;
 import net.minecraft.game.block.tileentity.smelters.BlastFurnaceEntity;
 import net.minecraft.game.block.tileentity.smelters.FurnaceEntity;
 import net.minecraft.game.block.tileentity.smelters.GeneratorEntity;
+import net.minecraft.game.block.tileentity.smelters.HellforgeEntity;
+import net.minecraft.game.block.tileentity.smelters.SmokerEntity;
 import net.minecraft.game.container.Container;
 import net.minecraft.game.container.inventory.BasicInventory;
 import net.minecraft.game.entity.DataSyncer;
@@ -124,10 +129,11 @@ import net.minecraft.network.packet.world.UpdateSectionPacket;
 import net.minecraft.network.packet.world.UpdateTimePacket;
 import net.minecraft.network.packet.world.WeatherPacket;
 import net.minecraft.network.packet.world.WorldEventPacket;
-import net.minecraft.util.math.MathHelper;
 import org.json.JSONObject;
 
 public class ClientHandler extends NetworkHandler {
+    private static final Logger logger = Logger.getLogger("Minecraft");
+
     private Minecraft mc;
     private NetworkManager connection;
     private NetworkWorld world;
@@ -683,53 +689,96 @@ public class ClientHandler extends NetworkHandler {
 
     @Override
     public void handleContainerOpen(ContainerOpenPacket packet) {
+        LocalPlayer player = this.mc.player;
         switch (packet.inventoryType) {
-            case 0:
-                BasicInventory inventory = new BasicInventory(packet.windowTitle, packet.slotsCount);
-                this.mc.player.displayGUIChest(inventory, false);
-                this.mc.player.openContainer.windowId = packet.windowId;
+            case ContainerOpenPacket.CHEST:
+                player.displayGUIChest(new BasicInventory(packet.windowTitle, packet.slotsCount), false);
                 break;
-            case 1:
-                LocalPlayer player = this.mc.player;
-                this.mc
-                    .player
-                    .displayWorkbenchGUI(MathHelper.floor_double(player.posX), MathHelper.floor_double(player.posY), MathHelper.floor_double(player.posZ), true);
-                this.mc.player.openContainer.windowId = packet.windowId;
+            case ContainerOpenPacket.WORKBENCH:
+                player.displayWorkbenchGUI(packet.xPosition, packet.yPosition, packet.zPosition, packet.state);
                 break;
-            case 2:
+            case ContainerOpenPacket.FURNACE: {
                 FurnaceEntity furnace = new FurnaceEntity();
                 furnace.world = this.world;
-                this.mc.player.displayGUIFurnace(furnace);
-                this.mc.player.openContainer.windowId = packet.windowId;
+                player.displayGUIFurnace(furnace);
                 break;
-            case 3:
+            }
+            case ContainerOpenPacket.BARREL: {
                 BarrelEntity barrel = new BarrelEntity();
                 barrel.world = this.world;
-                this.mc.player.displayGUIBarrel(barrel);
-                this.mc.player.openContainer.windowId = packet.windowId;
+                player.displayGUIBarrel(barrel);
                 break;
-            case 4:
+            }
+            case ContainerOpenPacket.BOOKSHELF: {
                 BookcaseEntity bookshelf = new BookcaseEntity();
                 bookshelf.world = this.world;
-                this.mc.player.displayGUIBookshelf(bookshelf);
-                this.mc.player.openContainer.windowId = packet.windowId;
+                player.displayGUIBookshelf(bookshelf);
                 break;
-            case 5:
+            }
+            case ContainerOpenPacket.GENERATOR: {
                 GeneratorEntity generator = new GeneratorEntity();
                 generator.world = this.world;
                 generator.x = packet.xPosition;
                 generator.y = packet.yPosition;
                 generator.z = packet.zPosition;
                 generator.active = packet.state;
-                this.mc.player.displayGUIGenerator(generator);
-                this.mc.player.openContainer.windowId = packet.windowId;
+                player.displayGUIGenerator(generator);
                 break;
-            case 6:
+            }
+            case ContainerOpenPacket.BLAST_FURNACE: {
                 BlastFurnaceEntity blastFurnace = new BlastFurnaceEntity();
                 blastFurnace.world = this.world;
-                this.mc.player.displayGUIFurnace(blastFurnace);
-                this.mc.player.openContainer.windowId = packet.windowId;
+                player.displayGUIFurnace(blastFurnace);
+                break;
+            }
+            case ContainerOpenPacket.ANVIL:
+                player.displayGUIAnvil(packet.xPosition, packet.yPosition, packet.zPosition);
+                break;
+            case ContainerOpenPacket.GRINDSTONE:
+                player.displayGUIGrindstone(packet.xPosition, packet.yPosition, packet.zPosition);
+                break;
+            case ContainerOpenPacket.STONECUTTER:
+                player.displayStonecutterGUI(packet.xPosition, packet.yPosition, packet.zPosition);
+                break;
+            case ContainerOpenPacket.SMOKER: {
+                SmokerEntity smoker = new SmokerEntity();
+                smoker.world = this.world;
+                player.displayGUISmoker(smoker);
+                break;
+            }
+            case ContainerOpenPacket.HELLFORGE: {
+                HellforgeEntity hellforge = new HellforgeEntity();
+                hellforge.world = this.world;
+                player.displayGUIHellforge(hellforge);
+                break;
+            }
+            case ContainerOpenPacket.CRAFTER: {
+                CrafterEntity crafter = new CrafterEntity();
+                crafter.world = this.world;
+                player.displayGUICrafter(crafter);
+                break;
+            }
+            case ContainerOpenPacket.BEACON: {
+                BeaconEntity beacon = new BeaconEntity();
+                beacon.world = this.world;
+                player.displayGUIBeacon(beacon);
+                break;
+            }
+            case ContainerOpenPacket.VACUUM:
+                player.displayGUIVacuum(new BasicInventory(packet.windowTitle, packet.slotsCount));
+                break;
+            case ContainerOpenPacket.DISPENSER:
+                player.displayGUIDispenser(new BasicInventory(packet.windowTitle, packet.slotsCount));
+                break;
+            case ContainerOpenPacket.ENDER_CHEST:
+                player.displayGUIEnderChest(player.inventoryChest, new BasicInventory(packet.windowTitle, packet.slotsCount));
+                break;
+            default:
+                logger.warning("Ignoring window " + packet.windowId + " of unknown type " + packet.inventoryType);
+                return;
         }
+
+        player.openContainer.windowId = packet.windowId;
     }
 
     @Override

@@ -11,17 +11,29 @@ import java.util.Set;
 import net.minecraft.game.block.BlockList;
 import net.minecraft.game.block.decoration.Bed;
 import net.minecraft.game.block.tileentity.TileEntity;
+import net.minecraft.game.block.tileentity.container.CrafterEntity;
+import net.minecraft.game.block.tileentity.other.BeaconEntity;
+import net.minecraft.game.block.tileentity.smelters.BlastFurnaceEntity;
 import net.minecraft.game.block.tileentity.smelters.FurnaceEntity;
 import net.minecraft.game.block.tileentity.smelters.GeneratorEntity;
+import net.minecraft.game.block.tileentity.smelters.HellforgeEntity;
+import net.minecraft.game.block.tileentity.smelters.SmokerEntity;
 import net.minecraft.game.container.Container;
 import net.minecraft.game.container.ContainerListener;
 import net.minecraft.game.container.inventory.Inventory;
 import net.minecraft.game.container.slot.CraftingSlot;
+import net.minecraft.game.container.tileentities.AnvilContainer;
 import net.minecraft.game.container.tileentities.BarrelContainer;
+import net.minecraft.game.container.tileentities.BeaconContainer;
 import net.minecraft.game.container.tileentities.BookshelfContainer;
 import net.minecraft.game.container.tileentities.ChestContainer;
+import net.minecraft.game.container.tileentities.CrafterContainer;
 import net.minecraft.game.container.tileentities.FurnaceContainer;
 import net.minecraft.game.container.tileentities.GeneratorContainer;
+import net.minecraft.game.container.tileentities.GrindstoneContainer;
+import net.minecraft.game.container.tileentities.HellforgeContainer;
+import net.minecraft.game.container.tileentities.SmokerContainer;
+import net.minecraft.game.container.tileentities.StonecutterContainer;
 import net.minecraft.game.container.tileentities.WorkbenchContainer;
 import net.minecraft.game.entity.Entity;
 import net.minecraft.game.entity.arrow.Arrow;
@@ -42,6 +54,7 @@ import net.minecraft.game.world.biomes.hell.HellBiome;
 import net.minecraft.game.world.biomes.sky.SkyBiome;
 import net.minecraft.game.world.chunk.ChunkUtils;
 import net.minecraft.game.world.util.Position;
+import net.minecraft.localization.Translator;
 import net.minecraft.statistics.Stat;
 import net.minecraft.statistics.achievement.Achievement;
 import net.minecraft.statistics.achievement.AchievementList;
@@ -530,70 +543,170 @@ public class EntityPlayerMP extends Player implements ContainerListener {
         this.currentWindowId = this.currentWindowId % 100 + 1;
     }
 
-    @Override
-    public void displayWorkbenchGUI(int i1, int i2, int i3, boolean portable) {
+    private void openWindow(int type, String title, int slots, Container container) {
+        this.openWindow(type, title, slots, 0, 0, 0, false, container);
+    }
+
+    private void openWindow(int type, String title, int slots, int x, int y, int z, boolean state, Container container) {
         this.getNextWidowId();
-        this.playerNetServerHandler.sendPacket(new ContainerOpenPacket(this.currentWindowId, 1, "Crafting", 9));
-        this.openContainer = new WorkbenchContainer(this.inventory, this.world, i1, i2, i3, portable);
+        this.playerNetServerHandler.sendPacket(new ContainerOpenPacket(this.currentWindowId, type, title, slots, x, y, z, state));
+        this.openContainer = container;
         this.openContainer.windowId = this.currentWindowId;
         this.openContainer.addListener(this);
+    }
+
+    @Override
+    public void displayWorkbenchGUI(int i1, int i2, int i3, boolean portable) {
+        this.openWindow(
+            ContainerOpenPacket.WORKBENCH,
+            "Crafting",
+            9,
+            i1,
+            i2,
+            i3,
+            portable,
+            new WorkbenchContainer(this.inventory, this.world, i1, i2, i3, portable)
+        );
     }
 
     @Override
     public void displayGUIChest(Inventory iInventory1, boolean b) {
-        this.getNextWidowId();
-        this.playerNetServerHandler.sendPacket(new ContainerOpenPacket(this.currentWindowId, 0, iInventory1.getName(), iInventory1.getSize()));
-        this.openContainer = new ChestContainer(this.inventory, iInventory1);
-        this.openContainer.windowId = this.currentWindowId;
-        this.openContainer.addListener(this);
+        this.openWindow(
+            ContainerOpenPacket.CHEST, iInventory1.getName(), iInventory1.getSize(), new ChestContainer(this.inventory, iInventory1)
+        );
     }
 
     @Override
     public void displayGUIFurnace(FurnaceEntity tileEntityFurnace1) {
-        this.getNextWidowId();
-        this.playerNetServerHandler.sendPacket(new ContainerOpenPacket(this.currentWindowId, 2, tileEntityFurnace1.getName(), tileEntityFurnace1.getSize()));
-        this.openContainer = new FurnaceContainer(this.inventory, tileEntityFurnace1);
-        this.openContainer.windowId = this.currentWindowId;
-        this.openContainer.addListener(this);
+        this.openWindow(
+            tileEntityFurnace1 instanceof BlastFurnaceEntity ? ContainerOpenPacket.BLAST_FURNACE : ContainerOpenPacket.FURNACE,
+            tileEntityFurnace1.getName(),
+            tileEntityFurnace1.getSize(),
+            new FurnaceContainer(this.inventory, tileEntityFurnace1)
+        );
     }
 
     @Override
     public void displayGUIBarrel(Inventory tileEntityFurnace1) {
-        this.getNextWidowId();
-        this.playerNetServerHandler.sendPacket(new ContainerOpenPacket(this.currentWindowId, 3, tileEntityFurnace1.getName(), tileEntityFurnace1.getSize()));
-        this.openContainer = new BarrelContainer(this.inventory, tileEntityFurnace1);
-        this.openContainer.windowId = this.currentWindowId;
-        this.openContainer.addListener(this);
+        this.openWindow(
+            ContainerOpenPacket.BARREL,
+            tileEntityFurnace1.getName(),
+            tileEntityFurnace1.getSize(),
+            new BarrelContainer(this.inventory, tileEntityFurnace1)
+        );
     }
 
     @Override
     public void displayGUIBookshelf(Inventory tileEntityFurnace1) {
-        this.getNextWidowId();
-        this.playerNetServerHandler.sendPacket(new ContainerOpenPacket(this.currentWindowId, 4, tileEntityFurnace1.getName(), tileEntityFurnace1.getSize()));
-        this.openContainer = new BookshelfContainer(this.inventory, tileEntityFurnace1);
-        this.openContainer.windowId = this.currentWindowId;
-        this.openContainer.addListener(this);
+        this.openWindow(
+            ContainerOpenPacket.BOOKSHELF,
+            tileEntityFurnace1.getName(),
+            tileEntityFurnace1.getSize(),
+            new BookshelfContainer(this.inventory, tileEntityFurnace1)
+        );
     }
 
     @Override
     public void displayGUIGenerator(GeneratorEntity tileEntityFurnace1) {
-        this.getNextWidowId();
-        this.playerNetServerHandler
-            .sendPacket(
-                new ContainerOpenPacket(
-                    this.currentWindowId,
-                    5,
-                    tileEntityFurnace1.getName(),
-                    tileEntityFurnace1.getSize(),
-                    tileEntityFurnace1.x,
-                    tileEntityFurnace1.y,
-                    tileEntityFurnace1.z,
-                    tileEntityFurnace1.active
-                )
-            );
-        this.openContainer = new GeneratorContainer(this.inventory, tileEntityFurnace1);
-        this.openContainer.windowId = this.currentWindowId;
-        this.openContainer.addListener(this);
+        this.openWindow(
+            ContainerOpenPacket.GENERATOR,
+            tileEntityFurnace1.getName(),
+            tileEntityFurnace1.getSize(),
+            tileEntityFurnace1.x,
+            tileEntityFurnace1.y,
+            tileEntityFurnace1.z,
+            tileEntityFurnace1.active,
+            new GeneratorContainer(this.inventory, tileEntityFurnace1)
+        );
+    }
+
+    @Override
+    public void displayGUIAnvil(int x, int y, int z) {
+        this.openWindow(
+            ContainerOpenPacket.ANVIL,
+            Translator.getInstance().translateKey("container.repair"),
+            3,
+            x,
+            y,
+            z,
+            false,
+            new AnvilContainer(this.inventory, this.world, x, y, z, this)
+        );
+    }
+
+    @Override
+    public void displayGUIGrindstone(int x, int y, int z) {
+        this.openWindow(
+            ContainerOpenPacket.GRINDSTONE,
+            Translator.getInstance().translateKey("container.disenchant"),
+            3,
+            x,
+            y,
+            z,
+            false,
+            new GrindstoneContainer(this.inventory, this.world, x, y, z)
+        );
+    }
+
+    @Override
+    public void displayStonecutterGUI(int x, int y, int z) {
+        this.openWindow(
+            ContainerOpenPacket.STONECUTTER,
+            Translator.getInstance().translateKey("container.stonecutter"),
+            2,
+            x,
+            y,
+            z,
+            false,
+            new StonecutterContainer(this.inventory, this.world, x, y, z)
+        );
+    }
+
+    @Override
+    public void displayGUISmoker(SmokerEntity smoker) {
+        this.openWindow(ContainerOpenPacket.SMOKER, smoker.getName(), smoker.getSize(), new SmokerContainer(this.inventory, smoker));
+    }
+
+    @Override
+    public void displayGUIHellforge(HellforgeEntity hellforge) {
+        this.openWindow(
+            ContainerOpenPacket.HELLFORGE, hellforge.getName(), hellforge.getSize(), new HellforgeContainer(this.inventory, hellforge)
+        );
+    }
+
+    @Override
+    public void displayGUICrafter(CrafterEntity crafter) {
+        this.openWindow(
+            ContainerOpenPacket.CRAFTER,
+            Translator.getInstance().translateKey("container.crafter"),
+            crafter.inventory.getSize(),
+            new CrafterContainer(this.inventory, crafter.inventory, crafter.craftResult, this.world)
+        );
+    }
+
+    @Override
+    public void displayGUIBeacon(BeaconEntity beacon) {
+        this.openWindow(ContainerOpenPacket.BEACON, beacon.getName(), beacon.getSize(), new BeaconContainer(this.inventory, beacon));
+    }
+
+    @Override
+    public void displayGUIVacuum(Inventory inv) {
+        this.openWindow(ContainerOpenPacket.VACUUM, inv.getName(), inv.getSize(), new BarrelContainer(this.inventory, inv));
+    }
+
+    @Override
+    public void displayGUIDispenser(Inventory inv) {
+        this.openWindow(ContainerOpenPacket.DISPENSER, inv.getName(), inv.getSize(), new BarrelContainer(this.inventory, inv));
+    }
+
+    @Override
+    public void displayGUIEnderChest(Inventory inv1, Inventory inv2) {
+        this.openWindow(
+            ContainerOpenPacket.ENDER_CHEST,
+            Translator.getInstance().translateKey("container.chestObsidian"),
+            inv1.getSize(),
+            new ChestContainer(this.inventory, inv1)
+        );
     }
 
     @Override

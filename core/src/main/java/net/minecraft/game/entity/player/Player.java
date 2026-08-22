@@ -4,6 +4,7 @@ import com.mojang.nbt.tag.special.CompoundTag;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 import net.minecraft.game.ParticleContext;
 import net.minecraft.game.ParticleType;
 import net.minecraft.game.block.Block;
@@ -76,6 +77,8 @@ import net.minecraft.statistics.achievement.AchievementList;
 import net.minecraft.util.math.MathHelper;
 
 public class Player extends Mob {
+    private static final Logger logger = Logger.getLogger("Minecraft");
+
     public PlayerInventory inventory = new PlayerInventory(this);
     public GlobalInventory inventoryChest = new GlobalInventory(this);
     public Container container;
@@ -2524,27 +2527,34 @@ public class Player extends Mob {
     }
 
     public void displayGUIChest(Inventory inventory, boolean b) {
+        this.windowNotImplemented("chest");
     }
 
     public void displayWorkbenchGUI(int x, int y, int z, boolean portable) {
+        this.windowNotImplemented("workbench");
     }
 
     public void displayGUIFurnace(FurnaceEntity furnace) {
+        this.windowNotImplemented("furnace");
     }
 
     public void displayGUIEditSign(SignEntity sign) {
     }
 
     public void displayGUIPainting(int xCoord, int yCoord, int zCoord, byte b8) {
+        this.windowNotImplemented("painting");
     }
 
     public void displayGUIBarrel(Inventory inventory) {
+        this.windowNotImplemented("barrel");
     }
 
     public void displayGUIBookshelf(Inventory inventory) {
+        this.windowNotImplemented("bookshelf");
     }
 
     public void displayGUIGenerator(GeneratorEntity generator) {
+        this.windowNotImplemented("generator");
     }
 
     public void displayGUIBook(ItemStack stack) {
@@ -2554,35 +2564,49 @@ public class Player extends Mob {
     }
 
     public void displayGUIHellforge(HellforgeEntity furnace) {
+        this.windowNotImplemented("hellforge");
     }
 
     public void displayGUIAnvil(int x, int y, int z) {
+        this.windowNotImplemented("anvil");
     }
 
     public void displayGUISmoker(SmokerEntity smoker) {
+        this.windowNotImplemented("smoker");
     }
 
     public void displayStonecutterGUI(int xCoord, int yCoord, int zCoord) {
+        this.windowNotImplemented("stonecutter");
     }
 
     public void displayGUICrafter(CrafterEntity crafter) {
+        this.windowNotImplemented("crafter");
     }
 
     public void displayGUIEnderChest(Inventory inv1, Inventory inv2) {
+        this.windowNotImplemented("ender chest");
     }
 
     public void displayGUIEditCommand(CommandBlockEntity cmd) {
     }
 
     public void displayGUIBeacon(BeaconEntity beacon) {
+        this.windowNotImplemented("beacon");
     }
 
     public void displayGUIGrindstone(int x, int y, int z) {
+        this.windowNotImplemented("grindstone");
     }
 
     public void displayGUIVacuum(Inventory inv) {
+        this.windowNotImplemented("vacuum");
     }
 
     public void displayGUIDispenser(Inventory inv) {
+        this.windowNotImplemented("dispenser");
+    }
+
+    private void windowNotImplemented(String name) {
+        logger.warning(this.getClass().getSimpleName() + " has no " + name + " window, so nothing will open");
     }
 }

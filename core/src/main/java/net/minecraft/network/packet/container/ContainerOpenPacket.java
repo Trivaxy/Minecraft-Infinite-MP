@@ -8,6 +8,24 @@ import net.minecraft.network.packet.Packet;
 import net.minecraft.util.io.IOUtil;
 
 public class ContainerOpenPacket extends Packet {
+    public static final int CHEST = 0;
+    public static final int WORKBENCH = 1;
+    public static final int FURNACE = 2;
+    public static final int BARREL = 3;
+    public static final int BOOKSHELF = 4;
+    public static final int GENERATOR = 5;
+    public static final int BLAST_FURNACE = 6;
+    public static final int ANVIL = 7;
+    public static final int GRINDSTONE = 8;
+    public static final int STONECUTTER = 9;
+    public static final int SMOKER = 10;
+    public static final int HELLFORGE = 11;
+    public static final int CRAFTER = 12;
+    public static final int BEACON = 13;
+    public static final int VACUUM = 14;
+    public static final int DISPENSER = 15;
+    public static final int ENDER_CHEST = 16;
+
     public int windowId;
     public int inventoryType;
     public String windowTitle;
