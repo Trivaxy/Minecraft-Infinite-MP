@@ -382,6 +382,7 @@ public class Minecraft implements Runnable {
     public void setScreen(GuiScreen newScreen) {
         if (this.currentScreen != null) {
             this.currentScreen.onClose();
+            this.currentScreen.releaseViewportTexture();
         }
 
         this.statistics.syncStats();

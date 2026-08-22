@@ -86,6 +86,7 @@ public class GuiScreen extends GuiComponent {
         this.initGui();
         int screenWidth = mc.displayWidth;
         int screenHeight = mc.displayHeight;
+        this.releaseViewportTexture();
         IntBuffer buffer = BufferUtils.createIntBuffer(1);
         GL11.glGenTextures(buffer);
         this.viewportTexture = buffer.get(0);
@@ -140,7 +141,13 @@ public class GuiScreen extends GuiComponent {
     }
 
     public void onClose() {
-        GL11.glDeleteTextures(this.viewportTexture);
+    }
+
+    public final void releaseViewportTexture() {
+        if (this.viewportTexture != 0) {
+            GL11.glDeleteTextures(this.viewportTexture);
+            this.viewportTexture = 0;
+        }
     }
 
     public void drawBackground() {
