@@ -130,11 +130,12 @@ public class PingHandler extends NetworkHandler {
                 strings = new String[]{ip};
             }
 
-            String ipaddr = strings[0];
-            int port = strings.length > 1 ? this.parseIntWithDefault(strings[1], 25565) : 25565;
+            ServerAddress address = strings.length > 1
+                ? ServerAddress.of(strings[0], this.parseIntWithDefault(strings[1], ServerAddress.DEFAULT_PORT))
+                : ServerAddress.resolve(strings[0]);
 
             try {
-                this.ping = new PingHandler(ipaddr, port, this.server);
+                this.ping = new PingHandler(address.getHost(), address.getPort(), this.server);
                 this.ping.connection.sendPacket(new DisconnectPacket("Impdev"));
             } catch (Exception var6) {
             }

@@ -7,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.button.Button;
 import net.minecraft.client.gui.screens.GuiScreen;
 import net.minecraft.client.network.ClientHandler;
+import net.minecraft.client.network.ServerAddress;
 import net.minecraft.localization.Translator;
 import net.minecraft.network.packet.misc.HandshakePacket;
 
@@ -18,12 +19,20 @@ public class ConnectingScreen extends GuiScreen {
     private boolean cancelled = false;
 
     public ConnectingScreen(ServerSelectScreen screen, Minecraft minecraft, String hostname, int port) {
+        this(screen, minecraft, hostname, port, false);
+    }
+
+    public ConnectingScreen(ServerSelectScreen screen, Minecraft minecraft, String hostname) {
+        this(screen, minecraft, hostname, ServerAddress.DEFAULT_PORT, true);
+    }
+
+    private ConnectingScreen(ServerSelectScreen screen, Minecraft minecraft, String hostname, int port, boolean resolveSrv) {
         this.mc = minecraft;
         info.info("Connecting to " + hostname + ", " + port);
         this.hostDispString = Translator.getInstance().translateKeyFormat("connect.connecting", hostname + ":" + port);
         minecraft.clearWorld();
         this.parent = screen;
-        new ConnectingScreen.ThreadConnectToServer(this, minecraft, hostname, port).start();
+        new ConnectingScreen.ThreadConnectToServer(this, minecraft, hostname, port, resolveSrv).start();
     }
 
     @Override
@@ -94,19 +103,22 @@ public class ConnectingScreen extends GuiScreen {
         final Minecraft mc;
         final String ip;
         final int port;
+        final boolean resolveSrv;
         final ConnectingScreen connectingGui;
 
-        private ThreadConnectToServer(ConnectingScreen screen, Minecraft minecraft, String hostname, int port) {
+        private ThreadConnectToServer(ConnectingScreen screen, Minecraft minecraft, String hostname, int port, boolean resolveSrv) {
             this.connectingGui = screen;
             this.mc = minecraft;
             this.ip = hostname;
             this.port = port;
+            this.resolveSrv = resolveSrv;
         }
 
         @Override
         public void run() {
             try {
-                ConnectingScreen.setNetClientHandler(this.connectingGui, new ClientHandler(this.mc, this.ip, this.port));
+                ServerAddress address = this.resolveSrv ? ServerAddress.resolve(this.ip) : ServerAddress.of(this.ip, this.port);
+                ConnectingScreen.setNetClientHandler(this.connectingGui, new ClientHandler(this.mc, address.getHost(), address.getPort()));
                 if (ConnectingScreen.isCancelled(this.connectingGui)) {
                     return;
                 }

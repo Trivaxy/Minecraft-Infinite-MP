@@ -16,6 +16,7 @@ import net.minecraft.client.gui.button.TextField;
 import net.minecraft.client.gui.screens.DialogueScreen;
 import net.minecraft.client.gui.screens.GuiScreen;
 import net.minecraft.client.network.PingHandler;
+import net.minecraft.client.network.ServerAddress;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.localization.Translator;
 import org.lwjgl.input.Keyboard;
@@ -273,7 +274,11 @@ public class ServerSelectScreen extends GuiScreen {
             splitIp = new String[]{ip};
         }
 
-        this.mc.setScreen(new ConnectingScreen(this, this.mc, splitIp[0], splitIp.length > 1 ? this.parseIntWithDefault(splitIp[1], 25565) : 25565));
+        if (splitIp.length > 1) {
+            this.mc.setScreen(new ConnectingScreen(this, this.mc, splitIp[0], this.parseIntWithDefault(splitIp[1], ServerAddress.DEFAULT_PORT)));
+        } else {
+            this.mc.setScreen(new ConnectingScreen(this, this.mc, splitIp[0]));
+        }
     }
 
     private String setGamemodeString(int gm) {
