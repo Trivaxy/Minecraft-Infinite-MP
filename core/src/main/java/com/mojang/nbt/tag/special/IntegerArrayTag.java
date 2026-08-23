@@ -51,8 +51,7 @@ public class IntegerArrayTag extends Tag {
             return false;
         }
 
-        IntegerArrayTag tag = (IntegerArrayTag)obj;
-        return this.intArray == null && tag.intArray == null || this.intArray != null && this.intArray.equals(tag.intArray);
+        return Arrays.equals(this.intArray, ((IntegerArrayTag)obj).intArray);
     }
 
     @Override

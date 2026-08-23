@@ -39,4 +39,14 @@ public class FloatTag extends Tag {
     public Tag copy() {
         return new FloatTag(this.floatValue).setKey(this.getKey());
     }
+
+    @Override
+    public boolean equals(Object other) {
+        return super.equals(other) && Float.compare(this.floatValue, ((FloatTag)other).floatValue) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode() ^ Float.floatToIntBits(this.floatValue);
+    }
 }

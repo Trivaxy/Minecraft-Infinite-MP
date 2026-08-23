@@ -39,4 +39,14 @@ public class IntegerTag extends Tag {
     public Tag copy() {
         return new IntegerTag(this.intValue).setKey(this.getKey());
     }
+
+    @Override
+    public boolean equals(Object other) {
+        return super.equals(other) && this.intValue == ((IntegerTag)other).intValue;
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode() ^ this.intValue;
+    }
 }

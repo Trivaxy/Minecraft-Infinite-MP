@@ -173,4 +173,14 @@ public class CompoundTag extends Tag {
         Tag tag = this.tagMap.get(name);
         return tag != null ? tag.getId() : 0;
     }
+
+    @Override
+    public boolean equals(Object other) {
+        return super.equals(other) && this.tagMap.equals(((CompoundTag)other).tagMap);
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode() ^ this.tagMap.hashCode();
+    }
 }

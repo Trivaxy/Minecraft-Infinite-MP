@@ -39,4 +39,14 @@ public class LongTag extends Tag {
     public Tag copy() {
         return new LongTag(this.longValue).setKey(this.getKey());
     }
+
+    @Override
+    public boolean equals(Object other) {
+        return super.equals(other) && this.longValue == ((LongTag)other).longValue;
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode() ^ (int)(this.longValue ^ this.longValue >>> 32);
+    }
 }

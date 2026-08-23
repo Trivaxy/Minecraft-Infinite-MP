@@ -39,4 +39,14 @@ public class ByteTag extends Tag {
     public Tag copy() {
         return new ByteTag(this.byteValue).setKey(this.getKey());
     }
+
+    @Override
+    public boolean equals(Object other) {
+        return super.equals(other) && this.byteValue == ((ByteTag)other).byteValue;
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode() ^ this.byteValue;
+    }
 }

@@ -186,4 +186,14 @@ public class ListTag<T extends Tag> extends Tag implements List<T> {
     public List<T> subList(int fromIndex, int toIndex) {
         return this.tagList.subList(fromIndex, toIndex);
     }
+
+    @Override
+    public boolean equals(Object other) {
+        return super.equals(other) && this.tagList.equals(((ListTag)other).tagList);
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode() ^ this.tagList.hashCode();
+    }
 }

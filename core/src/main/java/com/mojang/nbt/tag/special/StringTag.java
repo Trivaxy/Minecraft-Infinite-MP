@@ -42,4 +42,19 @@ public class StringTag extends Tag {
     public Tag copy() {
         return new StringTag(this.string).setKey(this.getKey());
     }
+
+    @Override
+    public boolean equals(Object other) {
+        if (!super.equals(other)) {
+            return false;
+        } else {
+            StringTag tag = (StringTag)other;
+            return this.string == null ? tag.string == null : this.string.equals(tag.string);
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode() ^ (this.string == null ? 0 : this.string.hashCode());
+    }
 }

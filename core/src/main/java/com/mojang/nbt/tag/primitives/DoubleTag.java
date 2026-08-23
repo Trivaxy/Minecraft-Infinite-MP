@@ -39,4 +39,14 @@ public class DoubleTag extends Tag {
     public Tag copy() {
         return new DoubleTag(this.doubleValue).setKey(this.getKey());
     }
+
+    @Override
+    public boolean equals(Object other) {
+        return super.equals(other) && Double.compare(this.doubleValue, ((DoubleTag)other).doubleValue) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode() ^ Double.hashCode(this.doubleValue);
+    }
 }

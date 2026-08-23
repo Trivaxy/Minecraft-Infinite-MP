@@ -116,4 +116,19 @@ public abstract class Tag {
                 return "UNKNOWN";
         }
     }
+
+    @Override
+    public boolean equals(Object other) {
+        if (!(other instanceof Tag)) {
+            return false;
+        } else {
+            Tag tag = (Tag)other;
+            return this.getId() != tag.getId() ? false : this.getKey().equals(tag.getKey());
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return this.getId() ^ this.getKey().hashCode();
+    }
 }

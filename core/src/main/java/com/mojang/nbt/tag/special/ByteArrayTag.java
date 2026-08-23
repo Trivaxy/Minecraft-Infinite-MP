@@ -49,4 +49,14 @@ public class ByteArrayTag extends Tag {
         System.arraycopy(this.byteArray, 0, arr, 0, this.byteArray.length);
         return new ByteArrayTag(arr).setKey(this.getKey());
     }
+
+    @Override
+    public boolean equals(Object other) {
+        return super.equals(other) && java.util.Arrays.equals(this.byteArray, ((ByteArrayTag)other).byteArray);
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode() ^ java.util.Arrays.hashCode(this.byteArray);
+    }
 }
