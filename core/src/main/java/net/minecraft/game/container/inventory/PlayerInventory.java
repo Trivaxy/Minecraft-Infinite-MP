@@ -208,7 +208,7 @@ public class PlayerInventory implements Inventory {
             this.mainInventory[slotIndex].itemID = this.mainInventory[this.currentSlot].itemID;
             this.mainInventory[slotIndex].stackSize = this.mainInventory[this.currentSlot].stackSize;
             if (this.mainInventory[this.currentSlot].hasDisplayName()) {
-                this.mainInventory[slotIndex].setItemName(this.mainInventory[this.currentSlot].getDisplayName());
+                this.mainInventory[slotIndex].setItemName(this.mainInventory[this.currentSlot].customName);
             }
 
             if (this.mainInventory[this.currentSlot].hasTag()) {
