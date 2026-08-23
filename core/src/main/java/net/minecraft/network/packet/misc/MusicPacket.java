@@ -45,8 +45,8 @@ public class MusicPacket extends Packet {
         o.writeInt(this.x);
         o.writeInt(this.y);
         o.writeInt(this.z);
-        o.writeBoolean(this.stop);
         IOUtil.writeUtf16String(this.string1, o);
+        o.writeBoolean(this.stop);
     }
 
     @Override
