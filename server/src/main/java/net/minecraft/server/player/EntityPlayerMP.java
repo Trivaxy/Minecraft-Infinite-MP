@@ -21,6 +21,7 @@ import net.minecraft.game.block.tileentity.smelters.SmokerEntity;
 import net.minecraft.game.container.Container;
 import net.minecraft.game.container.ContainerListener;
 import net.minecraft.game.container.inventory.Inventory;
+import net.minecraft.game.container.player.PlayerContainer;
 import net.minecraft.game.container.slot.CraftingSlot;
 import net.minecraft.game.container.tileentities.AnvilContainer;
 import net.minecraft.game.container.tileentities.BarrelContainer;
@@ -264,6 +265,10 @@ public class EntityPlayerMP extends Player implements ContainerListener {
     public void writeToNBT(CompoundTag nbtTagCompound) {
         super.writeToNBT(nbtTagCompound);
         nbtTagCompound.setInteger("Score", this.score);
+        if (holdsContainerContents(this.inventory.accessorySlots[2])) {
+            ((PlayerContainer)this.container).saveContents(this.inventory.accessorySlots[2]);
+        }
+
         nbtTagCompound.setTag("Inventory", this.inventory.saveContents(new ListTag<>()));
         nbtTagCompound.setIntArray("AwardedAchievementScores", toIntArray(this.awardedAchievementScores));
         nbtTagCompound.setIntArray("EatenFoodItems", toIntArray(this.eatenFoodItems));
@@ -279,12 +284,20 @@ public class EntityPlayerMP extends Player implements ContainerListener {
         this.score = nbtTagCompound.getInteger("Score");
         ListTag<? extends Tag> nBTTagList2 = nbtTagCompound.getTagList("Inventory");
         this.inventory.loadContents(nBTTagList2);
+        if (holdsContainerContents(this.inventory.accessorySlots[2]) && this.inventory.accessorySlots[2].hasTag()) {
+            ((PlayerContainer)this.container).loadContents(this.inventory.accessorySlots[2]);
+        }
+
         fillFromIntArray(this.awardedAchievementScores, nbtTagCompound.getIntArray("AwardedAchievementScores"));
         fillFromIntArray(this.eatenFoodItems, nbtTagCompound.getIntArray("EatenFoodItems"));
         fillFromIntArray(this.biomesExplored, nbtTagCompound.getIntArray("BiomesExplored"));
         fillFromIntArray(this.biomesExploredHell, nbtTagCompound.getIntArray("BiomesExploredHell"));
         fillFromIntArray(this.biomesExploredHeaven, nbtTagCompound.getIntArray("BiomesExploredHeaven"));
         this.stoneMined = nbtTagCompound.getInteger("StoneMined");
+    }
+
+    private static boolean holdsContainerContents(ItemStack accessory) {
+        return accessory != null && (accessory.getItem() == ItemList.backpack || accessory.getItem() == ItemList.quiver);
     }
 
     private static int[] toIntArray(Set<Integer> set) {
