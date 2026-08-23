@@ -38,7 +38,9 @@ public final class HelpCommand {
         source.sendSuccess(CommandMessages.translate("commands.help.header"));
 
         for (CommandNode<CommandSourceStack> node : visible) {
-            source.sendSuccess("§e/" + node.getName());
+            for (String usage : Commands.usage(dispatcher, node, source)) {
+                source.sendSuccess("§e" + usage);
+            }
         }
 
         return visible.size();
@@ -50,9 +52,9 @@ public final class HelpCommand {
             throw CommandMessages.UNKNOWN_COMMAND.create();
         }
 
-        String[] usages = dispatcher.getAllUsage(node, source, true);
+        String[] usages = Commands.usage(dispatcher, node, source);
         for (String usage : usages) {
-            source.sendSuccess("§e/" + (usage.isEmpty() ? name : name + " " + usage));
+            source.sendSuccess("§e" + usage);
         }
 
         return usages.length;

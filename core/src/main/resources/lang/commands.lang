@@ -1,4 +1,5 @@
 commands.base.unknown=Unknown command.
+commands.base.incorrect=Incorrect command. Usage:
 commands.base.noperms=You do not have permission to run this command.
 commands.base.error.internal=Something went wrong running that command.
 commands.base.error.player=That command has to be run by a player.
