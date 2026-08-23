@@ -16,6 +16,7 @@ public class IOUtil {
             dos.writeShort(item.itemID);
             dos.writeByte(item.stackSize);
             dos.writeShort(item.getItemDamage());
+            dos.writeUTF(item.customName);
             if (item.hasTag()) {
                 writeNbtCompound(item.customTag, dos);
             } else {
@@ -30,7 +31,7 @@ public class IOUtil {
         if (id >= 0) {
             byte stacksize = dis.readByte();
             short damage = dis.readShort();
-            item = new ItemStack(id, stacksize, damage);
+            item = new ItemStack(id, stacksize, damage, dis.readUTF());
             item.customTag = readNbtCompound(dis);
         }
 
