@@ -1,6 +1,5 @@
 package net.minecraft.game.block.utility;
 
-import java.util.Random;
 import net.minecraft.game.block.Block;
 import net.minecraft.game.block.building.Sand;
 import net.minecraft.game.block.material.MaterialList;
@@ -91,11 +90,6 @@ public class Anvil extends Sand {
         } else {
             this.setBounds(0.0, 0.0, 0.125, 1.0, 1.0, 0.875);
         }
-    }
-
-    @Override
-    public int dropID(int blockid, Random random) {
-        return 0;
     }
 
     @Override
