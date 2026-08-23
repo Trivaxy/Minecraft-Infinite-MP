@@ -319,7 +319,13 @@ public final class ItemStack {
     }
 
     private boolean isItemStackEqual(ItemStack stack) {
-        return this.stackSize != stack.stackSize ? false : (this.itemID != stack.itemID ? false : this.itemDmg == stack.itemDmg);
+        return this.stackSize != stack.stackSize
+            ? false
+            : (
+                this.itemID != stack.itemID
+                    ? false
+                    : this.itemDmg == stack.itemDmg && this.customName.equals(stack.customName) && areItemStackTagsEqual(this, stack)
+            );
     }
 
     public boolean isItemEqual(ItemStack stack) {
