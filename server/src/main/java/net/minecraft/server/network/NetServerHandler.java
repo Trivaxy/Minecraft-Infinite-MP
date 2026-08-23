@@ -4,6 +4,7 @@ import com.mojang.nbt.tag.special.StringTag;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,6 +17,7 @@ import net.minecraft.game.block.tileentity.TileEntity;
 import net.minecraft.game.block.tileentity.other.SignEntity;
 import net.minecraft.game.block.tileentity.smelters.GeneratorEntity;
 import net.minecraft.game.container.slot.Slot;
+import net.minecraft.game.container.tileentities.AnvilContainer;
 import net.minecraft.game.entity.Entity;
 import net.minecraft.game.item.ItemList;
 import net.minecraft.game.item.ItemStack;
@@ -789,6 +791,15 @@ public class NetServerHandler extends NetworkHandler implements CommandOutput {
             } catch (Exception var11) {
                 LoggingUtils.warnThrowable(logger, "Error receiving custom payload", var11);
             }
+        } else if ("MC|ItemName".equals(ass.channel) && this.playerEntity.openContainer instanceof AnvilContainer) {
+            AnvilContainer anvil = (AnvilContainer)this.playerEntity.openContainer;
+            String name = ass.data == null ? "" : new String(ass.data, StandardCharsets.UTF_8);
+            if (name.length() > 30) {
+                name = name.substring(0, 30);
+            }
+
+            anvil.updateItemName(SharedConstants.filterAllowedCharacters(name));
+            anvil.updateCraftResults();
         }
     }
 

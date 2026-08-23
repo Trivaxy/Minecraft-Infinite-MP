@@ -1,5 +1,6 @@
 package net.minecraft.client.gui.screens.container.tileentity;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.button.TextField;
@@ -83,7 +84,7 @@ public class AnvilScreen extends ContainerScreen implements ContainerListener {
             this.anvil.updateItemName(this.nameField.getText());
             if (this.mc.player instanceof NetworkPlayer) {
                 NetworkPlayer player = (NetworkPlayer)this.mc.player;
-                player.connection.sendPacket(new CustomPayloadPacket("MC|ItemName", this.nameField.getText().getBytes()));
+                player.connection.sendPacket(new CustomPayloadPacket("MC|ItemName", this.nameField.getText().getBytes(StandardCharsets.UTF_8)));
             }
         } else {
             super.keyTyped(character, key);
@@ -128,7 +129,7 @@ public class AnvilScreen extends ContainerScreen implements ContainerListener {
                 if (!stack.customName.isEmpty()) {
                     field = stack.customName;
                 } else {
-                    field = Translator.getInstance().translateNamedKey(stack.getItemName(0));
+                    field = Translator.getInstance().translateNamedKey(stack.getItemName(stack.itemDmg));
                 }
             }
 
@@ -138,7 +139,7 @@ public class AnvilScreen extends ContainerScreen implements ContainerListener {
                 this.anvil.updateItemName(this.nameField.getText());
                 if (this.mc.player instanceof NetworkPlayer) {
                     NetworkPlayer player = (NetworkPlayer)this.mc.player;
-                    player.connection.sendPacket(new CustomPayloadPacket("MC|ItemName", this.nameField.getText().getBytes()));
+                    player.connection.sendPacket(new CustomPayloadPacket("MC|ItemName", this.nameField.getText().getBytes(StandardCharsets.UTF_8)));
                 }
             }
         }

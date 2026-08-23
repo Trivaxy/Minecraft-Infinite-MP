@@ -65,106 +65,95 @@ public class AnvilContainer extends Container {
 
     public void updateRepairOutput() {
         ItemStack itemToRepair = this.inputSlots.getStackInSlot(0);
+        this.stackSize = 0;
         if (itemToRepair == null) {
             this.outputSlot.setSlotContents(0, null);
-        } else {
-            ItemStack repairCopy = itemToRepair.copy();
-            ItemStack repairMaterial = this.inputSlots.getStackInSlot(1);
-            this.stackSize = 0;
-            int stackSize = 1;
-            if (repairMaterial == null) {
-                if (this.customName != null
-                    && this.customName.length() > 0
-                    && !this.customName.equalsIgnoreCase(Translator.getInstance().translateKey(itemToRepair.getItemName(itemToRepair.itemDmg)))
-                    && !this.customName.equals(itemToRepair.getDisplayName())) {
-                    repairCopy.setItemName(this.customName);
+            return;
+        }
+
+        ItemStack repairCopy = itemToRepair.copy();
+        ItemStack repairMaterial = this.inputSlots.getStackInSlot(1);
+        boolean modified = false;
+        if (repairMaterial != null) {
+            if (repairCopy.isStackDamageable()
+                && (
+                    ItemList.items[repairCopy.itemID].isRepairable(itemToRepair, repairMaterial)
+                        || ItemList.items[repairCopy.itemID].isEnchantable(itemToRepair, repairMaterial)
+                )) {
+                int itemDamage = Math.min(repairCopy.getItemDamage(), repairCopy.getMaxDamage() / 4);
+                if (itemDamage <= 0 && repairMaterial.getItem() != ItemList.scroll) {
+                    this.outputSlot.setSlotContents(0, null);
+                    return;
                 }
 
-                int itemDamage = 0;
-                this.outputSlot.setSlotContents(2, repairCopy);
-            } else {
-                if (repairCopy.isStackDamageable()
-                    && (
-                        ItemList.items[repairCopy.itemID].isRepairable(itemToRepair, repairMaterial)
-                            || ItemList.items[repairCopy.itemID].isEnchantable(itemToRepair, repairMaterial)
-                    )) {
-                    int itemDamage = Math.min(repairCopy.getItemDamage(), repairCopy.getMaxDamage() / 4);
-                    if (itemDamage <= 0 && repairMaterial.getItem() != ItemList.scroll) {
-                        this.outputSlot.setSlotContents(0, null);
-                        return;
+                if (repairMaterial.getItem() == ItemList.scroll) {
+                    Enchantment enchant = EnchantmentList.enchantments[repairMaterial.getItemDamage()];
+                    int lvl = 1;
+                    int tier = 0;
+                    if (repairCopy.getItem() instanceof Tool) {
+                        tier = ((Tool)repairCopy.getItem()).toolMaterial.getHarvestLevel();
+                    } else if (repairCopy.getItem() instanceof Armor) {
+                        tier = ((Armor)repairCopy.getItem()).tier.getTier();
                     }
 
-                    if (repairMaterial.getItem() == ItemList.scroll) {
-                        Enchantment enchant = EnchantmentList.enchantments[repairMaterial.getItemDamage()];
-                        int lvl = 1;
-                        int tier = 0;
-                        if (repairCopy.getItem() instanceof Tool) {
-                            tier = ((Tool)repairCopy.getItem()).toolMaterial.getHarvestLevel();
-                        } else if (repairCopy.getItem() instanceof Armor) {
-                            tier = ((Armor)repairCopy.getItem()).tier.getTier();
-                        }
-
-                        if (tier > 0) {
-                            lvl = enchant.getMaxLevel() + 1 - tier;
-                        }
-
-                        lvl = MathHelper.clamp(lvl, enchant.getMinLevel(), enchant.getMaxLevel());
-                        repairCopy.addEnchantment(enchant, lvl);
-                    } else {
-                        for (stackSize = 0; itemDamage > 0 && stackSize <= repairMaterial.stackSize; stackSize++) {
-                            int materialDamage = repairCopy.getItemDamage() - itemDamage;
-                            repairCopy.setItemDamage(materialDamage);
-                            itemDamage = Math.min(repairCopy.getItemDamage(), repairCopy.getMaxDamage() / 4);
-                        }
+                    if (tier > 0) {
+                        lvl = enchant.getMaxLevel() + 1 - tier;
                     }
 
-                    this.outputSlot.setSlotContents(0, repairCopy);
-                    this.stackSize = stackSize;
+                    lvl = MathHelper.clamp(lvl, enchant.getMinLevel(), enchant.getMaxLevel());
+                    repairCopy.addEnchantment(enchant, lvl);
+                    this.stackSize = 1;
                 } else {
-                    if (repairCopy.itemID != repairMaterial.itemID || !repairCopy.isStackDamageable()) {
-                        this.outputSlot.setSlotContents(0, null);
-                        return;
+                    int used = 0;
+
+                    while (itemDamage > 0 && used < repairMaterial.stackSize) {
+                        repairCopy.setItemDamage(repairCopy.getItemDamage() - itemDamage);
+                        itemDamage = Math.min(repairCopy.getItemDamage(), repairCopy.getMaxDamage() / 4);
+                        used++;
                     }
 
-                    if (repairCopy.isStackDamageable()) {
-                        int itemDamage = itemToRepair.getMaxDamage() - itemToRepair.getItemDamage();
-                        stackSize = repairMaterial.getMaxDamage() - repairMaterial.getItemDamage();
-                        int materialDamage = stackSize + repairCopy.getMaxDamage() * 12 / 100;
-                        int finalDmg = itemDamage + materialDamage;
-                        int newDamage = repairCopy.getMaxDamage() - finalDmg;
-                        if (newDamage < 0) {
-                            newDamage = 0;
-                        }
-
-                        if (newDamage < repairCopy.getItemDamage()) {
-                            repairCopy.setItemDamage(newDamage);
-                        }
-                    }
+                    this.stackSize = used;
                 }
 
-                if (this.customName != null && this.customName.length() > 0) {
-                    repairCopy.setItemName(this.customName);
+                modified = true;
+            } else {
+                if (repairCopy.itemID != repairMaterial.itemID || !repairCopy.isStackDamageable()) {
+                    this.outputSlot.setSlotContents(0, null);
+                    return;
                 }
 
-                int itemDamage = 0;
-                if (repairCopy != null) {
-                    int var15 = 0;
-                    var15 = repairCopy.getRepairCost();
-                    if (repairMaterial != null && var15 < repairMaterial.getRepairCost()) {
-                        var15 = repairMaterial.getRepairCost();
-                    }
-
-                    if (repairCopy.hasDisplayName()) {
-                        var15 -= 9;
-                    }
-
-                    if (var15 < 0) {
-                        var15 = 0;
-                    }
-
-                    var15 += 2;
+                int remaining = itemToRepair.getMaxDamage() - itemToRepair.getItemDamage();
+                int materialRemaining = repairMaterial.getMaxDamage() - repairMaterial.getItemDamage();
+                int restored = remaining + materialRemaining + repairCopy.getMaxDamage() * 12 / 100;
+                int newDamage = Math.max(repairCopy.getMaxDamage() - restored, 0);
+                if (newDamage >= repairCopy.getItemDamage()) {
+                    this.outputSlot.setSlotContents(0, null);
+                    return;
                 }
+
+                repairCopy.setItemDamage(newDamage);
+                this.stackSize = 1;
+                modified = true;
             }
+        }
+
+        if (this.isRename(itemToRepair)) {
+            repairCopy.setItemName(this.customName);
+            modified = true;
+        } else if ((this.customName == null || this.customName.isEmpty()) && itemToRepair.hasDisplayName()) {
+            repairCopy.setItemName("");
+            modified = true;
+        }
+
+        this.outputSlot.setSlotContents(0, modified ? repairCopy : null);
+    }
+
+    private boolean isRename(ItemStack itemToRepair) {
+        if (this.customName == null || this.customName.isEmpty() || this.customName.equals(itemToRepair.customName)) {
+            return false;
+        } else {
+            String defaultName = Translator.getInstance().translateNamedKey(itemToRepair.getItemName(itemToRepair.itemDmg));
+            return !this.customName.equals(defaultName) || itemToRepair.hasDisplayName();
         }
     }
 
@@ -226,11 +215,7 @@ public class AnvilContainer extends Container {
     }
 
     public void updateItemName(String name) {
-        this.customName = name;
-        if (this.getSlot(2).hasStack()) {
-            this.getSlot(2).getStack().setItemName(this.customName);
-        }
-
+        this.customName = name == null ? "" : name;
         this.updateRepairOutput();
     }
 
