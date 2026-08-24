@@ -1,5 +1,8 @@
 // Minecraft Infinite - development environment.
 //
+// The decompiled game is NOT in this repository. `./gradlew bootstrap` rebuilds it from
+// Vesuvius's published jars; see tools/bootstrap.gradle and DEVELOPING.md.
+//
 // Three modules:
 //
 //   :core    - the shared game. Blocks, items, entities, world gen, containers, recipes,
@@ -12,10 +15,43 @@
 // task is gone: the copies were reconciled and hoisted into :core, so the compiler now
 // enforces what the task used to check by convention. See DEVELOPING.md.
 
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.eclipse.jgit:org.eclipse.jgit:6.10.0.202406032230-r'
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    vineflower
+}
+
+dependencies {
+    vineflower 'org.vineflower:vineflower:1.12.0'
+}
+
+apply from: rootProject.file('tools/bootstrap.gradle')
+
 subprojects {
     // java-library, not plain java, so :client and :server can depend on :core with `api`
     // and re-expose its types the way the old single-tree code took for granted.
     apply plugin: 'java-library'
+
+    // The tree is generated. Failing here beats a thousand "cannot find symbol" errors.
+    tasks.withType(JavaCompile).configureEach {
+        doFirst {
+            if (!rootProject.file('core/src/main/java/net/minecraft/SharedConstants.java').exists()) {
+                throw new GradleException(
+                    'The decompiled sources are missing. Run:\n\n    ./gradlew bootstrap\n')
+            }
+        }
+    }
 
     group = 'net.minecraft'
     version = '1.0-dev'

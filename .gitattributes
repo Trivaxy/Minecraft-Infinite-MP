@@ -1,0 +1,9 @@
+# The patch files are byte-exact inputs to ./gradlew bootstrap. Three lang resources are
+# CRLF inside the upstream jar, so their hunks carry CR bytes that a checkout must not
+# rewrite - normalising them would make the patch fail to apply.
+patches/*.patch -text
+tools/layout.txt -text
+
+# The Prism instance skeleton is copied verbatim into the released export. Keeping the
+# bytes fixed means the export a clone builds matches the one built here.
+dist/prism/** -text

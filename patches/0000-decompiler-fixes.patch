@@ -1,0 +1,2795 @@
+diff --git a/client/src/main/java/net/minecraft/SharedConstants.java b/client/src/main/java/net/minecraft/SharedConstants.java
+index 9472851..a71b3a2 100644
+--- a/client/src/main/java/net/minecraft/SharedConstants.java
++++ b/client/src/main/java/net/minecraft/SharedConstants.java
+@@ -17,7 +17,7 @@ public class SharedConstants {
+     public static final String VERSION_STRING = "v1.0";
+     public static final String PREFIX = "Minecraft Infinite";
+     public static final String FULL_VER_STRING = "Minecraft Infinite v1.0";
+-    public static final int PROTOCOL_VERSION = 20260630;
++    public static final int PROTOCOL_VERSION = 20260810;
+     public static final char COLOR_CODE = '§';
+     public static final String COLOR_CODE_STR = "§";
+     public static final String COLOR_CHARS = "0123456789abcdefgh";
+diff --git a/client/src/main/java/net/minecraft/client/ErrorDialog.java b/client/src/main/java/net/minecraft/client/ErrorDialog.java
+index 99bb088..bfa1c07 100644
+--- a/client/src/main/java/net/minecraft/client/ErrorDialog.java
++++ b/client/src/main/java/net/minecraft/client/ErrorDialog.java
+@@ -135,9 +135,9 @@ public class ErrorDialog extends JFrame {
+         titlePanel.setBorder(new TitledBorder(null, "Exception Details:", 4, 2, null, new Color(0, 0, 0)));
+         this.contentPanel.add(titlePanel, "Center");
+         titlePanel.setLayout(new BorderLayout(0, 0));
+-        rigidArea = new JScrollPane();
+-        rigidArea.setVerticalScrollBarPolicy(22);
+-        titlePanel.add(rigidArea, "Center");
++        JScrollPane scrollPane = new JScrollPane();
++        scrollPane.setVerticalScrollBarPolicy(22);
++        titlePanel.add(scrollPane, "Center");
+         JTextArea vAREA = new JTextArea(stacktrace);
+         vAREA.setBackground(Color.WHITE);
+         int i = 0;
+@@ -147,7 +147,7 @@ public class ErrorDialog extends JFrame {
+ 
+         vAREA.setFont(new Font("Monospaced", i, fontsize));
+         vAREA.setEditable(false);
+-        rigidArea.setViewportView(vAREA);
++        scrollPane.setViewportView(vAREA);
+         titlePanel = new JPanel();
+         titlePanel.setBorder(new BevelBorder(1, null, null, null, null));
+         titlePanel.setLayout(new FlowLayout(2));
+diff --git a/client/src/main/java/net/minecraft/client/Minecraft.java b/client/src/main/java/net/minecraft/client/Minecraft.java
+index 56225f7..487696a 100644
+--- a/client/src/main/java/net/minecraft/client/Minecraft.java
++++ b/client/src/main/java/net/minecraft/client/Minecraft.java
+@@ -757,7 +757,7 @@ public class Minecraft implements Runnable, CommandAccessor {
+             }
+         }
+ 
+-        if (this.world != null && !this.paused) {
++        if (this.world != null && this.player != null && !this.paused) {
+             if (this.player.properties.getPermadeath()) {
+                 this.world.settings.setDifficulty((byte)3);
+                 this.world.settings.difficultyLock = true;
+@@ -775,11 +775,21 @@ public class Minecraft implements Runnable, CommandAccessor {
+             this.world.tickEntities();
+             this.world.setAllowedSpawnTypes(this.world.settings.getDifficulty() > 0 && !this.world.blueMoon, true);
+             this.world.tick();
+-            Profiler.endStartSection("animateTick");
+-            this.world
+-                .tickAnimations(MathHelper.floor_double(this.player.posX), MathHelper.floor_double(this.player.posY), MathHelper.floor_double(this.player.posZ));
+-            Profiler.endStartSection("particles");
+-            this.particleRenderer.updateParticles();
++            // NetworkWorld.tick() drains the packet queue, so a kick, a lost connection or the
++            // server shutting down all land *here*, in the middle of this block. ClientHandler
++            // handles them by calling changeWorld(null), which nulls both world and player while
++            // we are still on the stack - and the rest of this block would then dereference
++            // them. This is why being kicked crashed the client instead of showing the
++            // disconnect screen.
++            if (this.world != null && this.player != null) {
++                Profiler.endStartSection("animateTick");
++                this.world
++                    .tickAnimations(
++                        MathHelper.floor_double(this.player.posX), MathHelper.floor_double(this.player.posY), MathHelper.floor_double(this.player.posZ)
++                    );
++                Profiler.endStartSection("particles");
++                this.particleRenderer.updateParticles();
++            }
+         }
+ 
+         Profiler.endSection();
+@@ -990,7 +1000,12 @@ public class Minecraft implements Runnable, CommandAccessor {
+     }
+ 
+     public void respawn(boolean isMultiplayer) {
+-        if (!this.world.isOnline && !this.world.currDim.canRespawnHere() && this.player.getSpawn(this.player.dimension) == null || this.player.dimension == 3) {
++        // switchDimension builds a local World with its own chunk provider, which would replace
++        // the NetworkWorld and sever the connection. The `dimension == 3` clause used to sit
++        // outside the !isOnline guard, so dying in the Void on a server did exactly that.
++        if (!this.world.isOnline
++            && (!this.world.currDim.canRespawnHere() && this.player.getSpawn(this.player.dimension) == null
++                || this.player.dimension == 3)) {
+             this.switchDimension(0);
+         }
+ 
+diff --git a/client/src/main/java/net/minecraft/client/network/ClientHandler.java b/client/src/main/java/net/minecraft/client/network/ClientHandler.java
+index c075005..40d6cae 100644
+--- a/client/src/main/java/net/minecraft/client/network/ClientHandler.java
++++ b/client/src/main/java/net/minecraft/client/network/ClientHandler.java
+@@ -12,6 +12,7 @@ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Random;
++import net.minecraft.SharedConstants;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.gui.screens.multiplayer.DisconnectedScreen;
+ import net.minecraft.client.gui.screens.multiplayer.LoginScreen;
+@@ -394,12 +395,12 @@ public class ClientHandler extends NetworkHandler {
+         int z = packet.zPosition * 16;
+ 
+         for (int id = 0; id < packet.sizeOfAllArrays; id++) {
+-            short coords = packet.coordinateArray[id];
++            int coords = packet.coordinateArray[id];
+             short type = packet.typeArray[id];
+             short metadata = packet.metadataArray[id];
+-            int chunkWidth = coords >> 12 & 15;
+-            int chunkLength = coords >> 8 & 15;
+-            int chunkHeight = coords & 255;
++            int chunkWidth = coords >> 20 & 15;
++            int chunkLength = coords >> 16 & 15;
++            int chunkHeight = coords & 0xFFFF;
+             chunk.setBlockAndState(chunkWidth, chunkHeight, chunkLength, type, metadata);
+             this.world.clearBlockUpdates(chunkWidth + x, chunkHeight, chunkLength + z, chunkWidth + x, chunkHeight, chunkLength + z);
+             this.world.markBlocksDirty(chunkWidth + x, chunkHeight, chunkLength + z, chunkWidth + x, chunkHeight, chunkLength + z);
+@@ -507,7 +508,7 @@ public class ClientHandler extends NetworkHandler {
+     @Override
+     public void handleHandshake(HandshakePacket packet) {
+         if (packet.username.equals("-")) {
+-            this.sendPacket(new LoginPacket(this.mc.session.username, 20260630));
++            this.sendPacket(new LoginPacket(this.mc.session.username, SharedConstants.PROTOCOL_VERSION));
+         } else {
+             try {
+                 URL url = new URL(
+@@ -522,7 +523,7 @@ public class ClientHandler extends NetworkHandler {
+                 String msg = reader.readLine();
+                 reader.close();
+                 if (msg.equalsIgnoreCase("ok")) {
+-                    this.sendPacket(new LoginPacket(this.mc.session.username, 20260630));
++                    this.sendPacket(new LoginPacket(this.mc.session.username, SharedConstants.PROTOCOL_VERSION));
+                 } else {
+                     this.connection.networkShutdown("disconnect.loginFailedInfo", msg);
+                 }
+diff --git a/client/src/main/java/net/minecraft/client/statistics/StatWriter.java b/client/src/main/java/net/minecraft/client/statistics/StatWriter.java
+index 8073067..09a287b 100644
+--- a/client/src/main/java/net/minecraft/client/statistics/StatWriter.java
++++ b/client/src/main/java/net/minecraft/client/statistics/StatWriter.java
+@@ -61,7 +61,8 @@ public class StatWriter {
+         if (map != null) {
+             this.syncing = true;
+ 
+-            for (Stat stat : map.keySet()) {
++            for (Object key : map.keySet()) {
++                Stat stat = (Stat)key;
+                 this.writeStatToMap(this.achievementMap, stat, (Integer)map.get(stat));
+                 this.writeStatToMap(this.statsMap, stat, (Integer)map.get(stat));
+             }
+@@ -70,7 +71,8 @@ public class StatWriter {
+ 
+     public void saveStats(Map<?, ?> map) {
+         if (map != null) {
+-            for (Stat stat : map.keySet()) {
++            for (Object key : map.keySet()) {
++                Stat stat = (Stat)key;
+                 Integer val = (Integer)this.achievementMap.get(stat);
+                 int value = val == null ? 0 : val;
+                 this.statsMap.put(stat, (Integer)map.get(stat) + value);
+@@ -82,7 +84,8 @@ public class StatWriter {
+         if (map != null) {
+             this.syncing = true;
+ 
+-            for (Stat stat : map.keySet()) {
++            for (Object key : map.keySet()) {
++                Stat stat = (Stat)key;
+                 this.writeStatToMap(this.achievementMap, stat, (Integer)map.get(stat));
+             }
+         }
+@@ -138,7 +141,8 @@ public class StatWriter {
+ 
+         builder1.append("  \"stats-change\":[");
+ 
+-        for (Stat stat : map2.keySet()) {
++        for (Object key : map2.keySet()) {
++            Stat stat = (Stat)key;
+             if (!validityCheck) {
+                 builder1.append("},");
+             } else {
+diff --git a/client/src/main/java/net/minecraft/commands/core/world/WorldInfoCommand.java b/client/src/main/java/net/minecraft/commands/core/world/WorldInfoCommand.java
+index c36e163..6c87a41 100644
+--- a/client/src/main/java/net/minecraft/commands/core/world/WorldInfoCommand.java
++++ b/client/src/main/java/net/minecraft/commands/core/world/WorldInfoCommand.java
+@@ -24,7 +24,7 @@ public class WorldInfoCommand extends Command {
+                 );
+                 src.print(Translator.getInstance().translateKey("commands.world.height") + ": " + w.getSettings().getMaxSections() * 16);
+                 src.print(Translator.getInstance().translateKey("commands.world.type") + ": " + w.getSettings().getType());
+-                src.print(Translator.getInstance().translateKey("commands.world.dimension") + ": " + w.getSettings().getDimension());
++                src.print(Translator.getInstance().translateKey("commands.world.dimension") + ": " + w.currDim.dimension);
+                 src.print(Translator.getInstance().translateKey("commands.world.difficulty") + ": " + w.getSettings().getDifficulty());
+                 src.print(Translator.getInstance().translateKey("commands.world.cheats") + ": " + w.getSettings().getCheats());
+                 src.print(Translator.getInstance().translateKey("commands.world.structures") + ": " + w.getSettings().generateStructures());
+diff --git a/client/src/main/java/net/minecraft/game/block/liquid/FlowingLiquid.java b/client/src/main/java/net/minecraft/game/block/liquid/FlowingLiquid.java
+index cc94d7b..f352f1e 100644
+--- a/client/src/main/java/net/minecraft/game/block/liquid/FlowingLiquid.java
++++ b/client/src/main/java/net/minecraft/game/block/liquid/FlowingLiquid.java
+@@ -36,7 +36,7 @@ public class FlowingLiquid extends LiquidBlock {
+                 flow = this.getSmallestFlowDecay(world, xCoord, yCoord, zCoord - 1, flow);
+                 flow = this.getSmallestFlowDecay(world, xCoord, yCoord, zCoord + 1, flow);
+                 int state;
+-                if (this.fluidType == 2 && world.settings.getDimension() == 1) {
++                if (this.fluidType == 2 && world.currDim.dimension == 1) {
+                     state = flow + 1;
+                 } else {
+                     state = flow + this.fluidType;
+diff --git a/client/src/main/java/net/minecraft/game/block/tileentity/other/BeaconEntity.java b/client/src/main/java/net/minecraft/game/block/tileentity/other/BeaconEntity.java
+index 810a0a1..d44e528 100644
+--- a/client/src/main/java/net/minecraft/game/block/tileentity/other/BeaconEntity.java
++++ b/client/src/main/java/net/minecraft/game/block/tileentity/other/BeaconEntity.java
+@@ -4,6 +4,7 @@ import com.mojang.nbt.tag.special.CompoundTag;
+ import com.mojang.nbt.tag.special.ListTag;
+ import net.minecraft.game.block.tileentity.TileEntity;
+ import net.minecraft.game.container.inventory.Inventory;
++import net.minecraft.game.entity.Entity;
+ import net.minecraft.game.entity.player.Player;
+ import net.minecraft.game.item.ItemStack;
+ import net.minecraft.game.item.potion.EffectData;
+@@ -45,7 +46,8 @@ public class BeaconEntity extends TileEntity implements Inventory {
+             BoundingBox bb = new BoundingBox(this.x, this.y, this.z, this.x + 1, this.y + 1, this.z + 1).expand(range, range, range);
+             bb.maxY = this.world.getWorldHeight();
+ 
+-            for (Player player : this.world.getEntitiesOfType(Player.class, bb)) {
++            for (Entity candidate : this.world.getEntitiesOfType(Player.class, bb)) {
++                Player player = (Player)candidate;
+                 player.addEffect(new EffectData(this.primaryEffect, 180, area, true));
+             }
+         }
+diff --git a/client/src/main/java/net/minecraft/game/entity/mob/ai/hostile/Aggro.java b/client/src/main/java/net/minecraft/game/entity/mob/ai/hostile/Aggro.java
+index 4f435d6..35fbc13 100644
+--- a/client/src/main/java/net/minecraft/game/entity/mob/ai/hostile/Aggro.java
++++ b/client/src/main/java/net/minecraft/game/entity/mob/ai/hostile/Aggro.java
+@@ -1,5 +1,6 @@
+ package net.minecraft.game.entity.mob.ai.hostile;
+ 
++import net.minecraft.game.entity.Entity;
+ import net.minecraft.game.entity.mob.Mob;
+ import net.minecraft.game.physics.BoundingBox;
+ 
+@@ -37,13 +38,14 @@ public class Aggro extends ChooseTarget {
+     }
+ 
+     protected void aggroAdversaries() {
+-        for (Mob entity : this.src
++        for (Entity candidate : this.src
+             .world
+             .getEntitiesOfType(
+                 this.src.getClass(),
+                 BoundingBox.getBoundingBox(this.src.posX, this.src.posY, this.src.posZ, this.src.posX + 1.0, this.src.posY + 1.0, this.src.posZ + 1.0)
+                     .expand(this.dist, 6.0, this.dist)
+             )) {
++            Mob entity = (Mob)candidate;
+             if (this.src != entity && entity.attackTarget == null && entity.calmTime <= 0) {
+                 entity.attackTarget = entity.lastTarget = this.src.getLastTarget();
+             }
+diff --git a/client/src/main/java/net/minecraft/game/entity/mob/ai/hostile/DetectEnemy.java b/client/src/main/java/net/minecraft/game/entity/mob/ai/hostile/DetectEnemy.java
+index 1eea823..a502fb1 100644
+--- a/client/src/main/java/net/minecraft/game/entity/mob/ai/hostile/DetectEnemy.java
++++ b/client/src/main/java/net/minecraft/game/entity/mob/ai/hostile/DetectEnemy.java
+@@ -36,10 +36,11 @@ public class DetectEnemy extends ChooseTarget {
+                     return true;
+                 }
+             } else {
+-                List<?> entities = this.src.world.getEntitiesOfType(this.targetClass, this.src.boundingBox.expand(this.dist, 6.0, this.dist));
++                List<Entity> entities = this.src.world.getEntitiesOfType(this.targetClass, this.src.boundingBox.expand(this.dist, 6.0, this.dist));
+                 Collections.sort(entities, this.targetSorter);
+ 
+-                for (Mob entity : entities) {
++                for (Entity candidate : entities) {
++                    Mob entity = (Mob)candidate;
+                     if (this.foundValidTarget(entity, false)) {
+                         this.target = entity;
+                         return true;
+diff --git a/client/src/main/java/net/minecraft/game/entity/mob/ai/tameable/AggroWild.java b/client/src/main/java/net/minecraft/game/entity/mob/ai/tameable/AggroWild.java
+index 583a6ea..3dd936c 100644
+--- a/client/src/main/java/net/minecraft/game/entity/mob/ai/tameable/AggroWild.java
++++ b/client/src/main/java/net/minecraft/game/entity/mob/ai/tameable/AggroWild.java
+@@ -3,6 +3,7 @@ package net.minecraft.game.entity.mob.ai.tameable;
+ import net.minecraft.game.entity.mob.Mob;
+ import net.minecraft.game.entity.mob.ai.hostile.Aggro;
+ import net.minecraft.game.entity.mob.animal.tameable.TameableMob;
++import net.minecraft.game.entity.Entity;
+ import net.minecraft.game.entity.mob.animal.tameable.Wolf;
+ import net.minecraft.game.physics.BoundingBox;
+ 
+@@ -27,13 +28,14 @@ public class AggroWild extends Aggro {
+     @Override
+     protected void aggroAdversaries() {
+         if (this.animal instanceof Wolf) {
+-            for (Wolf entity : this.src
++            for (Entity candidate : this.src
+                 .world
+                 .getEntitiesOfType(
+                     this.src.getClass(),
+                     BoundingBox.getBoundingBox(this.src.posX, this.src.posY, this.src.posZ, this.src.posX + 1.0, this.src.posY + 1.0, this.src.posZ + 1.0)
+                         .expand(this.dist, 6.0, this.dist)
+                 )) {
++                Wolf entity = (Wolf)candidate;
+                 if (this.src != entity && entity.attackTarget == null && entity.calmTime <= 0 && !entity.isTamed()) {
+                     entity.attackTarget = entity.lastTarget = this.src.getLastTarget();
+                     entity.setAngry(true);
+diff --git a/client/src/main/java/net/minecraft/game/entity/projectile/ThrownPotion.java b/client/src/main/java/net/minecraft/game/entity/projectile/ThrownPotion.java
+index f20145a..7546398 100644
+--- a/client/src/main/java/net/minecraft/game/entity/projectile/ThrownPotion.java
++++ b/client/src/main/java/net/minecraft/game/entity/projectile/ThrownPotion.java
+@@ -44,7 +44,8 @@ public class ThrownPotion extends Projectile {
+                 BoundingBox boundingBox = this.boundingBox.expand(4.0, 2.0, 4.0);
+                 List<Entity> entities = this.world.getEntitiesOfType(Mob.class, boundingBox);
+                 if (entities != null && !entities.isEmpty()) {
+-                    for (Mob entity : entities) {
++                    for (Entity candidate : entities) {
++                        Mob entity = (Mob)candidate;
+                         double dist = this.getDistanceSqTo(entity);
+                         if (!(dist >= 16.0)) {
+                             double maxDist = 1.0 - Math.sqrt(dist) / 4.0;
+diff --git a/client/src/main/java/net/minecraft/game/item/crafting/blocks/BlockRecipes.java b/client/src/main/java/net/minecraft/game/item/crafting/blocks/BlockRecipes.java
+index b55d2e7..0da9ee5 100644
+--- a/client/src/main/java/net/minecraft/game/item/crafting/blocks/BlockRecipes.java
++++ b/client/src/main/java/net/minecraft/game/item/crafting/blocks/BlockRecipes.java
+@@ -79,9 +79,9 @@ public class BlockRecipes {
+         cm.addRecipe(new ItemStack(BlockList.clay, 1), "##", "##", '#', ItemList.clay);
+         cm.addRecipe(new ItemStack(BlockList.brick, 1), "##", "##", '#', ItemList.brick);
+         cm.addRecipe(new ItemStack(BlockList.packedIce, 1), "###", "###", "###", '#', BlockList.ice);
+-        cm.addRecipe(new ItemStack(BlockList.snowLayer, 3), "###", '#', ItemList.snowball);
+-        cm.addRecipe(new ItemStack(BlockList.sandLayer, 3), "###", '#', ItemList.sandball);
+-        cm.addRecipe(new ItemStack(BlockList.ash, 3), "###", '#', ItemList.ash);
++        cm.addRecipe(new ItemStack(BlockList.snowLayer, 6), "###", '#', ItemList.snowball);
++        cm.addRecipe(new ItemStack(BlockList.sandLayer, 6), "###", '#', ItemList.sandball);
++        cm.addRecipe(new ItemStack(BlockList.ash, 6), "###", '#', ItemList.ash);
+         cm.addRecipe(new ItemStack(BlockList.tnt, 1), "X#X", "#X#", "X#X", 'X', ItemList.gunpowder, '#', BlockList.sand);
+         cm.addRecipe(new ItemStack(BlockList.tnt, 1), "X#X", "#X#", "X#X", 'X', ItemList.gunpowder, '#', BlockList.redSand);
+         cm.addRecipe(new ItemStack(BlockList.tnt, 1), "X#X", "#X#", "X#X", 'X', ItemList.gunpowder, '#', BlockList.silverSand);
+diff --git a/client/src/main/java/net/minecraft/game/world/World.java b/client/src/main/java/net/minecraft/game/world/World.java
+index e6a329a..04a28da 100644
+--- a/client/src/main/java/net/minecraft/game/world/World.java
++++ b/client/src/main/java/net/minecraft/game/world/World.java
+@@ -1098,7 +1098,10 @@ public class World implements WorldSource {
+         if (this.chunksExist(x - chunkOffset, y - chunkOffset, z - chunkOffset, x + chunkOffset, y + chunkOffset, z + chunkOffset)) {
+             if (id > 0) {
+                 int tickRate = BlockList.blocks[id].tickRate();
+-                if (id == BlockList.lavaMoving.id && this.settings.getDimension() == 1) {
++                // currDim, not settings.getDimension(): on a dedicated server every dimension
++                // loads its own WorldInfo from the shared level.dat, where "Dimension" comes
++                // from the player tag and is meaningless. currDim is always right per world.
++                if (id == BlockList.lavaMoving.id && this.currDim.dimension == 1) {
+                     tickRate = 5;
+                 }
+ 
+@@ -1935,7 +1938,7 @@ public class World implements WorldSource {
+     }
+ 
+     public Entity getEntityOfType(Class<?> typ, BoundingBox bb, Entity entity) {
+-        List<?> entities = this.getEntitiesOfType(typ, bb);
++        List<Entity> entities = this.getEntitiesOfType(typ, bb);
+         Entity target = null;
+         double maxDist = Double.MAX_VALUE;
+ 
+diff --git a/client/src/main/java/net/minecraft/game/world/biomes/Biome.java b/client/src/main/java/net/minecraft/game/world/biomes/Biome.java
+index fa0e7c7..221fd13 100644
+--- a/client/src/main/java/net/minecraft/game/world/biomes/Biome.java
++++ b/client/src/main/java/net/minecraft/game/world/biomes/Biome.java
+@@ -517,7 +517,7 @@ public class Biome {
+                         blocks[index] = (short)top;
+                         metadata[index] = topMetadata;
+                     } else {
+-                        int var26 = false;
++                        int var26 = 0;
+                         filler = BlockList.stone.id;
+                         fillerMetadata = 0;
+                         blocks[index] = (short)filler;
+diff --git a/client/src/main/java/net/minecraft/game/world/biomes/sky/SkyBiome.java b/client/src/main/java/net/minecraft/game/world/biomes/sky/SkyBiome.java
+index bd90d15..161b14c 100644
+--- a/client/src/main/java/net/minecraft/game/world/biomes/sky/SkyBiome.java
++++ b/client/src/main/java/net/minecraft/game/world/biomes/sky/SkyBiome.java
+@@ -111,7 +111,7 @@ public class SkyBiome extends Biome {
+     public void surfaceBuilder(
+         World world, Random random, short[] blocks, byte[] metadata, int x, int z, double heightValue, double sandValue, double gravelValue
+     ) {
+-        if (world.getSettings().getDimension() == 0) {
++        if (world.currDim.dimension == 0) {
+             super.surfaceBuilder(world, random, blocks, metadata, x, z, heightValue, sandValue, gravelValue);
+         } else {
+             if (this.seed != world.getSeed() || this.seed == 0L) {
+@@ -193,7 +193,7 @@ public class SkyBiome extends Biome {
+                                 filler = BlockList.stone.id;
+                                 fillerMetadata = 8;
+                             } else if (y >= world.getSeaLevel() - this.minBeachHeight && y <= world.getSeaLevel() + this.maxBeachHeight) {
+-                                var49 = this.getTopBlock();
++                                var49 = (short)this.getTopBlock();
+                                 topMetadata = (byte)(this.getTopMeta() & 0xFF);
+                                 filler = this.getFillerBlock();
+                                 fillerMetadata = (byte)(this.getFillerMeta() & 0xFF);
+diff --git a/client/src/main/java/net/minecraft/game/world/chunk/Chunk.java b/client/src/main/java/net/minecraft/game/world/chunk/Chunk.java
+index d79c606..a8a6aa3 100644
+--- a/client/src/main/java/net/minecraft/game/world/chunk/Chunk.java
++++ b/client/src/main/java/net/minecraft/game/world/chunk/Chunk.java
+@@ -606,8 +606,12 @@ public class Chunk {
+                 }
+ 
+                 byte[] abyte0 = this.sections[section].getLowerBlockArray();
+-                System.arraycopy(block, dataSet, abyte0, 0, abyte0.length);
+-                dataSet += abyte0.length;
++                int toCopy = Math.min(abyte0.length, block.length - dataSet);
++                if (toCopy <= 0) {
++                    break;
++                }
++                System.arraycopy(block, dataSet, abyte0, 0, toCopy);
++                dataSet += toCopy;
+             } else if (clear && this.sections[section] != null) {
+                 this.sections[section] = null;
+             }
+@@ -616,24 +620,36 @@ public class Chunk {
+         for (int var10 = 0; var10 < this.sections.length; var10++) {
+             if ((x & 1 << var10) != 0 && this.sections[var10] != null) {
+                 byte[] metadataArray = this.sections[var10].getBlockMetadataArray();
+-                System.arraycopy(block, dataSet, metadataArray, 0, metadataArray.length);
+-                dataSet += metadataArray.length;
++                int toCopy = Math.min(metadataArray.length, block.length - dataSet);
++                if (toCopy <= 0) {
++                    break;
++                }
++                System.arraycopy(block, dataSet, metadataArray, 0, toCopy);
++                dataSet += toCopy;
+             }
+         }
+ 
+         for (int var11 = 0; var11 < this.sections.length; var11++) {
+             if ((x & 1 << var11) != 0 && this.sections[var11] != null) {
+                 NibbleArray nibblearray = this.sections[var11].getBlocklightArray();
+-                System.arraycopy(block, dataSet, nibblearray.data, 0, nibblearray.data.length);
+-                dataSet += nibblearray.data.length;
++                int toCopy = Math.min(nibblearray.data.length, block.length - dataSet);
++                if (toCopy <= 0) {
++                    break;
++                }
++                System.arraycopy(block, dataSet, nibblearray.data, 0, toCopy);
++                dataSet += toCopy;
+             }
+         }
+ 
+         for (int var12 = 0; var12 < this.sections.length; var12++) {
+             if ((x & 1 << var12) != 0 && this.sections[var12] != null) {
+                 NibbleArray nibblearray2 = this.sections[var12].getSkylightArray();
+-                System.arraycopy(block, dataSet, nibblearray2.data, 0, nibblearray2.data.length);
+-                dataSet += nibblearray2.data.length;
++                int toCopy = Math.min(nibblearray2.data.length, block.length - dataSet);
++                if (toCopy <= 0) {
++                    break;
++                }
++                System.arraycopy(block, dataSet, nibblearray2.data, 0, toCopy);
++                dataSet += toCopy;
+             }
+         }
+ 
+@@ -647,8 +663,12 @@ public class Chunk {
+                         nibblearray = this.sections[var13].createUpperBlockArray();
+                     }
+ 
+-                    System.arraycopy(block, dataSet, nibblearray.data, 0, nibblearray.data.length);
+-                    dataSet += nibblearray.data.length;
++                    int toCopy = Math.min(nibblearray.data.length, block.length - dataSet);
++                    if (toCopy <= 0) {
++                        break;
++                    }
++                    System.arraycopy(block, dataSet, nibblearray.data, 0, toCopy);
++                    dataSet += toCopy;
+                 }
+             } else if (clear && this.sections[var13] != null && this.sections[var13].getUpperBlockArray() != null) {
+                 this.sections[var13].clearUpperBlockArray();
+@@ -656,8 +676,10 @@ public class Chunk {
+         }
+ 
+         if (clear) {
+-            System.arraycopy(block, dataSet, this.biomes, 0, this.biomes.length);
+-            dataSet += this.biomes.length;
++            int toCopy = Math.min(this.biomes.length, block.length - dataSet);
++            if (toCopy > 0) {
++                System.arraycopy(block, dataSet, this.biomes, 0, toCopy);
++            }
+         }
+ 
+         for (int var14 = 0; var14 < this.sections.length; var14++) {
+diff --git a/client/src/main/java/net/minecraft/game/world/chunk/loader/AnvilLoader.java b/client/src/main/java/net/minecraft/game/world/chunk/loader/AnvilLoader.java
+index afe459d..5a0cc72 100644
+--- a/client/src/main/java/net/minecraft/game/world/chunk/loader/AnvilLoader.java
++++ b/client/src/main/java/net/minecraft/game/world/chunk/loader/AnvilLoader.java
+@@ -190,7 +190,8 @@ public class AnvilLoader implements IThreadedFileIO, FileLoader {
+         int var19 = var17.length;
+ 
+         for (int var21 = 0; var21 < var19; var21++) {
+-            for (Entity entity : var17[var21]) {
++            for (Object candidate : var17[var21]) {
++                Entity entity = (Entity)candidate;
+                 chunk.hasEntities = true;
+                 CompoundTag entityTag = new CompoundTag();
+                 if (entity.addEntityID(entityTag)) {
+diff --git a/client/src/main/java/net/minecraft/game/world/generation/CavesGenerator.java b/client/src/main/java/net/minecraft/game/world/generation/CavesGenerator.java
+index 40854d7..fa2bd24 100644
+--- a/client/src/main/java/net/minecraft/game/world/generation/CavesGenerator.java
++++ b/client/src/main/java/net/minecraft/game/world/generation/CavesGenerator.java
+@@ -269,7 +269,7 @@ public class CavesGenerator extends OverworldGenerator implements ChunkLoader {
+                     blocks[index] = (short)top;
+                     metadata[index] = topMetadata;
+                 } else {
+-                    int var27 = false;
++                    int var27 = 0;
+                     filler = BlockList.stone.id;
+                     fillerMetadata = 0;
+                     blocks[index] = (short)filler;
+@@ -315,7 +315,7 @@ public class CavesGenerator extends OverworldGenerator implements ChunkLoader {
+                     blocks[index] = (short)top;
+                     metadata[index] = topMetadata;
+                 } else {
+-                    int var29 = false;
++                    int var29 = 0;
+                     filler = BlockList.stone.id;
+                     fillerMetadata = 0;
+                     blocks[index] = (short)filler;
+diff --git a/client/src/main/java/net/minecraft/game/world/generation/features/structure/fortress/FortressPiece.java b/client/src/main/java/net/minecraft/game/world/generation/features/structure/fortress/FortressPiece.java
+index 606e9db..9f18ce3 100644
+--- a/client/src/main/java/net/minecraft/game/world/generation/features/structure/fortress/FortressPiece.java
++++ b/client/src/main/java/net/minecraft/game/world/generation/features/structure/fortress/FortressPiece.java
+@@ -47,7 +47,8 @@ public abstract class FortressPiece extends LegacyStructurePiece {
+         boolean wght = false;
+         int yes = 0;
+ 
+-        for (PieceWeight piss : daBaby) {
++        for (Object candidate : daBaby) {
++            PieceWeight piss = (PieceWeight)candidate;
+             if (piss.z > 0 && piss.maxLimit < piss.z) {
+                 wght = true;
+             }
+@@ -69,7 +70,8 @@ public abstract class FortressPiece extends LegacyStructurePiece {
+             attempts++;
+             int nextpc = rand.nextInt(wght);
+ 
+-            for (PieceWeight pcwght : list) {
++            for (Object candidate : list) {
++                PieceWeight pcwght = (PieceWeight)candidate;
+                 nextpc -= pcwght.x;
+                 if (nextpc < 0) {
+                     if (!pcwght.getMaxLimit() || pcwght == start.pieceWeight && !pcwght.isSubmerged) {
+diff --git a/client/src/main/java/net/minecraft/game/world/generation/structures/misc/Cathedral.java b/client/src/main/java/net/minecraft/game/world/generation/structures/misc/Cathedral.java
+index e325c87..cd14fb6 100644
+--- a/client/src/main/java/net/minecraft/game/world/generation/structures/misc/Cathedral.java
++++ b/client/src/main/java/net/minecraft/game/world/generation/structures/misc/Cathedral.java
+@@ -89,7 +89,7 @@ public class Cathedral extends SchematicStructure {
+                     spawner.setMob("PigMan");
+                 }
+                 break;
+-            case 54:
++            case 54: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -105,7 +105,8 @@ public class Cathedral extends SchematicStructure {
+                     this.world.setBlockAndMetadata(x, y - 1, z, BlockList.cobblestone.id, 8);
+                 }
+                 break;
+-            case 179:
++            }
++            case 179: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -122,6 +123,7 @@ public class Cathedral extends SchematicStructure {
+ 
+                 this.world.setBlockMetadata(x, y, z, 1);
+                 break;
++            }
+             case 227:
+                 LecternEntity lcetern = (LecternEntity)this.world.getTileEntity(x, y, z);
+                 ItemStack itemStack = new ItemStack(ItemList.writtenBook);
+diff --git a/client/src/main/java/net/minecraft/game/world/generation/structures/misc/OceanMonument.java b/client/src/main/java/net/minecraft/game/world/generation/structures/misc/OceanMonument.java
+index 0b04156..4b1d02e 100644
+--- a/client/src/main/java/net/minecraft/game/world/generation/structures/misc/OceanMonument.java
++++ b/client/src/main/java/net/minecraft/game/world/generation/structures/misc/OceanMonument.java
+@@ -81,7 +81,7 @@ public class OceanMonument extends SchematicStructure {
+                     }
+                 }
+                 break;
+-            case 54:
++            case 54: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -93,7 +93,8 @@ public class OceanMonument extends SchematicStructure {
+                     }
+                 }
+                 break;
+-            case 179:
++            }
++            case 179: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -114,6 +115,7 @@ public class OceanMonument extends SchematicStructure {
+                     this.world.spawnEntity(dragon);
+                     this.spawnedBoss = true;
+                 }
++            }
+         }
+     }
+ 
+diff --git a/client/src/main/java/net/minecraft/game/world/generation/structures/misc/Pyramid.java b/client/src/main/java/net/minecraft/game/world/generation/structures/misc/Pyramid.java
+index 3f6f334..587c337 100644
+--- a/client/src/main/java/net/minecraft/game/world/generation/structures/misc/Pyramid.java
++++ b/client/src/main/java/net/minecraft/game/world/generation/structures/misc/Pyramid.java
+@@ -472,7 +472,7 @@ public class Pyramid extends SchematicStructure {
+                     spawner.setMob(this.getRandomMob());
+                 }
+                 break;
+-            case 54:
++            case 54: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -484,7 +484,8 @@ public class Pyramid extends SchematicStructure {
+                     }
+                 }
+                 break;
+-            case 179:
++            }
++            case 179: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -503,6 +504,7 @@ public class Pyramid extends SchematicStructure {
+                     this.spawnedBoss = true;
+                 }
+                 break;
++            }
+             case 185:
+                 PotEntity pot = (PotEntity)this.world.getTileEntity(x, y, z);
+                 if (pot != null && pot.getSize() > 0) {
+diff --git a/client/src/main/java/net/minecraft/game/world/generation/structures/misc/Tower.java b/client/src/main/java/net/minecraft/game/world/generation/structures/misc/Tower.java
+index fef2691..ddd7617 100644
+--- a/client/src/main/java/net/minecraft/game/world/generation/structures/misc/Tower.java
++++ b/client/src/main/java/net/minecraft/game/world/generation/structures/misc/Tower.java
+@@ -209,7 +209,7 @@ public class Tower extends SchematicStructure {
+     @Override
+     public void onSpecialBlockSet(int x, int y, int z, int id, int meta) {
+         switch (id) {
+-            case 54:
++            case 54: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -221,7 +221,8 @@ public class Tower extends SchematicStructure {
+                     }
+                 }
+                 break;
+-            case 179:
++            }
++            case 179: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -239,6 +240,7 @@ public class Tower extends SchematicStructure {
+                     this.world.spawnEntity(bitch);
+                     this.spawnedBoss = true;
+                 }
++            }
+         }
+     }
+ 
+diff --git a/client/src/main/java/net/minecraft/network/packet/player/DigPacket.java b/client/src/main/java/net/minecraft/network/packet/player/DigPacket.java
+index 1ae78fb..a081788 100644
+--- a/client/src/main/java/net/minecraft/network/packet/player/DigPacket.java
++++ b/client/src/main/java/net/minecraft/network/packet/player/DigPacket.java
+@@ -28,7 +28,7 @@ public class DigPacket extends Packet {
+     public void readPacketData(DataInputStream dataInputStream1) throws IOException {
+         this.status = dataInputStream1.read();
+         this.xPosition = dataInputStream1.readInt();
+-        this.yPosition = dataInputStream1.read();
++        this.yPosition = dataInputStream1.readShort();
+         this.zPosition = dataInputStream1.readInt();
+         this.face = dataInputStream1.read();
+     }
+@@ -37,7 +37,7 @@ public class DigPacket extends Packet {
+     public void writePacketData(DataOutputStream dataOutputStream1) throws IOException {
+         dataOutputStream1.write(this.status);
+         dataOutputStream1.writeInt(this.xPosition);
+-        dataOutputStream1.write(this.yPosition);
++        dataOutputStream1.writeShort(this.yPosition);
+         dataOutputStream1.writeInt(this.zPosition);
+         dataOutputStream1.write(this.face);
+     }
+@@ -49,6 +49,6 @@ public class DigPacket extends Packet {
+ 
+     @Override
+     public int getPacketSize() {
+-        return 11;
++        return 12;
+     }
+ }
+diff --git a/client/src/main/java/net/minecraft/network/packet/player/PlacePacket.java b/client/src/main/java/net/minecraft/network/packet/player/PlacePacket.java
+index 134fdcc..ec3de93 100644
+--- a/client/src/main/java/net/minecraft/network/packet/player/PlacePacket.java
++++ b/client/src/main/java/net/minecraft/network/packet/player/PlacePacket.java
+@@ -29,7 +29,7 @@ public class PlacePacket extends Packet {
+     @Override
+     public void readPacketData(DataInputStream dataInputStream1) throws IOException {
+         this.xPosition = dataInputStream1.readInt();
+-        this.yPosition = dataInputStream1.read();
++        this.yPosition = dataInputStream1.readShort();
+         this.zPosition = dataInputStream1.readInt();
+         this.direction = dataInputStream1.read();
+         this.itemStack = IOUtil.readItemStack(dataInputStream1);
+@@ -38,7 +38,7 @@ public class PlacePacket extends Packet {
+     @Override
+     public void writePacketData(DataOutputStream dataOutputStream1) throws IOException {
+         dataOutputStream1.writeInt(this.xPosition);
+-        dataOutputStream1.write(this.yPosition);
++        dataOutputStream1.writeShort(this.yPosition);
+         dataOutputStream1.writeInt(this.zPosition);
+         dataOutputStream1.write(this.direction);
+         IOUtil.writeItemStack(this.itemStack, dataOutputStream1);
+@@ -51,6 +51,6 @@ public class PlacePacket extends Packet {
+ 
+     @Override
+     public int getPacketSize() {
+-        return 15;
++        return 16;
+     }
+ }
+diff --git a/client/src/main/java/net/minecraft/network/packet/world/BlockEventPacket.java b/client/src/main/java/net/minecraft/network/packet/world/BlockEventPacket.java
+index e854783..7236247 100644
+--- a/client/src/main/java/net/minecraft/network/packet/world/BlockEventPacket.java
++++ b/client/src/main/java/net/minecraft/network/packet/world/BlockEventPacket.java
+@@ -28,7 +28,7 @@ public class BlockEventPacket extends Packet {
+     public void readPacketData(DataInputStream dataInputStream1) throws IOException {
+         this.sfx = dataInputStream1.readInt();
+         this.x = dataInputStream1.readInt();
+-        this.y = dataInputStream1.readByte();
++        this.y = dataInputStream1.readShort();
+         this.z = dataInputStream1.readInt();
+         this.data = dataInputStream1.readInt();
+     }
+@@ -37,7 +37,7 @@ public class BlockEventPacket extends Packet {
+     public void writePacketData(DataOutputStream dataOutputStream1) throws IOException {
+         dataOutputStream1.writeInt(this.sfx);
+         dataOutputStream1.writeInt(this.x);
+-        dataOutputStream1.writeByte(this.y);
++        dataOutputStream1.writeShort(this.y);
+         dataOutputStream1.writeInt(this.z);
+         dataOutputStream1.writeInt(this.data);
+     }
+@@ -49,6 +49,6 @@ public class BlockEventPacket extends Packet {
+ 
+     @Override
+     public int getPacketSize() {
+-        return 20;
++        return 21;
+     }
+ }
+diff --git a/client/src/main/java/net/minecraft/network/packet/world/UpdateChunkPacket.java b/client/src/main/java/net/minecraft/network/packet/world/UpdateChunkPacket.java
+index b9719a3..f00b251 100644
+--- a/client/src/main/java/net/minecraft/network/packet/world/UpdateChunkPacket.java
++++ b/client/src/main/java/net/minecraft/network/packet/world/UpdateChunkPacket.java
+@@ -33,7 +33,7 @@ public class UpdateChunkPacket extends Packet {
+         this.zCh = par1Chunk.zPosition;
+         this.includeInitialize = par2;
+         if (par2) {
+-            par3 = 65535;
++            par3 = -1;
+         }
+ 
+         ChunkSection[] sections = par1Chunk.getSections();
+@@ -128,8 +128,8 @@ public class UpdateChunkPacket extends Packet {
+         this.xCh = par1DataInputStream.readInt();
+         this.zCh = par1DataInputStream.readInt();
+         this.includeInitialize = par1DataInputStream.readBoolean();
+-        this.hasLowerBlocks = par1DataInputStream.readShort();
+-        this.hasUpperBlocks = par1DataInputStream.readShort();
++        this.hasLowerBlocks = par1DataInputStream.readInt();
++        this.hasUpperBlocks = par1DataInputStream.readInt();
+         this.tempLength = par1DataInputStream.readInt();
+         this.biome = par1DataInputStream.readInt();
+         if (temp.length < this.tempLength) {
+@@ -137,13 +137,11 @@ public class UpdateChunkPacket extends Packet {
+         }
+ 
+         par1DataInputStream.readFully(temp, 0, this.tempLength);
+-        int i = 0;
+-
+-        for (int j = 0; j < 16; j++) {
+-            i += this.hasLowerBlocks >> j & 1;
+-        }
+ 
+-        int k = 14336 * i;
++        // The payload is 12288 bytes per section (lower ids, metadata, blocklight,
++        // skylight), plus 2048 bytes for each section whose ids spill into the upper
++        // nibble array, plus 256 biome bytes when initializing.
++        int k = 12288 * Integer.bitCount(this.hasLowerBlocks) + 2048 * Integer.bitCount(this.hasUpperBlocks);
+         if (this.includeInitialize) {
+             k += 256;
+         }
+@@ -153,7 +151,12 @@ public class UpdateChunkPacket extends Packet {
+         inflater.setInput(temp, 0, this.tempLength);
+ 
+         try {
+-            inflater.inflate(this.chunkData);
++            int uncompressedLength = inflater.inflate(this.chunkData);
++            if (uncompressedLength != k) {
++                throw new IOException(
++                    "Chunk data size mismatch: expected " + k + " bytes but decompressed " + uncompressedLength + " (mask=0x" + Integer.toHexString(this.hasLowerBlocks) + ")"
++                );
++            }
+         } catch (DataFormatException dataformatexception) {
+             throw new IOException("Bad compressed data format");
+         } finally {
+@@ -166,8 +169,8 @@ public class UpdateChunkPacket extends Packet {
+         var1.writeInt(this.xCh);
+         var1.writeInt(this.zCh);
+         var1.writeBoolean(this.includeInitialize);
+-        var1.writeShort((short)(this.hasLowerBlocks & 65535));
+-        var1.writeShort((short)(this.hasUpperBlocks & 65535));
++        var1.writeInt(this.hasLowerBlocks);
++        var1.writeInt(this.hasUpperBlocks);
+         var1.writeInt(this.tempLength);
+         var1.writeInt(this.biome);
+         var1.write(this.chunkData, 0, this.tempLength);
+@@ -180,6 +183,6 @@ public class UpdateChunkPacket extends Packet {
+ 
+     @Override
+     public int getPacketSize() {
+-        return 17 + this.tempLength;
++        return 25 + this.tempLength;
+     }
+ }
+diff --git a/client/src/main/java/net/minecraft/network/packet/world/UpdateSectionPacket.java b/client/src/main/java/net/minecraft/network/packet/world/UpdateSectionPacket.java
+index 3501eee..1577469 100644
+--- a/client/src/main/java/net/minecraft/network/packet/world/UpdateSectionPacket.java
++++ b/client/src/main/java/net/minecraft/network/packet/world/UpdateSectionPacket.java
+@@ -12,7 +12,7 @@ import net.minecraft.util.io.IOUtil;
+ public class UpdateSectionPacket extends Packet {
+     public int xPosition;
+     public int zPosition;
+-    public short[] coordinateArray;
++    public int[] coordinateArray;
+     public short[] typeArray;
+     public short[] metadataArray;
+     public int sizeOfAllArrays;
+@@ -21,20 +21,20 @@ public class UpdateSectionPacket extends Packet {
+         this.isDelayed = true;
+     }
+ 
+-    public UpdateSectionPacket(int x, int z, short[] positions, int size, World level) {
++    public UpdateSectionPacket(int x, int z, int[] positions, int size, World level) {
+         this.isDelayed = true;
+         this.xPosition = x;
+         this.zPosition = z;
+         this.sizeOfAllArrays = size;
+-        this.coordinateArray = new short[size];
++        this.coordinateArray = new int[size];
+         this.typeArray = new short[size];
+         this.metadataArray = new short[size];
+         Chunk cunk = level.getChunk(x, z);
+ 
+         for (int i7 = 0; i7 < size; i7++) {
+-            x = positions[i7] >> 12 & 15;
+-            int y = positions[i7] >> 8 & 15;
+-            z = positions[i7] & 255;
++            x = positions[i7] >> 20 & 15;
++            int y = positions[i7] >> 16 & 15;
++            z = positions[i7] & 0xFFFF;
+             this.coordinateArray[i7] = positions[i7];
+             this.typeArray[i7] = (short)cunk.getBlockID(x, z, y);
+             this.metadataArray[i7] = (short)cunk.getBlockMetadata(x, z, y);
+@@ -45,7 +45,7 @@ public class UpdateSectionPacket extends Packet {
+     public void readPacketData(DataInputStream dataInputStream1) throws IOException {
+         this.xPosition = dataInputStream1.readInt();
+         this.zPosition = dataInputStream1.readInt();
+-        this.coordinateArray = IOUtil.readShortArray(dataInputStream1);
++        this.coordinateArray = IOUtil.readIntArray(dataInputStream1);
+         this.typeArray = IOUtil.readShortArray(dataInputStream1);
+         this.metadataArray = IOUtil.readShortArray(dataInputStream1);
+         this.sizeOfAllArrays = dataInputStream1.readInt();
+@@ -55,7 +55,7 @@ public class UpdateSectionPacket extends Packet {
+     public void writePacketData(DataOutputStream dataOutputStream1) throws IOException {
+         dataOutputStream1.writeInt(this.xPosition);
+         dataOutputStream1.writeInt(this.zPosition);
+-        IOUtil.writeShortArray(dataOutputStream1, this.coordinateArray);
++        IOUtil.writeIntArray(dataOutputStream1, this.coordinateArray);
+         IOUtil.writeShortArray(dataOutputStream1, this.typeArray);
+         IOUtil.writeShortArray(dataOutputStream1, this.metadataArray);
+         dataOutputStream1.writeInt(this.sizeOfAllArrays);
+@@ -68,6 +68,6 @@ public class UpdateSectionPacket extends Packet {
+ 
+     @Override
+     public int getPacketSize() {
+-        return 10 + this.sizeOfAllArrays * 4;
++        return 20 + this.sizeOfAllArrays * 8;
+     }
+ }
+diff --git a/server/src/main/java/net/minecraft/SharedConstants.java b/server/src/main/java/net/minecraft/SharedConstants.java
+index 9472851..a71b3a2 100644
+--- a/server/src/main/java/net/minecraft/SharedConstants.java
++++ b/server/src/main/java/net/minecraft/SharedConstants.java
+@@ -17,7 +17,7 @@ public class SharedConstants {
+     public static final String VERSION_STRING = "v1.0";
+     public static final String PREFIX = "Minecraft Infinite";
+     public static final String FULL_VER_STRING = "Minecraft Infinite v1.0";
+-    public static final int PROTOCOL_VERSION = 20260630;
++    public static final int PROTOCOL_VERSION = 20260810;
+     public static final char COLOR_CODE = '§';
+     public static final String COLOR_CODE_STR = "§";
+     public static final String COLOR_CHARS = "0123456789abcdefgh";
+diff --git a/server/src/main/java/net/minecraft/commands/core/world/WorldInfoCommand.java b/server/src/main/java/net/minecraft/commands/core/world/WorldInfoCommand.java
+index c36e163..6c87a41 100644
+--- a/server/src/main/java/net/minecraft/commands/core/world/WorldInfoCommand.java
++++ b/server/src/main/java/net/minecraft/commands/core/world/WorldInfoCommand.java
+@@ -24,7 +24,7 @@ public class WorldInfoCommand extends Command {
+                 );
+                 src.print(Translator.getInstance().translateKey("commands.world.height") + ": " + w.getSettings().getMaxSections() * 16);
+                 src.print(Translator.getInstance().translateKey("commands.world.type") + ": " + w.getSettings().getType());
+-                src.print(Translator.getInstance().translateKey("commands.world.dimension") + ": " + w.getSettings().getDimension());
++                src.print(Translator.getInstance().translateKey("commands.world.dimension") + ": " + w.currDim.dimension);
+                 src.print(Translator.getInstance().translateKey("commands.world.difficulty") + ": " + w.getSettings().getDifficulty());
+                 src.print(Translator.getInstance().translateKey("commands.world.cheats") + ": " + w.getSettings().getCheats());
+                 src.print(Translator.getInstance().translateKey("commands.world.structures") + ": " + w.getSettings().generateStructures());
+diff --git a/server/src/main/java/net/minecraft/game/block/liquid/FlowingLiquid.java b/server/src/main/java/net/minecraft/game/block/liquid/FlowingLiquid.java
+index cc94d7b..f352f1e 100644
+--- a/server/src/main/java/net/minecraft/game/block/liquid/FlowingLiquid.java
++++ b/server/src/main/java/net/minecraft/game/block/liquid/FlowingLiquid.java
+@@ -36,7 +36,7 @@ public class FlowingLiquid extends LiquidBlock {
+                 flow = this.getSmallestFlowDecay(world, xCoord, yCoord, zCoord - 1, flow);
+                 flow = this.getSmallestFlowDecay(world, xCoord, yCoord, zCoord + 1, flow);
+                 int state;
+-                if (this.fluidType == 2 && world.settings.getDimension() == 1) {
++                if (this.fluidType == 2 && world.currDim.dimension == 1) {
+                     state = flow + 1;
+                 } else {
+                     state = flow + this.fluidType;
+diff --git a/server/src/main/java/net/minecraft/game/block/tileentity/other/BeaconEntity.java b/server/src/main/java/net/minecraft/game/block/tileentity/other/BeaconEntity.java
+index 810a0a1..d44e528 100644
+--- a/server/src/main/java/net/minecraft/game/block/tileentity/other/BeaconEntity.java
++++ b/server/src/main/java/net/minecraft/game/block/tileentity/other/BeaconEntity.java
+@@ -4,6 +4,7 @@ import com.mojang.nbt.tag.special.CompoundTag;
+ import com.mojang.nbt.tag.special.ListTag;
+ import net.minecraft.game.block.tileentity.TileEntity;
+ import net.minecraft.game.container.inventory.Inventory;
++import net.minecraft.game.entity.Entity;
+ import net.minecraft.game.entity.player.Player;
+ import net.minecraft.game.item.ItemStack;
+ import net.minecraft.game.item.potion.EffectData;
+@@ -45,7 +46,8 @@ public class BeaconEntity extends TileEntity implements Inventory {
+             BoundingBox bb = new BoundingBox(this.x, this.y, this.z, this.x + 1, this.y + 1, this.z + 1).expand(range, range, range);
+             bb.maxY = this.world.getWorldHeight();
+ 
+-            for (Player player : this.world.getEntitiesOfType(Player.class, bb)) {
++            for (Entity candidate : this.world.getEntitiesOfType(Player.class, bb)) {
++                Player player = (Player)candidate;
+                 player.addEffect(new EffectData(this.primaryEffect, 180, area, true));
+             }
+         }
+diff --git a/server/src/main/java/net/minecraft/game/entity/mob/ai/hostile/Aggro.java b/server/src/main/java/net/minecraft/game/entity/mob/ai/hostile/Aggro.java
+index 4f435d6..35fbc13 100644
+--- a/server/src/main/java/net/minecraft/game/entity/mob/ai/hostile/Aggro.java
++++ b/server/src/main/java/net/minecraft/game/entity/mob/ai/hostile/Aggro.java
+@@ -1,5 +1,6 @@
+ package net.minecraft.game.entity.mob.ai.hostile;
+ 
++import net.minecraft.game.entity.Entity;
+ import net.minecraft.game.entity.mob.Mob;
+ import net.minecraft.game.physics.BoundingBox;
+ 
+@@ -37,13 +38,14 @@ public class Aggro extends ChooseTarget {
+     }
+ 
+     protected void aggroAdversaries() {
+-        for (Mob entity : this.src
++        for (Entity candidate : this.src
+             .world
+             .getEntitiesOfType(
+                 this.src.getClass(),
+                 BoundingBox.getBoundingBox(this.src.posX, this.src.posY, this.src.posZ, this.src.posX + 1.0, this.src.posY + 1.0, this.src.posZ + 1.0)
+                     .expand(this.dist, 6.0, this.dist)
+             )) {
++            Mob entity = (Mob)candidate;
+             if (this.src != entity && entity.attackTarget == null && entity.calmTime <= 0) {
+                 entity.attackTarget = entity.lastTarget = this.src.getLastTarget();
+             }
+diff --git a/server/src/main/java/net/minecraft/game/entity/mob/ai/hostile/DetectEnemy.java b/server/src/main/java/net/minecraft/game/entity/mob/ai/hostile/DetectEnemy.java
+index 1eea823..a502fb1 100644
+--- a/server/src/main/java/net/minecraft/game/entity/mob/ai/hostile/DetectEnemy.java
++++ b/server/src/main/java/net/minecraft/game/entity/mob/ai/hostile/DetectEnemy.java
+@@ -36,10 +36,11 @@ public class DetectEnemy extends ChooseTarget {
+                     return true;
+                 }
+             } else {
+-                List<?> entities = this.src.world.getEntitiesOfType(this.targetClass, this.src.boundingBox.expand(this.dist, 6.0, this.dist));
++                List<Entity> entities = this.src.world.getEntitiesOfType(this.targetClass, this.src.boundingBox.expand(this.dist, 6.0, this.dist));
+                 Collections.sort(entities, this.targetSorter);
+ 
+-                for (Mob entity : entities) {
++                for (Entity candidate : entities) {
++                    Mob entity = (Mob)candidate;
+                     if (this.foundValidTarget(entity, false)) {
+                         this.target = entity;
+                         return true;
+diff --git a/server/src/main/java/net/minecraft/game/entity/mob/ai/passive/FleeSun.java b/server/src/main/java/net/minecraft/game/entity/mob/ai/passive/FleeSun.java
+index a57a152..25fbedb 100644
+--- a/server/src/main/java/net/minecraft/game/entity/mob/ai/passive/FleeSun.java
++++ b/server/src/main/java/net/minecraft/game/entity/mob/ai/passive/FleeSun.java
+@@ -24,11 +24,10 @@ public class FleeSun extends Action {
+ 
+     @Override
+     public boolean canExecute() {
+-        if (this.theWorld.isRaining()
+-            || this.theWorld.isDaytime()
+-                && this.host.attackTarget == null
+-                && this.theWorld
+-                    .isBlockExposed(MathHelper.floor_double(this.host.posX), (int)this.host.boundingBox.minY, MathHelper.floor_double(this.host.posZ))) {
++        if (!this.theWorld.isRaining()
++            && this.theWorld.isDaytime()
++            && this.host.attackTarget == null
++            && this.theWorld.isBlockExposed(MathHelper.floor_double(this.host.posX), (int)this.host.boundingBox.minY, MathHelper.floor_double(this.host.posZ))) {
+             Vector safeLocation = this.findSafeLocation();
+             if (safeLocation == null) {
+                 return false;
+diff --git a/server/src/main/java/net/minecraft/game/entity/mob/ai/tameable/AggroWild.java b/server/src/main/java/net/minecraft/game/entity/mob/ai/tameable/AggroWild.java
+index 583a6ea..3dd936c 100644
+--- a/server/src/main/java/net/minecraft/game/entity/mob/ai/tameable/AggroWild.java
++++ b/server/src/main/java/net/minecraft/game/entity/mob/ai/tameable/AggroWild.java
+@@ -3,6 +3,7 @@ package net.minecraft.game.entity.mob.ai.tameable;
+ import net.minecraft.game.entity.mob.Mob;
+ import net.minecraft.game.entity.mob.ai.hostile.Aggro;
+ import net.minecraft.game.entity.mob.animal.tameable.TameableMob;
++import net.minecraft.game.entity.Entity;
+ import net.minecraft.game.entity.mob.animal.tameable.Wolf;
+ import net.minecraft.game.physics.BoundingBox;
+ 
+@@ -27,13 +28,14 @@ public class AggroWild extends Aggro {
+     @Override
+     protected void aggroAdversaries() {
+         if (this.animal instanceof Wolf) {
+-            for (Wolf entity : this.src
++            for (Entity candidate : this.src
+                 .world
+                 .getEntitiesOfType(
+                     this.src.getClass(),
+                     BoundingBox.getBoundingBox(this.src.posX, this.src.posY, this.src.posZ, this.src.posX + 1.0, this.src.posY + 1.0, this.src.posZ + 1.0)
+                         .expand(this.dist, 6.0, this.dist)
+                 )) {
++                Wolf entity = (Wolf)candidate;
+                 if (this.src != entity && entity.attackTarget == null && entity.calmTime <= 0 && !entity.isTamed()) {
+                     entity.attackTarget = entity.lastTarget = this.src.getLastTarget();
+                     entity.setAngry(true);
+diff --git a/server/src/main/java/net/minecraft/game/entity/mob/animal/flying/Chicken.java b/server/src/main/java/net/minecraft/game/entity/mob/animal/flying/Chicken.java
+index 5966a4d..c49239d 100644
+--- a/server/src/main/java/net/minecraft/game/entity/mob/animal/flying/Chicken.java
++++ b/server/src/main/java/net/minecraft/game/entity/mob/animal/flying/Chicken.java
+@@ -1,6 +1,7 @@
+ package net.minecraft.game.entity.mob.animal.flying;
+ 
+ import com.mojang.nbt.tag.special.CompoundTag;
++import net.minecraft.game.block.material.MaterialList;
+ import net.minecraft.game.entity.mob.ai.passive.LookAround;
+ import net.minecraft.game.entity.mob.ai.passive.LookAt;
+ import net.minecraft.game.entity.mob.ai.passive.Panic;
+@@ -31,6 +32,11 @@ public class Chicken extends FlyingMob {
+         this.behaviors.addTask(7, new LookAround(this));
+     }
+ 
++    @Override
++    public boolean isInWater() {
++        return this.world.handleWaterMovement(this.boundingBox, MaterialList.water, this);
++    }
++
+     @Override
+     public void setType() {
+         if (this.type == 4) {
+diff --git a/server/src/main/java/net/minecraft/game/entity/mob/animal/tameable/Ocelot.java b/server/src/main/java/net/minecraft/game/entity/mob/animal/tameable/Ocelot.java
+index e55999d..1ecaa67 100644
+--- a/server/src/main/java/net/minecraft/game/entity/mob/animal/tameable/Ocelot.java
++++ b/server/src/main/java/net/minecraft/game/entity/mob/animal/tameable/Ocelot.java
+@@ -2,6 +2,7 @@ package net.minecraft.game.entity.mob.animal.tameable;
+ 
+ import net.minecraft.game.block.BlockList;
+ import net.minecraft.game.block.decoration.Bed;
++import net.minecraft.game.block.material.MaterialList;
+ import net.minecraft.game.block.tileentity.container.ChestEntity;
+ import net.minecraft.game.entity.mob.DamageSource;
+ import net.minecraft.game.entity.mob.Mob;
+@@ -47,6 +48,11 @@ public class Ocelot extends TameableMob {
+         this.detections.addTask(1, new ChooseWildTarget(this, Bunny.class, 16.0F, 16, false));
+     }
+ 
++    @Override
++    public boolean isInWater() {
++        return this.world.handleWaterMovement(this.boundingBox, MaterialList.water, this);
++    }
++
+     @Override
+     public void setType() {
+         switch (this.type) {
+diff --git a/server/src/main/java/net/minecraft/game/entity/projectile/ThrownPotion.java b/server/src/main/java/net/minecraft/game/entity/projectile/ThrownPotion.java
+index f20145a..7546398 100644
+--- a/server/src/main/java/net/minecraft/game/entity/projectile/ThrownPotion.java
++++ b/server/src/main/java/net/minecraft/game/entity/projectile/ThrownPotion.java
+@@ -44,7 +44,8 @@ public class ThrownPotion extends Projectile {
+                 BoundingBox boundingBox = this.boundingBox.expand(4.0, 2.0, 4.0);
+                 List<Entity> entities = this.world.getEntitiesOfType(Mob.class, boundingBox);
+                 if (entities != null && !entities.isEmpty()) {
+-                    for (Mob entity : entities) {
++                    for (Entity candidate : entities) {
++                        Mob entity = (Mob)candidate;
+                         double dist = this.getDistanceSqTo(entity);
+                         if (!(dist >= 16.0)) {
+                             double maxDist = 1.0 - Math.sqrt(dist) / 4.0;
+diff --git a/server/src/main/java/net/minecraft/game/item/ItemList.java b/server/src/main/java/net/minecraft/game/item/ItemList.java
+index aa323ac..5500bd4 100644
+--- a/server/src/main/java/net/minecraft/game/item/ItemList.java
++++ b/server/src/main/java/net/minecraft/game/item/ItemList.java
+@@ -87,9 +87,9 @@ import net.minecraft.statistics.StatList;
+ 
+ public class ItemList {
+     public static final Item[] items = new Item[10240];
+-    public static final Item shovelSteel = new Shovel(0, ToolMaterial.IRON, true).setInternalName("shovelIron").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item pickaxeSteel = new Pickaxe(1, ToolMaterial.IRON, true).setInternalName("pickaxeIron").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item axeSteel = new Axe(2, ToolMaterial.IRON, true).setInternalName("hatchetIron").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item shovelSteel = new Shovel(0, ToolMaterial.IRON).setInternalName("shovelIron").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item pickaxeSteel = new Pickaxe(1, ToolMaterial.IRON).setInternalName("pickaxeIron").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item axeSteel = new Axe(2, ToolMaterial.IRON).setInternalName("hatchetIron").setCreativeTab(CreativeTabs.tabTools);
+     public static final Item striker = new FireStriker(3).setInternalName("flintAndSteel").setCreativeTab(CreativeTabs.tabTools);
+     public static final Item appleRed = new FoodItem(4, 4, 0.3F).setCompostable(true).setInternalName("apple").setCreativeTab(CreativeTabs.tabFood);
+     public static final Item bow = new Bow(5).setInternalName("bow").setCreativeTab(CreativeTabs.tabCombat);
+@@ -115,22 +115,22 @@ public class ItemList {
+         .setCreativeTab(CreativeTabs.tabFood);
+     public static final Item spyGlass = new Charm(15, 2, 3).setInternalName("telescope").setMaxStackSize(1).setCreativeTab(CreativeTabs.tabTools);
+     public static final Item swordStone = new Sword(16, ToolMaterial.STONE).setInternalName("swordStone").setCreativeTab(CreativeTabs.tabCombat);
+-    public static final Item shovelStone = new Shovel(17, ToolMaterial.STONE, false).setInternalName("shovelStone").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item pickaxeStone = new Pickaxe(18, ToolMaterial.STONE, false).setInternalName("pickaxeStone").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item axeStone = new Axe(19, ToolMaterial.STONE, false).setInternalName("hatchetStone").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item shovelStone = new Shovel(17, ToolMaterial.STONE).setInternalName("shovelStone").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item pickaxeStone = new Pickaxe(18, ToolMaterial.STONE).setInternalName("pickaxeStone").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item axeStone = new Axe(19, ToolMaterial.STONE).setInternalName("hatchetStone").setCreativeTab(CreativeTabs.tabTools);
+     public static final Item swordDiamond = new Sword(20, ToolMaterial.DIAMOND)
+         .setInternalName("swordDiamond")
+         .setRarity(Rarity.RARE)
+         .setCreativeTab(CreativeTabs.tabCombat);
+-    public static final Item shovelDiamond = new Shovel(21, ToolMaterial.DIAMOND, true)
++    public static final Item shovelDiamond = new Shovel(21, ToolMaterial.DIAMOND)
+         .setInternalName("shovelDiamond")
+         .setRarity(Rarity.RARE)
+         .setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item pickaxeDiamond = new Pickaxe(22, ToolMaterial.DIAMOND, true)
++    public static final Item pickaxeDiamond = new Pickaxe(22, ToolMaterial.DIAMOND)
+         .setInternalName("pickaxeDiamond")
+         .setRarity(Rarity.RARE)
+         .setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item axeDiamond = new Axe(23, ToolMaterial.DIAMOND, true)
++    public static final Item axeDiamond = new Axe(23, ToolMaterial.DIAMOND)
+         .setInternalName("hatchetDiamond")
+         .setRarity(Rarity.RARE)
+         .setCreativeTab(CreativeTabs.tabTools);
+@@ -138,20 +138,20 @@ public class ItemList {
+     public static final Item bowlEmpty = new Bowl(25).setInternalName("bowl").setCreativeTab(CreativeTabs.tabMaterials);
+     public static final Item bowlSoup = new SoupBowl(26, 10, 1.0F).setInternalName("mushroomStew").setCreativeTab(CreativeTabs.tabFood);
+     public static final Item swordGold = new Sword(27, ToolMaterial.GOLD).setInternalName("swordGold").setCreativeTab(CreativeTabs.tabCombat);
+-    public static final Item shovelGold = new Shovel(28, ToolMaterial.GOLD, true).setInternalName("shovelGold").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item pickaxeGold = new Pickaxe(29, ToolMaterial.GOLD, true).setInternalName("pickaxeGold").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item axeGold = new Axe(30, ToolMaterial.GOLD, true).setInternalName("hatchetGold").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item shovelGold = new Shovel(28, ToolMaterial.GOLD).setInternalName("shovelGold").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item pickaxeGold = new Pickaxe(29, ToolMaterial.GOLD).setInternalName("pickaxeGold").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item axeGold = new Axe(30, ToolMaterial.GOLD).setInternalName("hatchetGold").setCreativeTab(CreativeTabs.tabTools);
+     public static final Item silk = new Item(31).setInternalName("string").setCreativeTab(CreativeTabs.tabMaterials);
+     public static final Item feather = new Item(32).setInternalName("feather").setCreativeTab(CreativeTabs.tabMaterials);
+     public static final Item gunpowder = new Item(33).setInternalName("sulphur").setCreativeTab(CreativeTabs.tabMaterials);
+     public static final Item rock = new ThrowableItem(34, 4).setInternalName("pebble").setCreativeTab(CreativeTabs.tabMaterials);
+-    public static final Item hoeStone = new Hoe(35, ToolMaterial.STONE, false).setInternalName("hoeStone").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item hoeSteel = new Hoe(36, ToolMaterial.IRON, true).setInternalName("hoeIron").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item hoeDiamond = new Hoe(37, ToolMaterial.DIAMOND, true)
++    public static final Item hoeStone = new Hoe(35, ToolMaterial.STONE).setInternalName("hoeStone").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item hoeSteel = new Hoe(36, ToolMaterial.IRON).setInternalName("hoeIron").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item hoeDiamond = new Hoe(37, ToolMaterial.DIAMOND)
+         .setInternalName("hoeDiamond")
+         .setRarity(Rarity.RARE)
+         .setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item hoeGold = new Hoe(38, ToolMaterial.GOLD, true).setInternalName("hoeGold").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item hoeGold = new Hoe(38, ToolMaterial.GOLD).setInternalName("hoeGold").setCreativeTab(CreativeTabs.tabTools);
+     public static final Item seeds = new Seeds(39, BlockList.crops.id).setInternalName("seeds").setCompostable(true).setCreativeTab(CreativeTabs.tabNature);
+     public static final Item wheat = new Item(40).setInternalName("wheat").setCompostable(true).setCreativeTab(CreativeTabs.tabMaterials);
+     public static final Item bread = new FoodItem(41, 5, 0.6F)
+@@ -713,22 +713,22 @@ public class ItemList {
+         .setBurnRate(false)
+         .setRarity(Rarity.EPIC)
+         .setCreativeTab(CreativeTabs.tabCombat);
+-    public static final Item shovelDamascus = new Shovel(232, ToolMaterial.DAMASCUS, false)
++    public static final Item shovelDamascus = new Shovel(232, ToolMaterial.DAMASCUS)
+         .setInternalName("shovelDamascus")
+         .setBurnRate(false)
+         .setRarity(Rarity.EPIC)
+         .setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item pickaxeDamascus = new Pickaxe(233, ToolMaterial.DAMASCUS, false)
++    public static final Item pickaxeDamascus = new Pickaxe(233, ToolMaterial.DAMASCUS)
+         .setInternalName("pickaxeDamascus")
+         .setBurnRate(false)
+         .setRarity(Rarity.EPIC)
+         .setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item axeDamascus = new Axe(234, ToolMaterial.DAMASCUS, false)
++    public static final Item axeDamascus = new Axe(234, ToolMaterial.DAMASCUS)
+         .setInternalName("hatchetDamascus")
+         .setBurnRate(false)
+         .setRarity(Rarity.EPIC)
+         .setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item pickaxeAdamantine = new Pickaxe(235, ToolMaterial.ADAMANTINE, false)
++    public static final Item pickaxeAdamantine = new Pickaxe(235, ToolMaterial.ADAMANTINE)
+         .setInternalName("pickaxeAdamantine")
+         .setRarity(Rarity.EPIC)
+         .setCreativeTab(CreativeTabs.tabTools);
+@@ -796,7 +796,7 @@ public class ItemList {
+         .setInternalName("fireball")
+         .setCreativeTab(CreativeTabs.tabMaterials)
+         .setPotionPrefix(5, "+3!4-13");
+-    public static final Item axeAdamantine = new Axe(256, ToolMaterial.ADAMANTINE, false)
++    public static final Item axeAdamantine = new Axe(256, ToolMaterial.ADAMANTINE)
+         .setInternalName("hatchetAdamantine")
+         .setRarity(Rarity.EPIC)
+         .setCreativeTab(CreativeTabs.tabTools);
+@@ -808,13 +808,13 @@ public class ItemList {
+     public static final Item legsCopper = new Armor(260, ArmorMaterial.COPPER, 5, 2).setInternalName("leggingsCopper").setCreativeTab(CreativeTabs.tabCombat);
+     public static final Item bootsCopper = new Armor(261, ArmorMaterial.COPPER, 5, 3).setInternalName("bootsCopper").setCreativeTab(CreativeTabs.tabCombat);
+     public static final Item swordCopper = new Sword(262, ToolMaterial.COPPER).setInternalName("swordCopper").setCreativeTab(CreativeTabs.tabCombat);
+-    public static final Item shovelCopper = new Shovel(263, ToolMaterial.COPPER, true).setInternalName("shovelCopper").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item pickaxeCopper = new Pickaxe(264, ToolMaterial.COPPER, true).setInternalName("pickaxeCopper").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item axeCopper = new Axe(265, ToolMaterial.COPPER, true).setInternalName("hatchetCopper").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item hoeCopper = new Hoe(266, ToolMaterial.COPPER, true).setInternalName("hoeCopper").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item shovelCopper = new Shovel(263, ToolMaterial.COPPER).setInternalName("shovelCopper").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item pickaxeCopper = new Pickaxe(264, ToolMaterial.COPPER).setInternalName("pickaxeCopper").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item axeCopper = new Axe(265, ToolMaterial.COPPER).setInternalName("hatchetCopper").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item hoeCopper = new Hoe(266, ToolMaterial.COPPER).setInternalName("hoeCopper").setCreativeTab(CreativeTabs.tabTools);
+     public static final Item ingotCopper = new Ingot(267).setInternalName("ingotCopper").setCreativeTab(CreativeTabs.tabMaterials);
+     public static final Item rawCopper = new OreChunk(268).setInternalName("rawCopper").setCreativeTab(CreativeTabs.tabMaterials);
+-    public static final Item shovelAdamantine = new Shovel(269, ToolMaterial.ADAMANTINE, false)
++    public static final Item shovelAdamantine = new Shovel(269, ToolMaterial.ADAMANTINE)
+         .setInternalName("shovelAdamantine")
+         .setRarity(Rarity.EPIC)
+         .setCreativeTab(CreativeTabs.tabTools);
+@@ -831,7 +831,7 @@ public class ItemList {
+         .setCreativeTab(CreativeTabs.tabTools);
+     public static final Item recordBroken = new Record(275, "Disc XV", "Soybean").setInternalName("recordBroken").setCreativeTab(CreativeTabs.tabTools);
+     public static final Item recordVoid = new Record(276, "Eclipsed", "Soybean").setInternalName("recordVoid").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item hoeDamascus = new Hoe(277, ToolMaterial.DAMASCUS, false)
++    public static final Item hoeDamascus = new Hoe(277, ToolMaterial.DAMASCUS)
+         .setInternalName("hoeDamascus")
+         .setBurnRate(false)
+         .setRarity(Rarity.EPIC)
+@@ -852,7 +852,7 @@ public class ItemList {
+         .setBurnRate(false)
+         .setCreativeTab(CreativeTabs.tabCombat)
+         .setRarity(Rarity.LEGENDARY);
+-    public static final Item shovelPheonix = new Shovel(282, ToolMaterial.RUBY, false)
++    public static final Item shovelPheonix = new Shovel(282, ToolMaterial.RUBY)
+         .setReduceAmount(1, 1)
+         .setInternalName("phoenixShovel")
+         .setItemDescription("item.desc.fire")
+@@ -860,7 +860,7 @@ public class ItemList {
+         .setBurnRate(false)
+         .setCreativeTab(CreativeTabs.tabTools)
+         .setRarity(Rarity.LEGENDARY);
+-    public static final Item pickaxePheonix = new Pickaxe(283, ToolMaterial.RUBY, false)
++    public static final Item pickaxePheonix = new Pickaxe(283, ToolMaterial.RUBY)
+         .setReduceAmount(1, 3)
+         .setInternalName("phoenixPickaxe")
+         .setItemDescription("item.desc.fire")
+@@ -868,7 +868,7 @@ public class ItemList {
+         .setBurnRate(false)
+         .setCreativeTab(CreativeTabs.tabTools)
+         .setRarity(Rarity.LEGENDARY);
+-    public static final Item axePheonix = new Axe(284, ToolMaterial.RUBY, false)
++    public static final Item axePheonix = new Axe(284, ToolMaterial.RUBY)
+         .setReduceAmount(1, 3)
+         .setInternalName("phoenixAxe")
+         .setItemDescription("item.desc.fire")
+@@ -949,7 +949,7 @@ public class ItemList {
+         .setBurnRate(false)
+         .setCreativeTab(CreativeTabs.tabCombat)
+         .setRarity(Rarity.LEGENDARY);
+-    public static final Item gauntletUriel = new Pickaxe(295, ToolMaterial.SPECIAL, false)
++    public static final Item gauntletUriel = new Pickaxe(295, ToolMaterial.SPECIAL)
+         .setReduceAmount(5, 3)
+         .setInternalName("gauntletUriel")
+         .setItemDescription("item.desc.destroy")
+@@ -989,7 +989,7 @@ public class ItemList {
+         .setItemDescription("item.desc.paladin")
+         .setCreativeTab(CreativeTabs.tabCombat)
+         .setRarity(Rarity.LEGENDARY);
+-    public static final Item shovelValkyrie = new Shovel(303, ToolMaterial.TOPAZ, false)
++    public static final Item shovelValkyrie = new Shovel(303, ToolMaterial.TOPAZ)
+         .setReduceAmount(4, 1)
+         .setInternalName("valkyrieShovel")
+         .setItemDescription("item.desc.silkTouch")
+@@ -997,7 +997,7 @@ public class ItemList {
+         .setItemDescription("item.desc.paladin")
+         .setCreativeTab(CreativeTabs.tabTools)
+         .setRarity(Rarity.LEGENDARY);
+-    public static final Item pickaxeValkyrie = new Pickaxe(304, ToolMaterial.TOPAZ, false)
++    public static final Item pickaxeValkyrie = new Pickaxe(304, ToolMaterial.TOPAZ)
+         .setReduceAmount(4, 3)
+         .setInternalName("valkyriePickaxe")
+         .setItemDescription("item.desc.silkTouch")
+@@ -1005,7 +1005,7 @@ public class ItemList {
+         .setItemDescription("item.desc.paladin")
+         .setCreativeTab(CreativeTabs.tabTools)
+         .setRarity(Rarity.LEGENDARY);
+-    public static final Item axeValkyrie = new Axe(305, ToolMaterial.TOPAZ, false)
++    public static final Item axeValkyrie = new Axe(305, ToolMaterial.TOPAZ)
+         .setReduceAmount(4, 3)
+         .setInternalName("valkyrieAxe")
+         .setItemDescription("item.desc.silkTouch")
+@@ -1045,7 +1045,7 @@ public class ItemList {
+         .setItemDescription("item.desc.fullset")
+         .setCreativeTab(CreativeTabs.tabCombat)
+         .setRarity(Rarity.LEGENDARY);
+-    public static final Item hoeAdamantine = new Hoe(310, ToolMaterial.ADAMANTINE, false)
++    public static final Item hoeAdamantine = new Hoe(310, ToolMaterial.ADAMANTINE)
+         .setInternalName("hoeAdamantine")
+         .setRarity(Rarity.EPIC)
+         .setCreativeTab(CreativeTabs.tabTools);
+@@ -1189,7 +1189,7 @@ public class ItemList {
+         .setCreativeTab(CreativeTabs.tabFood);
+     public static final Item recordPig = new Record(358, "Flight School", "Soybean").setInternalName("recordPiglin").setCreativeTab(CreativeTabs.tabTools);
+     public static final Item endCrystal = new CrystalItem(359).setRarity(Rarity.LEGENDARY).setInternalName("end_crystal").setCreativeTab(CreativeTabs.tabTools);
+-    public static final Item paxel = new Pickaxe(360, ToolMaterial.DARKMATTER, false)
++    public static final Item paxel = new Pickaxe(360, ToolMaterial.DARKMATTER)
+         .setReduceAmount(0, 2)
+         .setInternalName("paxel")
+         .setItemDescription("item.desc.ancient")
+@@ -1232,6 +1232,10 @@ public class ItemList {
+         .setRarity(Rarity.RARE)
+         .setCreativeTab(CreativeTabs.tabCombat);
+     public static final Item bucketSlime = new Bucket(374, 0).setMaxStackSize(1).setInternalName("bucketSlime").setCreativeTab(CreativeTabs.tabTools);
++    public static final Item axeSpecial = new Axe(375, ToolMaterial.IRON)
++        .setInternalName("hatchet")
++        .setRarity(Rarity.LEGENDARY)
++        .setCreativeTab(CreativeTabs.tabCombat);
+ 
+     static {
+         StatList.initItemStats();
+diff --git a/server/src/main/java/net/minecraft/game/item/creative/CreativeItemsList.java b/server/src/main/java/net/minecraft/game/item/creative/CreativeItemsList.java
+index 5d60541..688afcb 100644
+--- a/server/src/main/java/net/minecraft/game/item/creative/CreativeItemsList.java
++++ b/server/src/main/java/net/minecraft/game/item/creative/CreativeItemsList.java
+@@ -446,6 +446,7 @@ public class CreativeItemsList {
+         ITEMS.add(ItemList.belialScythe);
+         ITEMS.add(ItemList.raphaelRing);
+         ITEMS.add(ItemList.whip);
++        ITEMS.add(ItemList.axeSpecial);
+         ITEMS.add(ItemList.bow);
+         ITEMS.add(ItemList.crossbow);
+         ITEMS.add(ItemList.crossboner);
+diff --git a/server/src/main/java/net/minecraft/game/item/recipe/blocks/BlockRecipes.java b/server/src/main/java/net/minecraft/game/item/recipe/blocks/BlockRecipes.java
+index 98d228e..2dcbede 100644
+--- a/server/src/main/java/net/minecraft/game/item/recipe/blocks/BlockRecipes.java
++++ b/server/src/main/java/net/minecraft/game/item/recipe/blocks/BlockRecipes.java
+@@ -52,7 +52,7 @@ public class BlockRecipes {
+         cm.addRecipe(new ItemStack(BlockList.stoneBrick, 4, 10), "##", "##", '#', new ItemStack(BlockList.stone, 1, 8));
+         cm.addRecipe(new ItemStack(BlockList.obsidianBrick, 4), "##", "##", '#', BlockList.obsidian);
+         cm.addRecipe(new ItemStack(BlockList.snowBlock, 4, 1), "##", "##", '#', new ItemStack(BlockList.snowBlock, 1, 0));
+-        cm.addRecipe(new ItemStack(BlockList.pillar, 2, 0), "#", "#", '#', new ItemStack(BlockList.slabStoneBrick, 1, 3));
++        cm.addRecipe(new ItemStack(BlockList.pillar, 2, 0), "#", "#", '#', new ItemStack(BlockList.slabStoneBrick, 1, 10));
+ 
+         for (int i = 0; i <= BlockList.wood.getMaxMeta(); i++) {
+             if (i == 18) {
+diff --git a/server/src/main/java/net/minecraft/game/item/tools/Axe.java b/server/src/main/java/net/minecraft/game/item/tools/Axe.java
+index 0c6baeb..eff8c36 100644
+--- a/server/src/main/java/net/minecraft/game/item/tools/Axe.java
++++ b/server/src/main/java/net/minecraft/game/item/tools/Axe.java
+@@ -4,6 +4,7 @@ import net.minecraft.game.block.Block;
+ import net.minecraft.game.block.BlockList;
+ import net.minecraft.game.block.decoration.Chair;
+ import net.minecraft.game.block.stepsound.StepSound;
++import net.minecraft.game.entity.Entity;
+ import net.minecraft.game.entity.misc.DroppedItem;
+ import net.minecraft.game.entity.player.Player;
+ import net.minecraft.game.item.ItemList;
+@@ -14,10 +15,9 @@ import net.minecraft.statistics.StatList;
+ import net.minecraft.util.math.MathHelper;
+ 
+ public class Axe extends Tool {
+-    public Axe(int itemid, ToolMaterial toolTier, boolean enchant) {
++    public Axe(int itemid, ToolMaterial toolTier) {
+         super(itemid, 2, toolTier);
+         this.toolType = ToolType.AXE;
+-        this.enchantable = enchant;
+         this.attackDelay = 15;
+         this.outputCount = 3;
+     }
+@@ -109,4 +109,9 @@ public class Axe extends Tool {
+     public void registerIcons(IconRegister ir) {
+         this.itemIcon = ir.registerIcon("axes/" + this.internalName);
+     }
++
++    @Override
++    public int getDamageVsEntity(Entity entity) {
++        return this == ItemList.axeSpecial ? 999999999 : this.atkDmg;
++    }
+ }
+diff --git a/server/src/main/java/net/minecraft/game/item/tools/Hoe.java b/server/src/main/java/net/minecraft/game/item/tools/Hoe.java
+index e9cc432..2352323 100644
+--- a/server/src/main/java/net/minecraft/game/item/tools/Hoe.java
++++ b/server/src/main/java/net/minecraft/game/item/tools/Hoe.java
+@@ -14,10 +14,9 @@ import net.minecraft.statistics.StatList;
+ import net.minecraft.statistics.achievement.AchievementList;
+ 
+ public class Hoe extends Tool {
+-    public Hoe(int itemid, ToolMaterial toolTier, boolean enchant) {
++    public Hoe(int itemid, ToolMaterial toolTier) {
+         super(itemid, 1, toolTier);
+         this.toolType = ToolType.HOE;
+-        this.enchantable = enchant;
+         this.outputCount = 2;
+         this.priorityItem = true;
+     }
+diff --git a/server/src/main/java/net/minecraft/game/item/tools/Pickaxe.java b/server/src/main/java/net/minecraft/game/item/tools/Pickaxe.java
+index 0b2059a..1427f2c 100644
+--- a/server/src/main/java/net/minecraft/game/item/tools/Pickaxe.java
++++ b/server/src/main/java/net/minecraft/game/item/tools/Pickaxe.java
+@@ -18,11 +18,10 @@ import net.minecraft.statistics.achievement.AchievementList;
+ public class Pickaxe extends Tool {
+     private int harvestLevel;
+ 
+-    public Pickaxe(int itemid, ToolMaterial toolTier, boolean enchant) {
++    public Pickaxe(int itemid, ToolMaterial toolTier) {
+         super(itemid, 1, toolTier);
+         this.harvestLevel = toolTier.getHarvestLevel();
+         this.toolType = ToolType.PICKAXE;
+-        this.enchantable = enchant;
+         this.attackDelay = 10;
+         this.outputCount = 3;
+     }
+diff --git a/server/src/main/java/net/minecraft/game/item/tools/Shovel.java b/server/src/main/java/net/minecraft/game/item/tools/Shovel.java
+index 5f49aab..32a0573 100644
+--- a/server/src/main/java/net/minecraft/game/item/tools/Shovel.java
++++ b/server/src/main/java/net/minecraft/game/item/tools/Shovel.java
+@@ -11,10 +11,9 @@ import net.minecraft.game.world.World;
+ import net.minecraft.statistics.StatList;
+ 
+ public class Shovel extends Tool {
+-    public Shovel(int itemid, ToolMaterial toolTier, boolean enchant) {
++    public Shovel(int itemid, ToolMaterial toolTier) {
+         super(itemid, 1, toolTier);
+         this.toolType = ToolType.SHOVEL;
+-        this.enchantable = enchant;
+         this.attackDelay = 10;
+         this.outputCount = 1;
+     }
+diff --git a/server/src/main/java/net/minecraft/game/item/tools/Tool.java b/server/src/main/java/net/minecraft/game/item/tools/Tool.java
+index 2f26b5f..626334e 100644
+--- a/server/src/main/java/net/minecraft/game/item/tools/Tool.java
++++ b/server/src/main/java/net/minecraft/game/item/tools/Tool.java
+@@ -15,7 +15,6 @@ public abstract class Tool extends Item {
+     public ToolType toolType = ToolType.NONE;
+     protected float efficiency = 4.0F;
+     protected int atkDmg;
+-    protected boolean enchantable;
+ 
+     public Tool(int itemid, int dmg, ToolMaterial material) {
+         super(itemid);
+diff --git a/server/src/main/java/net/minecraft/game/world/World.java b/server/src/main/java/net/minecraft/game/world/World.java
+index e6a329a..04a28da 100644
+--- a/server/src/main/java/net/minecraft/game/world/World.java
++++ b/server/src/main/java/net/minecraft/game/world/World.java
+@@ -1098,7 +1098,10 @@ public class World implements WorldSource {
+         if (this.chunksExist(x - chunkOffset, y - chunkOffset, z - chunkOffset, x + chunkOffset, y + chunkOffset, z + chunkOffset)) {
+             if (id > 0) {
+                 int tickRate = BlockList.blocks[id].tickRate();
+-                if (id == BlockList.lavaMoving.id && this.settings.getDimension() == 1) {
++                // currDim, not settings.getDimension(): on a dedicated server every dimension
++                // loads its own WorldInfo from the shared level.dat, where "Dimension" comes
++                // from the player tag and is meaningless. currDim is always right per world.
++                if (id == BlockList.lavaMoving.id && this.currDim.dimension == 1) {
+                     tickRate = 5;
+                 }
+ 
+@@ -1935,7 +1938,7 @@ public class World implements WorldSource {
+     }
+ 
+     public Entity getEntityOfType(Class<?> typ, BoundingBox bb, Entity entity) {
+-        List<?> entities = this.getEntitiesOfType(typ, bb);
++        List<Entity> entities = this.getEntitiesOfType(typ, bb);
+         Entity target = null;
+         double maxDist = Double.MAX_VALUE;
+ 
+diff --git a/server/src/main/java/net/minecraft/game/world/biomes/Biome.java b/server/src/main/java/net/minecraft/game/world/biomes/Biome.java
+index fa0e7c7..221fd13 100644
+--- a/server/src/main/java/net/minecraft/game/world/biomes/Biome.java
++++ b/server/src/main/java/net/minecraft/game/world/biomes/Biome.java
+@@ -517,7 +517,7 @@ public class Biome {
+                         blocks[index] = (short)top;
+                         metadata[index] = topMetadata;
+                     } else {
+-                        int var26 = false;
++                        int var26 = 0;
+                         filler = BlockList.stone.id;
+                         fillerMetadata = 0;
+                         blocks[index] = (short)filler;
+diff --git a/server/src/main/java/net/minecraft/game/world/biomes/sky/SkyBiome.java b/server/src/main/java/net/minecraft/game/world/biomes/sky/SkyBiome.java
+index bd90d15..161b14c 100644
+--- a/server/src/main/java/net/minecraft/game/world/biomes/sky/SkyBiome.java
++++ b/server/src/main/java/net/minecraft/game/world/biomes/sky/SkyBiome.java
+@@ -111,7 +111,7 @@ public class SkyBiome extends Biome {
+     public void surfaceBuilder(
+         World world, Random random, short[] blocks, byte[] metadata, int x, int z, double heightValue, double sandValue, double gravelValue
+     ) {
+-        if (world.getSettings().getDimension() == 0) {
++        if (world.currDim.dimension == 0) {
+             super.surfaceBuilder(world, random, blocks, metadata, x, z, heightValue, sandValue, gravelValue);
+         } else {
+             if (this.seed != world.getSeed() || this.seed == 0L) {
+@@ -193,7 +193,7 @@ public class SkyBiome extends Biome {
+                                 filler = BlockList.stone.id;
+                                 fillerMetadata = 8;
+                             } else if (y >= world.getSeaLevel() - this.minBeachHeight && y <= world.getSeaLevel() + this.maxBeachHeight) {
+-                                var49 = this.getTopBlock();
++                                var49 = (short)this.getTopBlock();
+                                 topMetadata = (byte)(this.getTopMeta() & 0xFF);
+                                 filler = this.getFillerBlock();
+                                 fillerMetadata = (byte)(this.getFillerMeta() & 0xFF);
+diff --git a/server/src/main/java/net/minecraft/game/world/chunk/Chunk.java b/server/src/main/java/net/minecraft/game/world/chunk/Chunk.java
+index d79c606..a8a6aa3 100644
+--- a/server/src/main/java/net/minecraft/game/world/chunk/Chunk.java
++++ b/server/src/main/java/net/minecraft/game/world/chunk/Chunk.java
+@@ -606,8 +606,12 @@ public class Chunk {
+                 }
+ 
+                 byte[] abyte0 = this.sections[section].getLowerBlockArray();
+-                System.arraycopy(block, dataSet, abyte0, 0, abyte0.length);
+-                dataSet += abyte0.length;
++                int toCopy = Math.min(abyte0.length, block.length - dataSet);
++                if (toCopy <= 0) {
++                    break;
++                }
++                System.arraycopy(block, dataSet, abyte0, 0, toCopy);
++                dataSet += toCopy;
+             } else if (clear && this.sections[section] != null) {
+                 this.sections[section] = null;
+             }
+@@ -616,24 +620,36 @@ public class Chunk {
+         for (int var10 = 0; var10 < this.sections.length; var10++) {
+             if ((x & 1 << var10) != 0 && this.sections[var10] != null) {
+                 byte[] metadataArray = this.sections[var10].getBlockMetadataArray();
+-                System.arraycopy(block, dataSet, metadataArray, 0, metadataArray.length);
+-                dataSet += metadataArray.length;
++                int toCopy = Math.min(metadataArray.length, block.length - dataSet);
++                if (toCopy <= 0) {
++                    break;
++                }
++                System.arraycopy(block, dataSet, metadataArray, 0, toCopy);
++                dataSet += toCopy;
+             }
+         }
+ 
+         for (int var11 = 0; var11 < this.sections.length; var11++) {
+             if ((x & 1 << var11) != 0 && this.sections[var11] != null) {
+                 NibbleArray nibblearray = this.sections[var11].getBlocklightArray();
+-                System.arraycopy(block, dataSet, nibblearray.data, 0, nibblearray.data.length);
+-                dataSet += nibblearray.data.length;
++                int toCopy = Math.min(nibblearray.data.length, block.length - dataSet);
++                if (toCopy <= 0) {
++                    break;
++                }
++                System.arraycopy(block, dataSet, nibblearray.data, 0, toCopy);
++                dataSet += toCopy;
+             }
+         }
+ 
+         for (int var12 = 0; var12 < this.sections.length; var12++) {
+             if ((x & 1 << var12) != 0 && this.sections[var12] != null) {
+                 NibbleArray nibblearray2 = this.sections[var12].getSkylightArray();
+-                System.arraycopy(block, dataSet, nibblearray2.data, 0, nibblearray2.data.length);
+-                dataSet += nibblearray2.data.length;
++                int toCopy = Math.min(nibblearray2.data.length, block.length - dataSet);
++                if (toCopy <= 0) {
++                    break;
++                }
++                System.arraycopy(block, dataSet, nibblearray2.data, 0, toCopy);
++                dataSet += toCopy;
+             }
+         }
+ 
+@@ -647,8 +663,12 @@ public class Chunk {
+                         nibblearray = this.sections[var13].createUpperBlockArray();
+                     }
+ 
+-                    System.arraycopy(block, dataSet, nibblearray.data, 0, nibblearray.data.length);
+-                    dataSet += nibblearray.data.length;
++                    int toCopy = Math.min(nibblearray.data.length, block.length - dataSet);
++                    if (toCopy <= 0) {
++                        break;
++                    }
++                    System.arraycopy(block, dataSet, nibblearray.data, 0, toCopy);
++                    dataSet += toCopy;
+                 }
+             } else if (clear && this.sections[var13] != null && this.sections[var13].getUpperBlockArray() != null) {
+                 this.sections[var13].clearUpperBlockArray();
+@@ -656,8 +676,10 @@ public class Chunk {
+         }
+ 
+         if (clear) {
+-            System.arraycopy(block, dataSet, this.biomes, 0, this.biomes.length);
+-            dataSet += this.biomes.length;
++            int toCopy = Math.min(this.biomes.length, block.length - dataSet);
++            if (toCopy > 0) {
++                System.arraycopy(block, dataSet, this.biomes, 0, toCopy);
++            }
+         }
+ 
+         for (int var14 = 0; var14 < this.sections.length; var14++) {
+diff --git a/server/src/main/java/net/minecraft/game/world/chunk/loader/AnvilLoader.java b/server/src/main/java/net/minecraft/game/world/chunk/loader/AnvilLoader.java
+index afe459d..5a0cc72 100644
+--- a/server/src/main/java/net/minecraft/game/world/chunk/loader/AnvilLoader.java
++++ b/server/src/main/java/net/minecraft/game/world/chunk/loader/AnvilLoader.java
+@@ -190,7 +190,8 @@ public class AnvilLoader implements IThreadedFileIO, FileLoader {
+         int var19 = var17.length;
+ 
+         for (int var21 = 0; var21 < var19; var21++) {
+-            for (Entity entity : var17[var21]) {
++            for (Object candidate : var17[var21]) {
++                Entity entity = (Entity)candidate;
+                 chunk.hasEntities = true;
+                 CompoundTag entityTag = new CompoundTag();
+                 if (entity.addEntityID(entityTag)) {
+diff --git a/server/src/main/java/net/minecraft/game/world/dimension/Dimension.java b/server/src/main/java/net/minecraft/game/world/dimension/Dimension.java
+index 4a94027..3666729 100644
+--- a/server/src/main/java/net/minecraft/game/world/dimension/Dimension.java
++++ b/server/src/main/java/net/minecraft/game/world/dimension/Dimension.java
+@@ -97,7 +97,7 @@ public abstract class Dimension {
+             Logger.getLogger("Minecraft").warning("Unable to find spawn biome");
+         }
+ 
+-        while (!this.suitableSpawnLocation(xpos, zpos) && spawnAttempts < 1000 && this.world.settings.border == 0) {
++        while (this.type != WorldType.FLAT && !this.suitableSpawnLocation(xpos, zpos) && spawnAttempts < 1000 && this.world.settings.border == 0) {
+             xpos += random.nextInt(64) - random.nextInt(64);
+             zpos += random.nextInt(64) - random.nextInt(64);
+             spawnAttempts++;
+diff --git a/server/src/main/java/net/minecraft/game/world/generation/CavesGenerator.java b/server/src/main/java/net/minecraft/game/world/generation/CavesGenerator.java
+index 40854d7..fa2bd24 100644
+--- a/server/src/main/java/net/minecraft/game/world/generation/CavesGenerator.java
++++ b/server/src/main/java/net/minecraft/game/world/generation/CavesGenerator.java
+@@ -269,7 +269,7 @@ public class CavesGenerator extends OverworldGenerator implements ChunkLoader {
+                     blocks[index] = (short)top;
+                     metadata[index] = topMetadata;
+                 } else {
+-                    int var27 = false;
++                    int var27 = 0;
+                     filler = BlockList.stone.id;
+                     fillerMetadata = 0;
+                     blocks[index] = (short)filler;
+@@ -315,7 +315,7 @@ public class CavesGenerator extends OverworldGenerator implements ChunkLoader {
+                     blocks[index] = (short)top;
+                     metadata[index] = topMetadata;
+                 } else {
+-                    int var29 = false;
++                    int var29 = 0;
+                     filler = BlockList.stone.id;
+                     fillerMetadata = 0;
+                     blocks[index] = (short)filler;
+diff --git a/server/src/main/java/net/minecraft/game/world/generation/features/structure/fortress/FortressPiece.java b/server/src/main/java/net/minecraft/game/world/generation/features/structure/fortress/FortressPiece.java
+index 606e9db..9f18ce3 100644
+--- a/server/src/main/java/net/minecraft/game/world/generation/features/structure/fortress/FortressPiece.java
++++ b/server/src/main/java/net/minecraft/game/world/generation/features/structure/fortress/FortressPiece.java
+@@ -47,7 +47,8 @@ public abstract class FortressPiece extends LegacyStructurePiece {
+         boolean wght = false;
+         int yes = 0;
+ 
+-        for (PieceWeight piss : daBaby) {
++        for (Object candidate : daBaby) {
++            PieceWeight piss = (PieceWeight)candidate;
+             if (piss.z > 0 && piss.maxLimit < piss.z) {
+                 wght = true;
+             }
+@@ -69,7 +70,8 @@ public abstract class FortressPiece extends LegacyStructurePiece {
+             attempts++;
+             int nextpc = rand.nextInt(wght);
+ 
+-            for (PieceWeight pcwght : list) {
++            for (Object candidate : list) {
++                PieceWeight pcwght = (PieceWeight)candidate;
+                 nextpc -= pcwght.x;
+                 if (nextpc < 0) {
+                     if (!pcwght.getMaxLimit() || pcwght == start.pieceWeight && !pcwght.isSubmerged) {
+diff --git a/server/src/main/java/net/minecraft/game/world/generation/structures/misc/Cathedral.java b/server/src/main/java/net/minecraft/game/world/generation/structures/misc/Cathedral.java
+index e325c87..cd14fb6 100644
+--- a/server/src/main/java/net/minecraft/game/world/generation/structures/misc/Cathedral.java
++++ b/server/src/main/java/net/minecraft/game/world/generation/structures/misc/Cathedral.java
+@@ -89,7 +89,7 @@ public class Cathedral extends SchematicStructure {
+                     spawner.setMob("PigMan");
+                 }
+                 break;
+-            case 54:
++            case 54: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -105,7 +105,8 @@ public class Cathedral extends SchematicStructure {
+                     this.world.setBlockAndMetadata(x, y - 1, z, BlockList.cobblestone.id, 8);
+                 }
+                 break;
+-            case 179:
++            }
++            case 179: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -122,6 +123,7 @@ public class Cathedral extends SchematicStructure {
+ 
+                 this.world.setBlockMetadata(x, y, z, 1);
+                 break;
++            }
+             case 227:
+                 LecternEntity lcetern = (LecternEntity)this.world.getTileEntity(x, y, z);
+                 ItemStack itemStack = new ItemStack(ItemList.writtenBook);
+diff --git a/server/src/main/java/net/minecraft/game/world/generation/structures/misc/OceanMonument.java b/server/src/main/java/net/minecraft/game/world/generation/structures/misc/OceanMonument.java
+index 0b04156..4b1d02e 100644
+--- a/server/src/main/java/net/minecraft/game/world/generation/structures/misc/OceanMonument.java
++++ b/server/src/main/java/net/minecraft/game/world/generation/structures/misc/OceanMonument.java
+@@ -81,7 +81,7 @@ public class OceanMonument extends SchematicStructure {
+                     }
+                 }
+                 break;
+-            case 54:
++            case 54: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -93,7 +93,8 @@ public class OceanMonument extends SchematicStructure {
+                     }
+                 }
+                 break;
+-            case 179:
++            }
++            case 179: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -114,6 +115,7 @@ public class OceanMonument extends SchematicStructure {
+                     this.world.spawnEntity(dragon);
+                     this.spawnedBoss = true;
+                 }
++            }
+         }
+     }
+ 
+diff --git a/server/src/main/java/net/minecraft/game/world/generation/structures/misc/Pyramid.java b/server/src/main/java/net/minecraft/game/world/generation/structures/misc/Pyramid.java
+index 3f6f334..587c337 100644
+--- a/server/src/main/java/net/minecraft/game/world/generation/structures/misc/Pyramid.java
++++ b/server/src/main/java/net/minecraft/game/world/generation/structures/misc/Pyramid.java
+@@ -472,7 +472,7 @@ public class Pyramid extends SchematicStructure {
+                     spawner.setMob(this.getRandomMob());
+                 }
+                 break;
+-            case 54:
++            case 54: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -484,7 +484,8 @@ public class Pyramid extends SchematicStructure {
+                     }
+                 }
+                 break;
+-            case 179:
++            }
++            case 179: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -503,6 +504,7 @@ public class Pyramid extends SchematicStructure {
+                     this.spawnedBoss = true;
+                 }
+                 break;
++            }
+             case 185:
+                 PotEntity pot = (PotEntity)this.world.getTileEntity(x, y, z);
+                 if (pot != null && pot.getSize() > 0) {
+diff --git a/server/src/main/java/net/minecraft/game/world/generation/structures/misc/Tower.java b/server/src/main/java/net/minecraft/game/world/generation/structures/misc/Tower.java
+index fef2691..ddd7617 100644
+--- a/server/src/main/java/net/minecraft/game/world/generation/structures/misc/Tower.java
++++ b/server/src/main/java/net/minecraft/game/world/generation/structures/misc/Tower.java
+@@ -209,7 +209,7 @@ public class Tower extends SchematicStructure {
+     @Override
+     public void onSpecialBlockSet(int x, int y, int z, int id, int meta) {
+         switch (id) {
+-            case 54:
++            case 54: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -221,7 +221,8 @@ public class Tower extends SchematicStructure {
+                     }
+                 }
+                 break;
+-            case 179:
++            }
++            case 179: {
+                 ChestEntity chest = (ChestEntity)this.world.getTileEntity(x, y, z);
+                 if (chest != null && chest.getSize() > 0) {
+                     int ni = 4 + this.rand.nextInt(4);
+@@ -239,6 +240,7 @@ public class Tower extends SchematicStructure {
+                     this.world.spawnEntity(bitch);
+                     this.spawnedBoss = true;
+                 }
++            }
+         }
+     }
+ 
+diff --git a/server/src/main/java/net/minecraft/network/packet/BlockEventPacket.java b/server/src/main/java/net/minecraft/network/packet/BlockEventPacket.java
+index 178ea2a..d32d5b7 100644
+--- a/server/src/main/java/net/minecraft/network/packet/BlockEventPacket.java
++++ b/server/src/main/java/net/minecraft/network/packet/BlockEventPacket.java
+@@ -27,7 +27,7 @@ public class BlockEventPacket extends Packet {
+     public void readPacketData(DataInputStream dataInputStream1) throws IOException {
+         this.sfx = dataInputStream1.readInt();
+         this.x = dataInputStream1.readInt();
+-        this.y = dataInputStream1.readByte();
++        this.y = dataInputStream1.readShort();
+         this.z = dataInputStream1.readInt();
+         this.data = dataInputStream1.readInt();
+     }
+@@ -36,7 +36,7 @@ public class BlockEventPacket extends Packet {
+     public void writePacketData(DataOutputStream dataOutputStream1) throws IOException {
+         dataOutputStream1.writeInt(this.sfx);
+         dataOutputStream1.writeInt(this.x);
+-        dataOutputStream1.writeByte(this.y);
++        dataOutputStream1.writeShort(this.y);
+         dataOutputStream1.writeInt(this.z);
+         dataOutputStream1.writeInt(this.data);
+     }
+@@ -48,6 +48,6 @@ public class BlockEventPacket extends Packet {
+ 
+     @Override
+     public int getPacketSize() {
+-        return 20;
++        return 21;
+     }
+ }
+diff --git a/server/src/main/java/net/minecraft/network/packet/DigPacket.java b/server/src/main/java/net/minecraft/network/packet/DigPacket.java
+index 490f4f2..7bb7274 100644
+--- a/server/src/main/java/net/minecraft/network/packet/DigPacket.java
++++ b/server/src/main/java/net/minecraft/network/packet/DigPacket.java
+@@ -27,7 +27,7 @@ public class DigPacket extends Packet {
+     public void readPacketData(DataInputStream dataInputStream1) throws IOException {
+         this.status = dataInputStream1.read();
+         this.xPosition = dataInputStream1.readInt();
+-        this.yPosition = dataInputStream1.read();
++        this.yPosition = dataInputStream1.readShort();
+         this.zPosition = dataInputStream1.readInt();
+         this.face = dataInputStream1.read();
+     }
+@@ -36,7 +36,7 @@ public class DigPacket extends Packet {
+     public void writePacketData(DataOutputStream dataOutputStream1) throws IOException {
+         dataOutputStream1.write(this.status);
+         dataOutputStream1.writeInt(this.xPosition);
+-        dataOutputStream1.write(this.yPosition);
++        dataOutputStream1.writeShort(this.yPosition);
+         dataOutputStream1.writeInt(this.zPosition);
+         dataOutputStream1.write(this.face);
+     }
+@@ -48,6 +48,6 @@ public class DigPacket extends Packet {
+ 
+     @Override
+     public int getPacketSize() {
+-        return 11;
++        return 12;
+     }
+ }
+diff --git a/server/src/main/java/net/minecraft/network/packet/Packet15Place.java b/server/src/main/java/net/minecraft/network/packet/Packet15Place.java
+index 801a312..8522bb6 100644
+--- a/server/src/main/java/net/minecraft/network/packet/Packet15Place.java
++++ b/server/src/main/java/net/minecraft/network/packet/Packet15Place.java
+@@ -28,7 +28,7 @@ public class Packet15Place extends Packet {
+     @Override
+     public void readPacketData(DataInputStream dataInputStream1) throws IOException {
+         this.xPosition = dataInputStream1.readInt();
+-        this.yPosition = dataInputStream1.read();
++        this.yPosition = dataInputStream1.readShort();
+         this.zPosition = dataInputStream1.readInt();
+         this.direction = dataInputStream1.read();
+         this.itemStack = IOUtil.readItemStack(dataInputStream1);
+@@ -37,7 +37,7 @@ public class Packet15Place extends Packet {
+     @Override
+     public void writePacketData(DataOutputStream dataOutputStream1) throws IOException {
+         dataOutputStream1.writeInt(this.xPosition);
+-        dataOutputStream1.write(this.yPosition);
++        dataOutputStream1.writeShort(this.yPosition);
+         dataOutputStream1.writeInt(this.zPosition);
+         dataOutputStream1.write(this.direction);
+         IOUtil.writeItemStack(this.itemStack, dataOutputStream1);
+@@ -50,6 +50,6 @@ public class Packet15Place extends Packet {
+ 
+     @Override
+     public int getPacketSize() {
+-        return 15;
++        return 16;
+     }
+ }
+diff --git a/server/src/main/java/net/minecraft/network/packet/UpdateChunkPacket.java b/server/src/main/java/net/minecraft/network/packet/UpdateChunkPacket.java
+index 8eb69fa..17a71e5 100644
+--- a/server/src/main/java/net/minecraft/network/packet/UpdateChunkPacket.java
++++ b/server/src/main/java/net/minecraft/network/packet/UpdateChunkPacket.java
+@@ -32,7 +32,7 @@ public class UpdateChunkPacket extends Packet {
+         this.zCh = par1Chunk.zPosition;
+         this.includeInitialize = par2;
+         if (par2) {
+-            par3 = 65535;
++            par3 = -1;
+         }
+ 
+         ChunkSection[] sections = par1Chunk.getSections();
+@@ -127,8 +127,8 @@ public class UpdateChunkPacket extends Packet {
+         this.xCh = par1DataInputStream.readInt();
+         this.zCh = par1DataInputStream.readInt();
+         this.includeInitialize = par1DataInputStream.readBoolean();
+-        this.hasLowerBlocks = par1DataInputStream.readShort();
+-        this.hasUpperBlocks = par1DataInputStream.readShort();
++        this.hasLowerBlocks = par1DataInputStream.readInt();
++        this.hasUpperBlocks = par1DataInputStream.readInt();
+         this.tempLength = par1DataInputStream.readInt();
+         this.biome = par1DataInputStream.readInt();
+         if (temp.length < this.tempLength) {
+@@ -136,13 +136,11 @@ public class UpdateChunkPacket extends Packet {
+         }
+ 
+         par1DataInputStream.readFully(temp, 0, this.tempLength);
+-        int i = 0;
+-
+-        for (int j = 0; j < 16; j++) {
+-            i += this.hasLowerBlocks >> j & 1;
+-        }
+ 
+-        int k = 14336 * i;
++        // The payload is 12288 bytes per section (lower ids, metadata, blocklight,
++        // skylight), plus 2048 bytes for each section whose ids spill into the upper
++        // nibble array, plus 256 biome bytes when initializing.
++        int k = 12288 * Integer.bitCount(this.hasLowerBlocks) + 2048 * Integer.bitCount(this.hasUpperBlocks);
+         if (this.includeInitialize) {
+             k += 256;
+         }
+@@ -165,8 +163,8 @@ public class UpdateChunkPacket extends Packet {
+         var1.writeInt(this.xCh);
+         var1.writeInt(this.zCh);
+         var1.writeBoolean(this.includeInitialize);
+-        var1.writeShort((short)(this.hasLowerBlocks & 65535));
+-        var1.writeShort((short)(this.hasUpperBlocks & 65535));
++        var1.writeInt(this.hasLowerBlocks);
++        var1.writeInt(this.hasUpperBlocks);
+         var1.writeInt(this.tempLength);
+         var1.writeInt(this.biome);
+         var1.write(this.chunkData, 0, this.tempLength);
+@@ -179,6 +177,6 @@ public class UpdateChunkPacket extends Packet {
+ 
+     @Override
+     public int getPacketSize() {
+-        return 17 + this.tempLength;
++        return 25 + this.tempLength;
+     }
+ }
+diff --git a/server/src/main/java/net/minecraft/network/packet/UpdateSectionPacket.java b/server/src/main/java/net/minecraft/network/packet/UpdateSectionPacket.java
+index 0eed8ba..addf03b 100644
+--- a/server/src/main/java/net/minecraft/network/packet/UpdateSectionPacket.java
++++ b/server/src/main/java/net/minecraft/network/packet/UpdateSectionPacket.java
+@@ -11,7 +11,7 @@ import net.minecraft.util.io.IOUtil;
+ public class UpdateSectionPacket extends Packet {
+     public int xPosition;
+     public int zPosition;
+-    public short[] coordinateArray;
++    public int[] coordinateArray;
+     public short[] typeArray;
+     public short[] metadataArray;
+     public int sizeOfAllArrays;
+@@ -20,20 +20,20 @@ public class UpdateSectionPacket extends Packet {
+         this.isDelayed = true;
+     }
+ 
+-    public UpdateSectionPacket(int x, int z, short[] positions, int size, World level) {
++    public UpdateSectionPacket(int x, int z, int[] positions, int size, World level) {
+         this.isDelayed = true;
+         this.xPosition = x;
+         this.zPosition = z;
+         this.sizeOfAllArrays = size;
+-        this.coordinateArray = new short[size];
++        this.coordinateArray = new int[size];
+         this.typeArray = new short[size];
+         this.metadataArray = new short[size];
+         Chunk cunk = level.getChunk(x, z);
+ 
+         for (int i7 = 0; i7 < size; i7++) {
+-            x = positions[i7] >> 12 & 15;
+-            int y = positions[i7] >> 8 & 15;
+-            z = positions[i7] & 255;
++            x = positions[i7] >> 20 & 15;
++            int y = positions[i7] >> 16 & 15;
++            z = positions[i7] & 0xFFFF;
+             this.coordinateArray[i7] = positions[i7];
+             this.typeArray[i7] = (short)cunk.getBlockID(x, z, y);
+             this.metadataArray[i7] = (short)cunk.getBlockMetadata(x, z, y);
+@@ -44,7 +44,7 @@ public class UpdateSectionPacket extends Packet {
+     public void readPacketData(DataInputStream dataInputStream1) throws IOException {
+         this.xPosition = dataInputStream1.readInt();
+         this.zPosition = dataInputStream1.readInt();
+-        this.coordinateArray = IOUtil.readShortArray(dataInputStream1);
++        this.coordinateArray = IOUtil.readIntArray(dataInputStream1);
+         this.typeArray = IOUtil.readShortArray(dataInputStream1);
+         this.metadataArray = IOUtil.readShortArray(dataInputStream1);
+         this.sizeOfAllArrays = dataInputStream1.readInt();
+@@ -54,7 +54,7 @@ public class UpdateSectionPacket extends Packet {
+     public void writePacketData(DataOutputStream dataOutputStream1) throws IOException {
+         dataOutputStream1.writeInt(this.xPosition);
+         dataOutputStream1.writeInt(this.zPosition);
+-        IOUtil.writeShortArray(dataOutputStream1, this.coordinateArray);
++        IOUtil.writeIntArray(dataOutputStream1, this.coordinateArray);
+         IOUtil.writeShortArray(dataOutputStream1, this.typeArray);
+         IOUtil.writeShortArray(dataOutputStream1, this.metadataArray);
+         dataOutputStream1.writeInt(this.sizeOfAllArrays);
+@@ -67,6 +67,6 @@ public class UpdateSectionPacket extends Packet {
+ 
+     @Override
+     public int getPacketSize() {
+-        return 10 + this.sizeOfAllArrays * 4;
++        return 20 + this.sizeOfAllArrays * 8;
+     }
+ }
+diff --git a/server/src/main/java/net/minecraft/server/MinecraftServer.java b/server/src/main/java/net/minecraft/server/MinecraftServer.java
+index 0446f84..62806c3 100644
+--- a/server/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/server/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -40,6 +40,9 @@ import net.minecraft.util.property.PropertiesConfig;
+ import net.minecraft.util.property.PropertySource;
+ 
+ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource {
++    // Overworld=0, Hell=1, Sky=2, Void=3, Ocean=4. Dense and fixed, so every per-dimension
++    // collection below is a plain array indexed straight by dimension id.
++    public static final int DIMENSION_COUNT = 5;
+     public static File workingDirectory = new File(System.getProperty("user.dir", "."));
+     public static Logger logger;
+     public NetworkListener networkListener;
+@@ -53,11 +56,12 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
+     public int percentDone;
+     private List<IUpdatePlayerListBox> updatePlayerList = new ArrayList<>();
+     private List<CommandHolder> commands = Collections.synchronizedList(new ArrayList<>());
+-    public EntityTracker[] entityTracker = new EntityTracker[1];
++    public EntityTracker[] entityTracker = new EntityTracker[DIMENSION_COUNT];
+     public boolean onlineMode;
+     public boolean spawnPeacefulMobs;
+     public boolean pvpOn;
+     public boolean allowFlight;
++    public boolean allowDimensions;
+     public boolean quitOnException = false;
+     public int spawnProtectionRadius;
+     public String serverName;
+@@ -122,10 +126,19 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
+         this.spawnProtectionRadius = this.properties.get("spawn-protection-radius", -1);
+         this.autosaveinterval = this.properties.get("autosave-interval-ticks", 256);
+         String string2 = this.properties.get("server-ip", "");
+-        this.onlineMode = this.properties.get("online-mode", true);
++        // Defaults to false: the session.minecraft.net endpoints this build authenticates
++        // against are long dead, so online-mode=true can never succeed. Kept as a working
++        // config switch so it can be rewired to modern auth endpoints later.
++        this.onlineMode = this.properties.get("online-mode", false);
+         this.spawnPeacefulMobs = this.properties.get("spawn-animals", true);
+         this.pvpOn = this.properties.get("pvp", true);
+         this.allowFlight = this.properties.get("allow-flight", false);
++        // Renamed from "allow-nether": this mod has four non-overworld dimensions, not one.
++        // The old key is still honoured so existing server.properties files keep working.
++        // Note this gates *travel into* other dimensions, not whether they tick — all five
++        // worlds always tick, so a player whose save puts them in Hell isn't stranded in a
++        // frozen world with no obvious cause.
++        this.allowDimensions = this.properties.get("allow-dimensions", this.properties.get("allow-nether", true));
+         InetAddress inetAddress3 = null;
+         if (string2.length() > 0) {
+             inetAddress3 = InetAddress.getByName(string2);
+@@ -157,7 +170,13 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
+         }
+ 
+         this.configManager = new ServerConfigurationManager(this);
+-        this.entityTracker[0] = new EntityTracker(this, 0);
++
++        // Must stay after configManager: EntityTracker's constructor asks it for the max
++        // tracking distance.
++        for (int d = 0; d < this.entityTracker.length; d++) {
++            this.entityTracker[d] = new EntityTracker(this, d);
++        }
++
+         long j5 = System.nanoTime();
+         String string7 = this.properties.get("level-name", "world");
+         String string8 = this.properties.get("level-seed", "");
+@@ -177,7 +196,7 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
+     }
+ 
+     private void initWorld(String string2, long j3) {
+-        this.worlds = new WorldServer[1];
++        this.worlds = new WorldServer[DIMENSION_COUNT];
+         WorldSettings ws = new WorldSettings();
+         WorldSettings.gamemode = this.properties.get("gamemode", 0).byteValue();
+         WorldSettings.cheats = true;
+@@ -198,41 +217,65 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
+         }
+ 
+         WorldSettings.difficulty = difficulty;
+-        this.worlds[0] = new WorldServer(this, new AnvilSaveHandler(workingDirectory, string2, true), string2, 0, j3, ws);
+-        this.worlds[0].addListener(new WorldManager(this, this.worlds[0]));
+-        this.worlds[0].setAllowedSpawnTypes(monsters, this.spawnPeacefulMobs);
+-        this.worlds[0].setMaxSections(WorldSettings.heightInt);
+-        this.configManager.setPlayerManager(this.worlds);
+-        short s18 = 196;
+-        long j7 = System.currentTimeMillis();
++        // ONE save handler for all five worlds. SaveHandlerBase's constructor writes its own
++        // timestamp into <world>/session.lock and checkSessionLock() compares against that
++        // instance's field, so five handlers would mean the last one wins and the other four
++        // die with LevelConflictException on their first chunk save. AnvilSaveHandler already
++        // routes per-dimension via Dimension.getSaveFolder() ("" / DIM1..DIM4), so a single
++        // handler serves every world correctly.
++        AnvilSaveHandler save = new AnvilSaveHandler(workingDirectory, string2, true);
++        this.worlds[0] = new WorldServer(this, save, string2, 0, j3, ws);
++        // Flush level.dat before dimensions 1..4 read it. World's constructor treats a missing
++        // level.dat as "brand new world" and runs the expensive spawn search; without this,
++        // a fresh server would run that search five times and land on five different spawns.
++        this.worlds[0].saveData();
++
++        for (int d = 1; d < this.worlds.length; d++) {
++            this.worlds[d] = new WorldServer(this, save, string2, d, j3, ws);
++            // Every World constructor builds its own MapStorage, and MapStorage keeps a private
++            // id counter that getUniqueId() rewrites into one shared data/idcounts.dat. Five of
++            // them over one directory hand out colliding map ids and clobber each other's file.
++            this.worlds[d].mapStorage = this.worlds[0].mapStorage;
++        }
+ 
+-        for (int i9 = 0; i9 < this.worlds.length; i9++) {
+-            logger.info("Preparing start region for level " + i9);
+-            if (i9 == 0 || this.properties.get("allow-nether", true)) {
+-                WorldServer worldServer10 = this.worlds[i9];
+-                Position chunkCoordinates11 = worldServer10.getSpawnPoint();
+-
+-                for (int i12 = -s18; i12 <= s18 && this.serverRunning; i12 += 16) {
+-                    for (int i13 = -s18; i13 <= s18 && this.serverRunning; i13 += 16) {
+-                        long j14 = System.currentTimeMillis();
+-                        if (j14 < j7) {
+-                            j7 = j14;
+-                        }
++        for (int d = 0; d < this.worlds.length; d++) {
++            this.worlds[d].addListener(new WorldManager(this, this.worlds[d]));
++            this.worlds[d].setAllowedSpawnTypes(monsters, this.spawnPeacefulMobs);
++            this.worlds[d].setMaxSections(WorldSettings.heightInt);
++        }
+ 
+-                        if (j14 > j7 + 1000L) {
+-                            int i16 = (s18 * 2 + 1) * (s18 * 2 + 1);
+-                            int i17 = (i12 + s18) * (s18 * 2 + 1) + i13 + 1;
+-                            this.outputPercentRemaining("Preparing spawn area", i17 * 100 / i16);
+-                            j7 = j14;
+-                        }
++        this.configManager.setPlayerNbtStorage(this.worlds);
++        // Only the Overworld is preloaded. Constructing the other four is nearly free — one
++        // level.dat read plus a chunk provider — because none of them generate terrain until
++        // someone actually stands in them.
++        this.preloadSpawnRegion(0);
++        this.clearCurrentTask();
++    }
+ 
+-                        worldServer10.chunkProviderServer.loadChunk(chunkCoordinates11.x + i12 >> 4, chunkCoordinates11.z + i13 >> 4);
+-                    }
++    private void preloadSpawnRegion(int dimension) {
++        logger.info("Preparing start region for level " + dimension);
++        short s18 = 196;
++        long j7 = System.currentTimeMillis();
++        WorldServer worldServer10 = this.worlds[dimension];
++        Position chunkCoordinates11 = worldServer10.getSpawnPoint();
++
++        for (int i12 = -s18; i12 <= s18 && this.serverRunning; i12 += 16) {
++            for (int i13 = -s18; i13 <= s18 && this.serverRunning; i13 += 16) {
++                long j14 = System.currentTimeMillis();
++                if (j14 < j7) {
++                    j7 = j14;
++                }
++
++                if (j14 > j7 + 1000L) {
++                    int i16 = (s18 * 2 + 1) * (s18 * 2 + 1);
++                    int i17 = (i12 + s18) * (s18 * 2 + 1) + i13 + 1;
++                    this.outputPercentRemaining("Preparing spawn area", i17 * 100 / i16);
++                    j7 = j14;
+                 }
++
++                worldServer10.chunkProviderServer.loadChunk(chunkCoordinates11.x + i12 >> 4, chunkCoordinates11.z + i13 >> 4);
+             }
+         }
+-
+-        this.clearCurrentTask();
+     }
+ 
+     private void outputPercentRemaining(String string1, int i2) {
+@@ -249,10 +292,20 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
+     private void saveServerWorld() {
+         logger.info("Saving chunks");
+ 
++        WorldServer lastSaved = null;
++
+         for (int i1 = 0; i1 < this.worlds.length; i1++) {
+             WorldServer worldServer2 = this.worlds[i1];
+-            worldServer2.save(true, (ProgressBar)null);
+-            worldServer2.postSaveCleanup();
++            if (worldServer2 != null) {
++                worldServer2.save(true, (ProgressBar)null);
++                lastSaved = worldServer2;
++            }
++        }
++
++        // postSaveCleanup() drains the shared IO thread and clears the global RegionFileCache;
++        // it isn't per-world, so it runs once at the end rather than five times.
++        if (lastSaved != null) {
++            lastSaved.postSaveCleanup();
+         }
+     }
+ 
+@@ -262,13 +315,10 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
+             this.configManager.savePlayerStates();
+         }
+ 
++        // saveServerWorld() already loops every world, so calling it once per world saved
++        // each world N times. Harmless at N=1, quadratic once there are five dimensions.
+         if (this.worlds != null) {
+-            for (int i1 = 0; i1 < this.worlds.length; i1++) {
+-                WorldServer worldServer2 = this.worlds[i1];
+-                if (worldServer2 != null) {
+-                    this.saveServerWorld();
+-                }
+-            }
++            this.saveServerWorld();
+         }
+     }
+ 
+@@ -356,15 +406,23 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
+         this.tickTime++;
+ 
+         for (int i6 = 0; i6 < this.worlds.length; i6++) {
+-            if (i6 == 0 || this.properties.get("allow-nether", true)) {
+-                WorldServer worldServer7 = this.worlds[i6];
+-                if (this.tickTime % 20 == 0) {
+-                    this.configManager.sendPacketToAllDimension(new UpdateTimePacket(worldServer7.getWorldTime()), 0);
+-                }
+-
+-                worldServer7.tickEntities();
+-                worldServer7.tick();
++            WorldServer worldServer7 = this.worlds[i6];
++            if (this.tickTime % 20 == 0) {
++                this.configManager.sendPacketToAllDimension(new UpdateTimePacket(worldServer7.getWorldTime()), i6);
+             }
++
++            worldServer7.tickEntities();
++            worldServer7.tick();
++        }
++
++        // Every world advances its own clock, so without this Hell drifts away from the
++        // Overworld. Done after the loop, not before: worlds[0] has already ticked by now, and
++        // copying its time in beforehand would leave the others incrementing on top of an
++        // already-incremented value and running permanently one tick ahead.
++        long worldTime = this.worlds[0].getWorldTime();
++
++        for (int d = 1; d < this.worlds.length; d++) {
++            this.worlds[d].settings.setWorldTime(worldTime);
+         }
+ 
+         CommandUseTimer.tick();
+@@ -434,12 +492,15 @@ public class MinecraftServer implements Runnable, CommandAccessor, CommandSource
+         return "CONSOLE";
+     }
+ 
+-    public WorldServer getWorldManager(int i1) {
+-        return this.worlds[0];
++    // Both accessors clamp instead of throwing. Dimension ids reach them from player NBT and
++    // from packet payloads, so a corrupt id should drop the player into the Overworld, not
++    // take the server thread down from inside a packet handler.
++    public WorldServer getWorldManager(int dimension) {
++        return this.worlds[dimension >= 0 && dimension < this.worlds.length ? dimension : 0];
+     }
+ 
+-    public EntityTracker getEntityTracker(int i1) {
+-        return this.entityTracker[0];
++    public EntityTracker getEntityTracker(int dimension) {
++        return this.entityTracker[dimension >= 0 && dimension < this.entityTracker.length ? dimension : 0];
+     }
+ 
+     @Override
+diff --git a/server/src/main/java/net/minecraft/server/ServerConfigurationManager.java b/server/src/main/java/net/minecraft/server/ServerConfigurationManager.java
+index 28ecbbd..56302f7 100644
+--- a/server/src/main/java/net/minecraft/server/ServerConfigurationManager.java
++++ b/server/src/main/java/net/minecraft/server/ServerConfigurationManager.java
+@@ -38,7 +38,7 @@ public class ServerConfigurationManager implements ConfigManager {
+     public static Logger logger = Logger.getLogger("Minecraft");
+     public List<EntityPlayerMP> playerEntities = new ArrayList<>();
+     private final MinecraftServer mcServer;
+-    private final ServerChunkDistance[] playerManagerObj = new ServerChunkDistance[1];
++    private final ServerChunkDistance[] playerManagerObj = new ServerChunkDistance[MinecraftServer.DIMENSION_COUNT];
+     private final int maxPlayers;
+     private final BanList bannedPlayers = new BanList(new File("banned-players.txt"));
+     private final BanList bannedIPs = new BanList(new File("banned-ips.txt"));
+@@ -55,7 +55,11 @@ public class ServerConfigurationManager implements ConfigManager {
+         this.opFile = minecraftServer1.getFile("ops.txt");
+         this.whitelistPlayersFile = minecraftServer1.getFile("white-list.txt");
+         int i2 = minecraftServer1.properties.get("view-distance", 10);
+-        this.playerManagerObj[0] = new ServerChunkDistance(minecraftServer1, 0, i2);
++
++        for (int d = 0; d < this.playerManagerObj.length; d++) {
++            this.playerManagerObj[d] = new ServerChunkDistance(minecraftServer1, d, i2);
++        }
++
+         this.maxPlayers = minecraftServer1.properties.get("max-players", 20);
+         this.whiteListEnforced = minecraftServer1.properties.get("white-list", false);
+         this.bannedPlayers.loadBanList();
+@@ -68,13 +72,22 @@ public class ServerConfigurationManager implements ConfigManager {
+         this.saveWhiteList();
+     }
+ 
+-    public void setPlayerManager(WorldServer[] ws) {
++    // Named for what it actually does. Player .dat files live in <world>/players/ and are
++    // dimension-independent, so dimension 0's storage is the storage for everyone — this never
++    // had anything to do with the per-dimension chunk managers.
++    public void setPlayerNbtStorage(WorldServer[] ws) {
+         this.playerNBTManagerObj = ws[0].getPlayerStorage();
+     }
+ 
++    // Drops the player from every dimension's chunk manager, then re-registers them with the
++    // one for the dimension they're actually in. Indexed [0] and [1] explicitly before, which
++    // ran off the end of a length-1 array; removePlayer is a no-op for a manager the player
++    // isn't registered with, so sweeping all of them is safe and survives the array growing.
+     public void removePlayersFromList(EntityPlayerMP entityPlayerMP1) {
+-        this.playerManagerObj[0].removePlayer(entityPlayerMP1);
+-        this.playerManagerObj[1].removePlayer(entityPlayerMP1);
++        for (ServerChunkDistance manager : this.playerManagerObj) {
++            manager.removePlayer(entityPlayerMP1);
++        }
++
+         this.getPlayerManager(entityPlayerMP1.dimension).addPlayer(entityPlayerMP1);
+         WorldServer worldServer2 = this.mcServer.getWorldManager(entityPlayerMP1.dimension);
+         worldServer2.chunkProviderServer.loadChunk((int)entityPlayerMP1.posX >> 4, (int)entityPlayerMP1.posZ >> 4);
+@@ -84,8 +97,12 @@ public class ServerConfigurationManager implements ConfigManager {
+         return this.playerManagerObj[0].getMaxTrackingDistance();
+     }
+ 
+-    private ServerChunkDistance getPlayerManager(int i1) {
+-        return i1 == -1 ? this.playerManagerObj[1] : this.playerManagerObj[0];
++    // Was `i1 == -1 ? playerManagerObj[1] : playerManagerObj[0]` — -1 is vanilla's nether id,
++    // but this mod numbers Hell as 1, so the branch was both wrong and an out-of-bounds read
++    // on a length-1 array. Clamping keeps a corrupt dimension id from killing the server
++    // thread; it degrades to the Overworld instead.
++    private ServerChunkDistance getPlayerManager(int dimension) {
++        return this.playerManagerObj[dimension >= 0 && dimension < this.playerManagerObj.length ? dimension : 0];
+     }
+ 
+     public void readPlayerDataFromFile(EntityPlayerMP entityPlayerMP1) {
+@@ -165,6 +182,10 @@ public class ServerConfigurationManager implements ConfigManager {
+                     }
+                 }
+ 
++                // Dimension 0 is correct here, not a leftover: the player's real dimension lives
++                // in their NBT, which can't be read until the entity exists. NetLoginHandler
++                // reads it immediately after and calls setWorld(), which rebuilds the
++                // ItemInWorldManager against the right world.
+                 return new EntityPlayerMP(this.mcServer, this.mcServer.getWorldManager(0), string2, new ItemInWorldManager(this.mcServer.getWorldManager(0)));
+             }
+         }
+@@ -506,7 +527,12 @@ public class ServerConfigurationManager implements ConfigManager {
+ 
+     @Override
+     public void sendPacketToAllExcluding(Packet packet, Player player) {
+-        throw new RuntimeException("method not implemented");
++        for (int i = 0; i < this.playerEntities.size(); i++) {
++            EntityPlayerMP entityPlayerMP = this.playerEntities.get(i);
++            if (entityPlayerMP != player) {
++                entityPlayerMP.playerNetServerHandler.sendPacket(packet);
++            }
++        }
+     }
+ 
+     @Override
+diff --git a/server/src/main/java/net/minecraft/server/commands/CommandSaveAll.java b/server/src/main/java/net/minecraft/server/commands/CommandSaveAll.java
+index 4ca02dc..1296e5f 100644
+--- a/server/src/main/java/net/minecraft/server/commands/CommandSaveAll.java
++++ b/server/src/main/java/net/minecraft/server/commands/CommandSaveAll.java
+@@ -15,10 +15,18 @@ public class CommandSaveAll extends Command implements ProgressBar {
+         sendNoticeToOps(ca, src, "Forcing save..");
+         ca.getConfigManager().savePlayerStates();
+ 
++        World last = null;
++
+         for (int i = 0; i < ca.getWorldCount(); i++) {
+             World ii = ca.getWorld(i);
+             ii.save(true, this);
+-            ii.postSaveCleanup();
++            last = ii;
++        }
++
++        // postSaveCleanup() drains the shared IO thread and clears the global RegionFileCache,
++        // so it belongs after every world has been written, not once per world.
++        if (last != null) {
++            last.postSaveCleanup();
+         }
+ 
+         sendNoticeToOps(ca, src, "Save complete.");
+diff --git a/server/src/main/java/net/minecraft/server/commands/CommandSaveOff.java b/server/src/main/java/net/minecraft/server/commands/CommandSaveOff.java
+index 57766fc..9c7b92f 100644
+--- a/server/src/main/java/net/minecraft/server/commands/CommandSaveOff.java
++++ b/server/src/main/java/net/minecraft/server/commands/CommandSaveOff.java
+@@ -9,8 +9,12 @@ public class CommandSaveOff extends Command {
+     public void action(String[] args, CommandAccessor ca, CommandSource src) {
+         sendNoticeToOps(ca, src, "Disabling level saving..");
+ 
++        // setSaving(true) is what *suspends* saving: WorldServer stores it in levelSaving and
++        // ChunkProviderServer.canSave() returns !levelSaving. save-off and save-on had the
++        // booleans the wrong way round, so save-off enabled saving and save-on silently
++        // disabled it — and every later save-all did nothing.
+         for (int i = 0; i < ca.getWorldCount(); i++) {
+-            ca.getWorld(i).setSaving(false);
++            ca.getWorld(i).setSaving(true);
+         }
+     }
+ 
+diff --git a/server/src/main/java/net/minecraft/server/commands/CommandSaveOn.java b/server/src/main/java/net/minecraft/server/commands/CommandSaveOn.java
+index 3f372c8..ce4e75b 100644
+--- a/server/src/main/java/net/minecraft/server/commands/CommandSaveOn.java
++++ b/server/src/main/java/net/minecraft/server/commands/CommandSaveOn.java
+@@ -9,8 +9,9 @@ public class CommandSaveOn extends Command {
+     public void action(String[] args, CommandAccessor ca, CommandSource src) {
+         sendNoticeToOps(ca, src, "Enabling level saving..");
+ 
++        // See CommandSaveOff: setSaving(false) is the one that *allows* saving.
+         for (int i = 0; i < ca.getWorldCount(); i++) {
+-            ca.getWorld(i).setSaving(true);
++            ca.getWorld(i).setSaving(false);
+         }
+     }
+ 
+diff --git a/server/src/main/java/net/minecraft/server/network/NetLoginHandler.java b/server/src/main/java/net/minecraft/server/network/NetLoginHandler.java
+index cb06483..de1e8d0 100644
+--- a/server/src/main/java/net/minecraft/server/network/NetLoginHandler.java
++++ b/server/src/main/java/net/minecraft/server/network/NetLoginHandler.java
+@@ -14,6 +14,7 @@ import java.net.URLEncoder;
+ import java.util.Random;
+ import java.util.logging.Logger;
+ import javax.imageio.ImageIO;
++import net.minecraft.SharedConstants;
+ import net.minecraft.game.item.potion.EffectData;
+ import net.minecraft.game.world.util.Position;
+ import net.minecraft.network.NetworkHandler;
+@@ -98,8 +99,8 @@ public class NetLoginHandler extends NetworkHandler {
+     @Override
+     public void handleLogin(final LoginPacket packet1Login1) {
+         this.username = packet1Login1.username;
+-        if (packet1Login1.protocolVersion != 20260630) {
+-            if (packet1Login1.protocolVersion > 20260630) {
++        if (packet1Login1.protocolVersion != SharedConstants.PROTOCOL_VERSION) {
++            if (packet1Login1.protocolVersion > SharedConstants.PROTOCOL_VERSION) {
+                 this.kickUser("Outdated server!");
+             } else {
+                 this.kickUser("Outdated client!");
+@@ -121,7 +122,7 @@ public class NetLoginHandler extends NetworkHandler {
+                             BufferedReader bufferedReader3 = new BufferedReader(new InputStreamReader(uRL2.openStream()));
+                             String string4 = bufferedReader3.readLine();
+                             bufferedReader3.close();
+-                            if (!string4.equals("YES")) {
++                            if (string4.equals("YES")) {
+                                 NetLoginHandler.this.packet1login = packet1Login1;
+                             } else {
+                                 NetLoginHandler.this.kickUser("Failed to verify username!");
+@@ -140,6 +141,16 @@ public class NetLoginHandler extends NetworkHandler {
+         EntityPlayerMP player = this.mcServer.configManager.login(this, packet1Login1.username);
+         if (player != null) {
+             this.mcServer.configManager.readPlayerDataFromFile(player);
++            // Clamp the id itself, not just the lookups. getWorldManager() degrades an
++            // out-of-range dimension to the Overworld, but the field would keep its bad value
++            // and every sendPacketToAllDimension filter compares against it — the player would
++            // stand in the Overworld while being invisible to it and receiving nothing.
++            // Also the door to a disabled dimension: without this, a save that puts someone in
++            // Hell would ignore allow-dimensions=false.
++            if (player.dimension < 0 || player.dimension >= MinecraftServer.DIMENSION_COUNT || !this.mcServer.allowDimensions && player.dimension != 0) {
++                player.dimension = 0;
++            }
++
+             player.setWorld(this.mcServer.getWorldManager(player.dimension));
+             logger.info(
+                 this.getUserAndIPString()
+@@ -156,8 +167,19 @@ public class NetLoginHandler extends NetworkHandler {
+             WorldServer level = this.mcServer.getWorldManager(player.dimension);
+             Position pos = level.getSpawnPoint();
+             NetServerHandler csnh = new NetServerHandler(this.mcServer, this.netManager, player);
++            // 4th argument is the dimension, and the client feeds it straight into
++            // `new NetworkWorld(this, seed, packet.dimension)`. Hardcoded to 0, a player who
++            // logged out in Hell got an Overworld client world back on reconnect: Hell terrain
++            // rendered with Overworld sky, lighting and fog.
+             csnh.sendPacket(
+-                new LoginPacket("", player.entityId, level.getSeed(), (byte)0, (byte)this.mcServer.configManager.getMaxPlayers(), (byte)level.getMaxSections())
++                new LoginPacket(
++                    "",
++                    player.entityId,
++                    level.getSeed(),
++                    (byte)player.dimension,
++                    (byte)this.mcServer.configManager.getMaxPlayers(),
++                    (byte)level.getMaxSections()
++                )
+             );
+             csnh.sendPacket(new SpawnPacket(pos.x, pos.y, pos.z));
+             this.mcServer.configManager.updateWorldTimeForPlayers(player, level);
+diff --git a/server/src/main/java/net/minecraft/server/network/NetServerHandler.java b/server/src/main/java/net/minecraft/server/network/NetServerHandler.java
+index 8c17247..e409b82 100644
+--- a/server/src/main/java/net/minecraft/server/network/NetServerHandler.java
++++ b/server/src/main/java/net/minecraft/server/network/NetServerHandler.java
+@@ -12,6 +12,8 @@ import java.util.logging.Logger;
+ import net.minecraft.SharedConstants;
+ import net.minecraft.commands.Command;
+ import net.minecraft.commands.CommandSource;
++import net.minecraft.game.block.BlockList;
++import net.minecraft.game.block.material.MaterialList;
+ import net.minecraft.game.block.tileentity.TileEntity;
+ import net.minecraft.game.block.tileentity.other.SignEntity;
+ import net.minecraft.game.block.tileentity.smelters.GeneratorEntity;
+@@ -234,7 +236,12 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
+             this.playerEntity.moveEntity(d13, d15, d17);
+             d13 = d5 - this.playerEntity.posX;
+             d15 = d7 - this.playerEntity.posY;
+-            if (d15 > -0.5 || d15 < 0.5) {
++            // `||` here is tautologically true, so d15 was unconditionally zeroed and the
++            // vertical half of the desync check below never ran. The intent is plainly to
++            // ignore *small* vertical disagreements, which is `&&`. Legitimate play keeps
++            // |d15| well under 0.5, so this behaves identically except for the >0.5-block
++            // discrepancies the check exists to catch.
++            if (d15 > -0.5 && d15 < 0.5) {
+                 d15 = 0.0;
+             }
+ 
+@@ -256,13 +263,32 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
+             }
+ 
+             if (!this.mcServer.allowFlight) {
+-                if (d15 >= -0.03125) {
++                // playerInAirTime used to be reset only in the else branch below - the
++                // allow-flight=true branch, i.e. the one where it is never read. With the
++                // default allow-flight=false it was a monotonic counter incremented once per
++                // movement packet, so it crossed 80 four seconds after a player started moving
++                // and kicked them. Walking, swimming, standing still: everyone, always.
++                //
++                // It also tested `d15`, which the zeroing above always forces to 0.0, so the
++                // "is this player hovering?" question was never actually being asked. Ask it
++                // properly instead: are they unsupported, and not descending?
++                boolean supported = this.playerEntity.onGround
++                    || this.playerEntity.isInWater()
++                    || this.playerEntity.isInLava()
++                    || this.playerEntity.mount != null
++                    || this.playerEntity.isPlayerSleeping()
++                    || this.playerEntity.canClimb(BlockList.ladder)
++                    || this.playerEntity.canClimb(BlockList.vine)
++                    || this.playerEntity.canClimb(MaterialList.rope);
++                if (!supported && this.playerEntity.posY - d3 >= -0.03125) {
+                     this.playerInAirTime++;
+                     if (this.playerInAirTime > 80) {
+                         logger.warning(this.playerEntity.username + " was kicked for floating too long!");
+                         this.kickPlayer("Flying is not enabled on this server");
+                         return;
+                     }
++                } else {
++                    this.playerInAirTime = 0;
+                 }
+             } else {
+                 this.playerInAirTime = 0;
+@@ -280,7 +306,12 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
+         this.lastPosY = d3;
+         this.lastPosZ = d5;
+         this.playerEntity.teleportTo(d1, d3, d5, f7, f8);
+-        this.playerEntity.playerNetServerHandler.sendPacket(new PlayerTeleportPacket(d1, d3 + 1.62, d3, d5, f7, f8, false));
++        // The constructor takes (x, y, stance, z) - same order as PlayerPositionPacket - but the
++        // arguments were (x, y + 1.62, y, z), which swaps y and stance. Every server-initiated
++        // teleport therefore told the client it was standing 1.62 blocks higher than the server
++        // thought, with its eyes 1.62 blocks below its feet. That includes the teleport sent on
++        // login, so every player arrived floating and immediately fell.
++        this.playerEntity.playerNetServerHandler.sendPacket(new PlayerTeleportPacket(d1, d3, d3 + 1.62, d5, f7, f8, false));
+     }
+ 
+     @Override
+@@ -683,9 +714,11 @@ public class NetServerHandler extends NetworkHandler implements CommandSource {
+ 
+     @Override
+     public void handleGenerator(GeneratorPacket packet) {
+-        if (this.mcServer.worlds[0].getTileEntity(packet.xPosition, packet.yPosition, packet.zPosition) != null
+-            && this.mcServer.worlds[0].getTileEntity(packet.xPosition, packet.yPosition, packet.zPosition) instanceof GeneratorEntity) {
+-            ((GeneratorEntity)this.mcServer.worlds[0].getTileEntity(packet.xPosition, packet.yPosition, packet.zPosition)).active = packet.state;
++        TileEntity tileEntity = this.mcServer
++            .getWorldManager(this.playerEntity.dimension)
++            .getTileEntity(packet.xPosition, packet.yPosition, packet.zPosition);
++        if (tileEntity instanceof GeneratorEntity) {
++            ((GeneratorEntity)tileEntity).active = packet.state;
+             this.sendPacket(new GeneratorPacket(packet.xPosition, packet.yPosition, packet.zPosition, packet.state));
+         }
+     }
+diff --git a/server/src/main/java/net/minecraft/server/player/EntityPlayerMP.java b/server/src/main/java/net/minecraft/server/player/EntityPlayerMP.java
+index bee41c2..0c8e41b 100644
+--- a/server/src/main/java/net/minecraft/server/player/EntityPlayerMP.java
++++ b/server/src/main/java/net/minecraft/server/player/EntityPlayerMP.java
+@@ -229,9 +229,9 @@ public class EntityPlayerMP extends Player implements ContainerListener {
+                 this.loadedChunks.remove(chunkCoordIntPair7);
+                 int chunkX = ChunkUtils.getChunkX(chunkCoordIntPair7);
+                 int chunkZ = ChunkUtils.getChunkZ(chunkCoordIntPair7);
+-                this.playerNetServerHandler.sendPacket(new UpdateChunkPacket(this.mcServer.worlds[0].getChunk(chunkX, chunkZ), true, 0));
++                this.playerNetServerHandler.sendPacket(new UpdateChunkPacket(worldServer9.getChunk(chunkX, chunkZ), true, 0));
+                 List<TileEntity> list5 = worldServer9.getTileEntityList(
+-                    chunkX * 16, 0, chunkZ * 16, chunkX * 16 + 16, this.mcServer.worlds[0].getWorldHeight(), chunkZ * 16 + 16
++                    chunkX * 16, 0, chunkZ * 16, chunkX * 16 + 16, worldServer9.getWorldHeight(), chunkZ * 16 + 16
+                 );
+ 
+                 for (int i6 = 0; i6 < list5.size(); i6++) {
+@@ -304,7 +304,7 @@ public class EntityPlayerMP extends Player implements ContainerListener {
+     public Bed.Status goToSleep(int var1, int var2, int var3) {
+         Bed.Status var4 = super.goToSleep(var1, var2, var3);
+         if (var4 == Bed.Status.OK) {
+-            this.mcServer.entityTracker[0].sendPacketToTrackedPlayers(this, new SleepPacket(this, 0, var1, var2, var3));
++            this.mcServer.getEntityTracker(this.dimension).sendPacketToTrackedPlayers(this, new SleepPacket(this, 0, var1, var2, var3));
+         }
+ 
+         return var4;
+@@ -323,7 +323,7 @@ public class EntityPlayerMP extends Player implements ContainerListener {
+     @Override
+     public void wakeUpPlayer(boolean var1, boolean var2, boolean var3) {
+         if (this.isPlayerSleeping()) {
+-            this.mcServer.entityTracker[0].sendPacketToTrackedPlayersAndTrackedEntity(this, new AnimationPacket(this, 3));
++            this.mcServer.getEntityTracker(this.dimension).sendPacketToTrackedPlayersAndTrackedEntity(this, new AnimationPacket(this, 3));
+         }
+ 
+         super.wakeUpPlayer(var1, var2, var3);
+diff --git a/server/src/main/java/net/minecraft/server/world/ServerChunkDistance.java b/server/src/main/java/net/minecraft/server/world/ServerChunkDistance.java
+index b91c616..a16a795 100644
+--- a/server/src/main/java/net/minecraft/server/world/ServerChunkDistance.java
++++ b/server/src/main/java/net/minecraft/server/world/ServerChunkDistance.java
+@@ -167,7 +167,7 @@ public class ServerChunkDistance {
+         private final int chunkX;
+         private final int chunkZ;
+         private final long currentChunk;
+-        private final short[] blocksToUpdate = new short[64];
++        private final int[] blocksToUpdate = new int[64];
+         private int numBlocksToUpdate = 0;
+         private int distModifier;
+         private int minX;
+@@ -250,7 +250,9 @@ public class ServerChunkDistance {
+ 
+             this.distModifier |= 1 << (y >> 4);
+             if (this.numBlocksToUpdate < 64) {
+-                short s4 = (short)(x << 12 | z << 8 | y);
++                // Packed coordinate layout: x in bits 20-23, z in bits 16-19,
++                // full world height in the low 16 bits.
++                int s4 = x << 20 | z << 16 | y;
+ 
+                 for (int i5 = 0; i5 < this.numBlocksToUpdate; i5++) {
+                     if (this.blocksToUpdate[i5] == s4) {
+@@ -287,9 +289,9 @@ public class ServerChunkDistance {
+                     );
+ 
+                     for (int i2 = 0; i2 < this.numBlocksToUpdate; i2++) {
+-                        int i3 = this.chunkX * 16 + (this.numBlocksToUpdate >> 12 & 15);
+-                        int i4 = this.numBlocksToUpdate & 0xFF;
+-                        int i5 = this.chunkZ * 16 + (this.numBlocksToUpdate >> 8 & 15);
++                        int i3 = this.chunkX * 16 + (this.numBlocksToUpdate >> 20 & 15);
++                        int i4 = this.numBlocksToUpdate & 0xFFFF;
++                        int i5 = this.chunkZ * 16 + (this.numBlocksToUpdate >> 16 & 15);
+                         if (Block.isContainer.get(worldServer1.getBlockId(i3, i4, i5))) {
+                             this.updateTileEntity(worldServer1.getTileEntity(i3, i4, i5));
+                         }
+@@ -300,14 +302,14 @@ public class ServerChunkDistance {
+                     int j = this.chunkX * 16;
+                     int i1 = this.chunkZ * 16;
+                     this.sendPacketToPlayersInInstance(
+-                        new UpdateChunkPacket(ServerChunkDistance.this.mcServer.worlds[0].getChunk(this.chunkX, this.chunkZ), false, this.distModifier)
++                        new UpdateChunkPacket(worldServer1.getChunk(this.chunkX, this.chunkZ), false, this.distModifier)
+                     );
+ 
+-                    for (int l1 = 0; l1 < 16; l1++) {
++                    for (int l1 = 0; l1 < worldServer1.getMaxSections(); l1++) {
+                         if ((this.distModifier & 1 << l1) != 0) {
+                             int j2 = l1 << 4;
+ 
+-                            for (TileEntity te : ServerChunkDistance.this.mcServer.worlds[0].getTileEntityList(j, j2, i1, j + 16, j2 + 16, i1 + 16)) {
++                            for (TileEntity te : worldServer1.getTileEntityList(j, j2, i1, j + 16, j2 + 16, i1 + 16)) {
+                                 this.updateTileEntity(te);
+                             }
+                         }
+diff --git a/server/src/main/java/net/minecraft/server/world/WorldManager.java b/server/src/main/java/net/minecraft/server/world/WorldManager.java
+index 716a313..46effaf 100644
+--- a/server/src/main/java/net/minecraft/server/world/WorldManager.java
++++ b/server/src/main/java/net/minecraft/server/world/WorldManager.java
+@@ -12,20 +12,25 @@ import net.minecraft.server.MinecraftServer;
+ public class WorldManager implements WorldListener {
+     private MinecraftServer mcServer;
+     public WorldServer serverWorld;
++    // Every WorldServer registers one of these as its listener, so this class is where entity
++    // spawns and block changes leave the world and become packets. Hardcoding dimension 0 here
++    // meant all five worlds funnelled into the Overworld's tracker and chunk manager.
++    private final int dimension;
+ 
+     public WorldManager(MinecraftServer minecraftServer1, WorldServer worldServer2) {
+         this.mcServer = minecraftServer1;
+         this.serverWorld = worldServer2;
++        this.dimension = worldServer2.currDim.dimension;
+     }
+ 
+     @Override
+     public void obtainEntitySkin(Entity entity1) {
+-        this.mcServer.getEntityTracker(0).trackEntity(entity1);
++        this.mcServer.getEntityTracker(this.dimension).trackEntity(entity1);
+     }
+ 
+     @Override
+     public void releaseEntitySkin(Entity entity1) {
+-        this.mcServer.getEntityTracker(0).untrackEntity(entity1);
++        this.mcServer.getEntityTracker(this.dimension).untrackEntity(entity1);
+     }
+ 
+     @Override
+@@ -42,12 +47,12 @@ public class WorldManager implements WorldListener {
+ 
+     @Override
+     public void changeBlocks(int i1, int i2, int i3) {
+-        this.mcServer.configManager.markBlockNeedsUpdate(i1, i2, i3, 0);
++        this.mcServer.configManager.markBlockNeedsUpdate(i1, i2, i3, this.dimension);
+     }
+ 
+     @Override
+     public void playRecord(String string1, int i2, int i3, int i4, boolean stop) {
+-        this.mcServer.configManager.sendPacketToAllCoord(i2, i3, i4, 64.0, 0, new MusicPacket(string1, i2, i3, i4, stop));
++        this.mcServer.configManager.sendPacketToAllCoord(i2, i3, i4, 64.0, this.dimension, new MusicPacket(string1, i2, i3, i4, stop));
+     }
+ 
+     @Override
+@@ -57,7 +62,7 @@ public class WorldManager implements WorldListener {
+ 
+     @Override
+     public void worldEvent(Player entityPlayer1, int i2, int i3, int i4, int i5, int i6) {
+-        this.mcServer.configManager.sendPacketToPlayerCoord(entityPlayer1, i3, i4, i5, 64.0, 0, new BlockEventPacket(i2, i3, i4, i5, i6));
++        this.mcServer.configManager.sendPacketToPlayerCoord(entityPlayer1, i3, i4, i5, 64.0, this.dimension, new BlockEventPacket(i2, i3, i4, i5, i6));
+     }
+ 
+     @Override
+diff --git a/server/src/main/java/net/minecraft/server/world/WorldServer.java b/server/src/main/java/net/minecraft/server/world/WorldServer.java
+index ac5cf01..da14a07 100644
+--- a/server/src/main/java/net/minecraft/server/world/WorldServer.java
++++ b/server/src/main/java/net/minecraft/server/world/WorldServer.java
+@@ -99,7 +99,7 @@ public class WorldServer extends World {
+     @Override
+     public void updateServerEntity(Entity entity1, byte b2) {
+         EntityStatePacket packet38EntityStatus3 = new EntityStatePacket(entity1.entityId, b2);
+-        this.mcServer.getEntityTracker(0).sendPacketToTrackedPlayersAndTrackedEntity(entity1, packet38EntityStatus3);
++        this.mcServer.getEntityTracker(this.currDim.dimension).sendPacketToTrackedPlayersAndTrackedEntity(entity1, packet38EntityStatus3);
+     }
+ 
+     @Override
+@@ -107,14 +107,15 @@ public class WorldServer extends World {
+         Explosion explosion10 = new Explosion(this, entity1, d2, d4, d6, f8);
+         explosion10.explode();
+         explosion10.addParticles(false);
+-        this.mcServer.configManager.sendPacketToAllCoord(d2, d4, d6, 64.0, 0, new ExplosionPacket(d2, d4, d6, f8, explosion10.destroyedBlocks));
++        this.mcServer.configManager
++            .sendPacketToAllCoord(d2, d4, d6, 64.0, this.currDim.dimension, new ExplosionPacket(d2, d4, d6, f8, explosion10.destroyedBlocks));
+         return explosion10;
+     }
+ 
+     @Override
+     public void blockEvent(int i1, int i2, int i3, int i4, int i5) {
+         super.blockEvent(i1, i2, i3, i4, i5);
+-        this.mcServer.configManager.sendPacketToAllCoord(i1, i2, i3, 64.0, 0, new PlayNotePacket(i1, i2, i3, i4, i5));
++        this.mcServer.configManager.sendPacketToAllCoord(i1, i2, i3, 64.0, this.currDim.dimension, new PlayNotePacket(i1, i2, i3, i4, i5));
+     }
+ 
+     public void removePlayer(Entity entity) {
+@@ -134,6 +135,20 @@ public class WorldServer extends World {
+         this.releaseEntitySkin(entity);
+     }
+ 
++    // level.dat is one file shared by all five dimensions, and World.saveData() writes the
++    // player list into it. Letting every world write means five racing rewrites with five
++    // different player lists, so only the Overworld owns the file. The other dimensions still
++    // do the rest of the work — the session-lock check and their map data.
++    @Override
++    public void saveData() {
++        if (this.currDim.dimension == 0) {
++            super.saveData();
++        } else {
++            this.checkSessionLock();
++            this.mapStorage.saveAllData();
++        }
++    }
++
+     @Override
+     public void setSaving(boolean state) {
+         this.levelSaving = state;

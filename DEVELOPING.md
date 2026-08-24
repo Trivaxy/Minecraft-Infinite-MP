@@ -162,26 +162,72 @@ but it still means resolving the package rename and the eight packet names first
 
 ## Provenance / how to regenerate
 
-Sources came from:
+**The decompiled game is not in this repository.** `core/`, `client/` and `server/` are empty
+of sources until you run:
 
-- client: `Latest.zip` → `jarmods/InfdevPlus-Client.jar`
-- server: `Server-FOR-DEV-WORK-ONLY.jar`
-
-decompiled with [Vineflower](https://github.com/Vineflower/vineflower) 1.12.0:
-
-```bash
-java -jar vineflower.jar -dgs=1 -rsy=1 -ind="    " \
-     -e=<jdk8-rt.jar> -e=libs/vendor-common.jar -e=libs/vendor-sound.jar -e=<lwjgl jars> \
-     <code-only.jar> <output-dir>
+```
+./gradlew bootstrap
 ```
 
-Vineflower produced zero warnings and every class round-trips: the rebuilt jars contain the
-exact same class list as the originals (the only omission is fastutil's
-`META-INF/versions/9/module-info.class`, which is inert on Java 8).
+That downloads Vesuvius's published jars, decompiles them, and applies this project's
+patches on top. It takes about a minute. Everything under the module source sets is
+generated and `.gitignore`d; the 34 files this project actually wrote are listed in
+`tools/authored.txt`.
+
+The repository ships the build, the docs, the Brigadier command framework, and two patches.
+It does not ship Mojang's or Vesuvius's code or art.
+
+### The two commands
+
+| | |
+| --- | --- |
+| `./gradlew bootstrap` | Assemble the tree. Safe to re-run; it preserves authored files. |
+| `./gradlew capturePatch` | Fold your working-tree edits back into `patches/`. **Run before committing.** |
+
+`capturePatch` is not optional. Derived files are gitignored, so an edit to one is invisible
+to git — `capturePatch` is what turns it into a tracked change. It also refreshes
+`tools/authored.txt` and the generated half of `.gitignore`, so a file you newly write in a
+module is picked up automatically.
+
+### What bootstrap does
+
+| Stage | Task | Result |
+| --- | --- | --- |
+| 1 | `fetchUpstream` | Downloads the two jars, SHA-256 pinned. Client is the `v1.0` release asset; server is pinned to upstream commit `b7bc008`. |
+| 2 | `extractVendor` | Re-jars fastutil + org.json into `libs/vendor-common.jar`, JOrbis/JOgg + Paulscode into `libs/vendor-sound.jar`. |
+| 3 | `makeCodeJars` | Strips the jars to game classes only (`net/`, `com/mojang/`, `ca/`). |
+| 4 | `decompile*` | Vineflower 1.12.0 → 1435 client + 1113 server sources. |
+| 5 | `stageBaseline` | Applies `patches/0000`, then `tools/layout.txt`: 1017 moves into `:core`, 1157 duplicate deletes, 2214 resources extracted from the jar. |
+| 6 | `bootstrap` | Applies `patches/0001` and writes the tree. |
+
+Patches are applied with JGit, so no `git` binary is required and the flow is identical on
+Windows, macOS and Linux.
+
+### Reproducibility
+
+Vineflower runs on a pinned Java 21 toolchain (it cannot run on 8, and the version is pinned
+so a future JDK cannot silently move the output). Verified: two runs on the same JDK are
+byte-identical, and JDK 21 and JDK 25 produce byte-identical output. Decompiling the
+published `v1.0.jar` yields all 1435 client sources with zero missing or extra files.
+
+`tools/layout.txt` carries a fourth verb, `N`, for two lang files that are CRLF inside the jar
+and LF in the tree. A unified diff cannot express a line-ending change on lines it does not
+otherwise touch, so the normalisation is recorded in the layout instead of the patch.
+
+### The two patches
+
+- **`patches/0000-decompiler-fixes.patch`** — 76 files. The 20 mechanical decompiler fixes in
+  the table below, plus the work done between decompiling and the first commit (the protocol
+  bump, the `currDim.dimension` move, `DigPacket`'s widened y, `Chunk.setChunkData` bounds
+  checks).
+- **`patches/0001-content.patch`** — 143 files. Everything since: the `:core` merge's content
+  reconciliation and every bug fix, plus three lang files.
 
 ### Hand-fixes applied after decompiling
 
-20 edits across 19 files, all mechanical decompiler artifacts — no behaviour changes:
+20 edits across 19 files, all mechanical decompiler artifacts — no behaviour changes. These
+live in `patches/0000` now, so they are reapplied automatically; the table is kept because it
+explains *why* those files differ from raw decompiler output.
 
 | Symptom | Fix | Files |
 | --- | --- | --- |
@@ -192,4 +238,13 @@ exact same class list as the originals (the only omission is fastutil's
 | two `case` bodies declaring the same local | gave each `case` its own `{ }` scope | `Cathedral`, `OceanMonument`, `Pyramid`, `Tower` |
 | a `JScrollPane` merged into an earlier `Component` local | split into its own variable | `ErrorDialog` |
 
-If you ever re-decompile from scratch, you'll have to redo these.
+### If upstream republishes
+
+`fetchUpstream` fails loudly on a checksum mismatch rather than bootstrapping something the
+patches were not built against. That already happened once: the `Latest.zip` this tree was
+decompiled from was superseded by a "Cathedral schematic fix" upload, which changed
+`struct/cathedral.bin` and `title/changelog.txt`. Both were adopted — the code decompiles
+identically either way, so only those two resources moved.
+
+To move to a new upstream build: update the URL and SHA in `tools/bootstrap.gradle`, run
+`bootstrap`, fix whatever fails to apply, then `capturePatch`.

@@ -1,9 +1,0 @@
-%%e Additions: 
-* Creative-mode exclusive secret ;)
-
-%%e Changes:
-* Leaf piles should now be affected by the fast leaves toggle
-
-%%e Fixes:
-* Fixed an issue with the zombie and skeleton pathfinder trying to find shade when it was raining
-* Bug reports button should now be clickable on Linux and Mac
