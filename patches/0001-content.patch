@@ -149,7 +149,7 @@ index bfa1c07..79e3ff0 100644
  
          try {
 diff --git a/client/src/main/java/net/minecraft/client/Minecraft.java b/client/src/main/java/net/minecraft/client/Minecraft.java
-index 487696a..7480952 100644
+index 487696a..ca01943 100644
 --- a/client/src/main/java/net/minecraft/client/Minecraft.java
 +++ b/client/src/main/java/net/minecraft/client/Minecraft.java
 @@ -12,12 +12,7 @@
@@ -274,6 +274,15 @@ index 487696a..7480952 100644
                              this.setScreen(new ModeSwitcher());
                          }
                      }
+@@ -785,7 +782,7 @@
+                 Profiler.endStartSection("animateTick");
+                 this.world
+                     .tickAnimations(
+-                        MathHelper.floor_double(this.player.posX), MathHelper.floor_double(this.player.posY), MathHelper.floor_double(this.player.posZ)
++                        MathHelper.floor_double(this.player.posX), MathHelper.floor_double(this.player.getEyeY()), MathHelper.floor_double(this.player.posZ)
+                     );
+                 Profiler.endStartSection("particles");
+                 this.particleRenderer.updateParticles();
 @@ -810,7 +807,7 @@
              this.statistics = new StatWriter(((SaveHandlerBase)handler).saveDirectory);
              World world = new World(handler, worldname, seed, settings);
@@ -311,6 +320,15 @@ index 487696a..7480952 100644
          switch (dimension) {
              case 1:
                  this.player.triggerAchievement(AchievementList.enterNether);
+@@ -1085,7 +1087,7 @@
+ 
+     public String debugInfoLight() {
+         int x = MathHelper.floor_double(this.player.posX);
+-        int y = MathHelper.floor_double(this.player.posY);
++        int y = MathHelper.floor_double(this.player.getEyeY());
+         int z = MathHelper.floor_double(this.player.posZ);
+         return "Light: "
+             + this.world.getBlockBrightness(x, y, z)
 @@ -1107,29 +1109,15 @@
          return instance != null && OptionValues.advCoords;
      }
@@ -1500,7 +1518,7 @@ index 1800628..c587efc 100644
          if (worldName == null) {
              worldName = "World" + worldIndex;
 diff --git a/client/src/main/java/net/minecraft/client/network/ClientHandler.java b/client/src/main/java/net/minecraft/client/network/ClientHandler.java
-index 40d6cae..92c1421 100644
+index 40d6cae..fecb4b3 100644
 --- a/client/src/main/java/net/minecraft/client/network/ClientHandler.java
 +++ b/client/src/main/java/net/minecraft/client/network/ClientHandler.java
 @@ -1,17 +1,19 @@
@@ -1656,6 +1674,15 @@ index 40d6cae..92c1421 100644
                          Entity entityToSpawnx = this.getEntityByID(packt.ownerId);
                          if (entityToSpawnx instanceof Mob) {
                              ((Projectile)entity).thrower = (Mob)entityToSpawnx;
+@@ -372,7 +409,7 @@
+         packet.xPosition = player.posX;
+         packet.yPosition = player.boundingBox.minY;
+         packet.zPosition = player.posZ;
+-        packet.stance = player.posY;
++        packet.stance = player.getEyeY();
+         this.connection.sendPacket(packet);
+         if (!this.playerMoving) {
+             this.mc.player.prevX = this.mc.player.posX;
 @@ -489,6 +526,9 @@
              } else if (packet.animate == 3) {
                  player = (Player)entity;
@@ -2078,7 +2105,7 @@ index ea852f2..508a53b 100644
          this.networkHandler.sendPacket(new ContainerClosePacket(player.openContainer.windowId));
          super.closeScreen(id, player);
 diff --git a/client/src/main/java/net/minecraft/client/network/player/NetworkPlayer.java b/client/src/main/java/net/minecraft/client/network/player/NetworkPlayer.java
-index bf82376..91871d3 100644
+index bf82376..58f2622 100644
 --- a/client/src/main/java/net/minecraft/client/network/player/NetworkPlayer.java
 +++ b/client/src/main/java/net/minecraft/client/network/player/NetworkPlayer.java
 @@ -30,7 +30,6 @@
@@ -2089,6 +2116,19 @@ index bf82376..91871d3 100644
      private boolean onSolidTile = false;
      private boolean wasSneaking = false;
      private boolean wasCrawling = false;
+@@ -86,10 +85,10 @@
+ 
+             moving = false;
+         } else if (moving && looking) {
+-            this.connection.sendPacket(new PlayerTeleportPacket(this.posX, this.boundingBox.minY, this.posY, this.posZ, this.yaw, this.pitch, this.onGround));
++            this.connection.sendPacket(new PlayerTeleportPacket(this.posX, this.boundingBox.minY, this.getEyeY(), this.posZ, this.yaw, this.pitch, this.onGround));
+             this.movementInterval = 0;
+         } else if (moving) {
+-            this.connection.sendPacket(new PlayerPositionPacket(this.posX, this.boundingBox.minY, this.posY, this.posZ, this.onGround));
++            this.connection.sendPacket(new PlayerPositionPacket(this.posX, this.boundingBox.minY, this.getEyeY(), this.posZ, this.onGround));
+             this.movementInterval = 0;
+         } else if (looking) {
+             this.connection.sendPacket(new PlayerLookPacket(this.yaw, this.pitch, this.onGround));
 @@ -205,11 +204,16 @@
  
      @Override
@@ -2113,10 +2153,30 @@ index bf82376..91871d3 100644
      }
  }
 diff --git a/client/src/main/java/net/minecraft/client/network/player/RemotePlayer.java b/client/src/main/java/net/minecraft/client/network/player/RemotePlayer.java
-index 8d014fc..b7f7731 100644
+index 8d014fc..9be7417 100644
 --- a/client/src/main/java/net/minecraft/client/network/player/RemotePlayer.java
 +++ b/client/src/main/java/net/minecraft/client/network/player/RemotePlayer.java
-@@ -69,6 +69,8 @@
+@@ -21,7 +21,6 @@
+     public RemotePlayer(World world, String name) {
+         super(world);
+         this.username = name;
+-        this.yOffset = 0.0F;
+         this.stepHeight = 0.0F;
+         this.noClip = true;
+         if (name != null && name.length() > 0) {
+@@ -37,11 +36,6 @@
+     }
+ 
+     @Override
+-    protected void resetHeight() {
+-        this.yOffset = 0.0F;
+-    }
+-
+-    @Override
+     public boolean damageEntity(DamageSource src, int amount) {
+         return true;
+     }
+@@ -69,6 +63,8 @@
  
          this.limbYaw = this.limbYaw + (dist - this.limbYaw) * 0.4F;
          this.limbSwing = this.limbSwing + this.limbYaw;
@@ -2125,6 +2185,32 @@ index 8d014fc..b7f7731 100644
          if (!this.itemInUse && this.isEating() && this.inventory.mainInventory[this.inventory.currentSlot] != null) {
              ItemStack stack = this.inventory.mainInventory[this.inventory.currentSlot];
              this.setItemInUse(this.inventory.mainInventory[this.inventory.currentSlot], ItemList.items[stack.itemID].getMaxUseDuration(stack));
+@@ -138,25 +134,6 @@
+     }
+ 
+     @Override
+-    public void setCrawling(boolean state) {
+-        if (state) {
+-            this.setSize(0.6F, 0.9F);
+-        } else {
+-            this.setSize(0.6F, 1.8F);
+-        }
+-    }
+-
+-    @Override
+-    public void mountEntity(Entity entity) {
+-        super.mountEntity(entity);
+-        if (entity != null) {
+-            this.yOffset = 1.62F;
+-        } else {
+-            this.yOffset = 0.0F;
+-        }
+-    }
+-
+-    @Override
+     public void updateSkin() {
+         if (this.skinUrl == null && !this.foundSkin) {
+             new SkinDownloader(this).start();
 diff --git a/client/src/main/java/net/minecraft/client/network/world/NetworkWorld.java b/client/src/main/java/net/minecraft/client/network/world/NetworkWorld.java
 index 6c89684..c3bf833 100644
 --- a/client/src/main/java/net/minecraft/client/network/world/NetworkWorld.java
@@ -2284,7 +2370,7 @@ index 68cd336..829e3cc 100644
      }
  }
 diff --git a/client/src/main/java/net/minecraft/client/player/PlayerController.java b/client/src/main/java/net/minecraft/client/player/PlayerController.java
-index 42f5a02..be9d800 100644
+index 42f5a02..328315a 100644
 --- a/client/src/main/java/net/minecraft/client/player/PlayerController.java
 +++ b/client/src/main/java/net/minecraft/client/player/PlayerController.java
 @@ -2,8 +2,6 @@
@@ -2314,7 +2400,22 @@ index 42f5a02..be9d800 100644
                  while (this.options.flightKey.pressed()) {
                      player.flying = !player.flying;
                  }
-@@ -331,7 +329,7 @@
+@@ -307,13 +305,7 @@
+             }
+ 
+             if (OptionValues.sneakMode && !player.sleeping && !player.crawling && !player.sitting) {
+-                if (this.mc.options.sneakKey.pressed) {
+-                    player.sneaking = true;
+-                    player.yOffset = 1.42F;
+-                } else {
+-                    player.sneaking = false;
+-                    player.yOffset = 1.62F;
+-                }
++                player.sneaking = this.mc.options.sneakKey.pressed;
+             }
+         }
+     }
+@@ -331,7 +323,7 @@
                  this.mc.player.swingOffhandItem();
              }
  
@@ -2323,7 +2424,7 @@ index 42f5a02..be9d800 100644
                  this.mc.gameRenderer.cameraMob = this.mc.player;
              }
          }
-@@ -432,7 +430,7 @@
+@@ -432,7 +424,7 @@
      }
  
      public void clickBlock(int buttonClick, boolean canBreakBlock) {
@@ -2332,8 +2433,37 @@ index 42f5a02..be9d800 100644
              if (canBreakBlock && this.mc.selectedObject != null && this.mc.selectedObject.target == TargetingSystem.HitType.TILE && buttonClick == 0) {
                  this.mc
                      .gamemode
+diff --git a/client/src/main/java/net/minecraft/client/render/entity/MobRenderer.java b/client/src/main/java/net/minecraft/client/render/entity/MobRenderer.java
+index 0d2a752..7d12017 100644
+--- a/client/src/main/java/net/minecraft/client/render/entity/MobRenderer.java
++++ b/client/src/main/java/net/minecraft/client/render/entity/MobRenderer.java
+@@ -305,12 +305,13 @@
+     }
+ 
+     protected void renderLabels(T entity, double xoffset, double yoffset, double zoffset) {
++        double labelY = yoffset + entity.getEyeOffset() * 1.5;
+         if (!entity.customName.isEmpty()) {
+-            this.renderLabel(entity, entity.customName, xoffset, yoffset, zoffset, 32);
++            this.renderLabel(entity, entity.customName, xoffset, labelY, zoffset, 32);
+         }
+ 
+         if (Minecraft.isDebugScreenFull()) {
+-            this.renderLabel(entity, Integer.toString(entity.entityId), xoffset, yoffset + 0.5, zoffset, 64);
++            this.renderLabel(entity, Integer.toString(entity.entityId), xoffset, labelY + 0.5, zoffset, 64);
+         }
+     }
+ 
+@@ -323,7 +324,7 @@
+             float scale = 0.02666667F;
+             scale = (float)(scale * (Math.sqrt(eDistance) / 2.0));
+             GL11.glPushMatrix();
+-            GL11.glTranslatef((float)xoffset, (float)yoffset + entity.getEyeHeight() + entity.getEyeHeight() / 2.0F, (float)zoffset);
++            GL11.glTranslatef((float)xoffset, (float)yoffset, (float)zoffset);
+             GL11.glNormal3f(0.0F, 1.0F, 0.0F);
+             GL11.glRotatef(-this.renderManager.yaw, 0.0F, 1.0F, 0.0F);
+             GL11.glRotatef(this.renderManager.pitch, 1.0F, 0.0F, 0.0F);
 diff --git a/client/src/main/java/net/minecraft/client/render/entity/PlayerRenderer.java b/client/src/main/java/net/minecraft/client/render/entity/PlayerRenderer.java
-index 6729cc1..d4f16f9 100644
+index 6729cc1..56344a6 100644
 --- a/client/src/main/java/net/minecraft/client/render/entity/PlayerRenderer.java
 +++ b/client/src/main/java/net/minecraft/client/render/entity/PlayerRenderer.java
 @@ -1,7 +1,6 @@
@@ -2353,16 +2483,32 @@ index 6729cc1..d4f16f9 100644
              ItemStack equippedItem = player.inventory.getCurrentItem();
              if (player.inventory.getOffHandItem() != null && player.inventory.getOffHandItem() == player.itemInUse) {
                  equippedItem = player.inventory.getOffHandItem();
-@@ -514,7 +513,8 @@
+@@ -514,9 +513,10 @@
  
                  if (!player.sneaking) {
                      if (player.isPlayerSleeping()) {
 -                        this.renderLabel(player, label, x, y - 1.5, z, 64);
 +                        // vanilla's -1.5 assumes posY is the eye line; a remote player here is anchored at the feet
-+                        this.renderLabel(player, label, x, y + 0.6, z, 64);
++                        this.renderLabel(player, label, x, y + 0.78, z, 64);
                      } else {
-                         this.renderLabel(player, label, x, y + 2.15, z, 64);
+-                        this.renderLabel(player, label, x, y + 2.15, z, 64);
++                        this.renderLabel(player, label, x, y + 2.33, z, 64);
                      }
+                 } else {
+                     Font font = this.renderManager.getFont();
+diff --git a/client/src/main/java/net/minecraft/client/render/entity/projectile/HookRenderer.java b/client/src/main/java/net/minecraft/client/render/entity/projectile/HookRenderer.java
+index 7371d5d..cccfd33 100644
+--- a/client/src/main/java/net/minecraft/client/render/entity/projectile/HookRenderer.java
++++ b/client/src/main/java/net/minecraft/client/render/entity/projectile/HookRenderer.java
+@@ -50,7 +50,7 @@
+             double endX = entity.thrower.prevX + (entity.thrower.posX - entity.thrower.prevX) * pitch + length.xCoord;
+             double endY = entity.thrower.prevY + (entity.thrower.posY - entity.thrower.prevY) * pitch + length.yCoord;
+             double endZ = entity.thrower.prevZ + (entity.thrower.posZ - entity.thrower.prevZ) * pitch + length.zCoord;
+-            double eyeHeight = entity.thrower != Minecraft.getMinecraft().player ? entity.thrower.getEyeHeight() : 0.0;
++            double eyeHeight = entity.thrower.getEyeOffset(pitch);
+             if (OptionValues.cameraMode > 0 || entity.thrower != Minecraft.getMinecraft().player) {
+                 float offset = (entity.thrower.prevYawOffset + (entity.thrower.yawOffset - entity.thrower.prevYawOffset) * pitch) * (float) Math.PI / 180.0F;
+                 endX = entity.thrower.prevX
 diff --git a/client/src/main/java/net/minecraft/client/render/entity/vehicle/BoatRenderer.java b/client/src/main/java/net/minecraft/client/render/entity/vehicle/BoatRenderer.java
 index 84bdbc9..9c482da 100644
 --- a/client/src/main/java/net/minecraft/client/render/entity/vehicle/BoatRenderer.java
@@ -2429,8 +2575,55 @@ index 937f5d5..03a733d 100644
          }
  
          this.loadTexture("/terrain.png");
+diff --git a/client/src/main/java/net/minecraft/client/render/environment/SkyRenderer.java b/client/src/main/java/net/minecraft/client/render/environment/SkyRenderer.java
+index 8e9af67..42636ec 100644
+--- a/client/src/main/java/net/minecraft/client/render/environment/SkyRenderer.java
++++ b/client/src/main/java/net/minecraft/client/render/environment/SkyRenderer.java
+@@ -128,7 +128,7 @@
+         GL11.glEnable(3008);
+         GL11.glEnable(2912);
+         GL11.glPopMatrix();
+-        double minY = this.game.gameRenderer.cameraMob.posY - (this.game.world.getSeaLevel() - 16);
++        double minY = this.game.gameRenderer.cameraMob.getEyeY() - (this.game.world.getSeaLevel() - 16);
+         if (this.game.world.currDim instanceof SkyDimension) {
+             GL11.glColor3f(red, green, blue);
+         } else if (!(minY < 0.0) && !(this.game.world.currDim instanceof HellDimension) && this.game.world.settings.getType() != WorldType.CAVES) {
+diff --git a/client/src/main/java/net/minecraft/client/render/environment/WeatherRenderer.java b/client/src/main/java/net/minecraft/client/render/environment/WeatherRenderer.java
+index 2521f7b..27b6de4 100644
+--- a/client/src/main/java/net/minecraft/client/render/environment/WeatherRenderer.java
++++ b/client/src/main/java/net/minecraft/client/render/environment/WeatherRenderer.java
+@@ -53,7 +53,7 @@
+                 Mob player = this.mc.gameRenderer.cameraMob;
+                 World world = this.mc.world;
+                 int x = MathHelper.floor_double(player.posX);
+-                int y = MathHelper.floor_double(player.posY);
++                int y = MathHelper.floor_double(player.getEyeY());
+                 int z = MathHelper.floor_double(player.posZ);
+                 GL11.glDisable(2884);
+                 GL11.glNormal3f(0.0F, 1.0F, 0.0F);
+@@ -263,7 +263,7 @@
+             Mob player = this.mc.gameRenderer.cameraMob;
+             World world = this.mc.world;
+             int x = MathHelper.floor_double(player.posX);
+-            int y = MathHelper.floor_double(player.posY);
++            int y = MathHelper.floor_double(player.getEyeY());
+             int z = MathHelper.floor_double(player.posZ);
+             byte amount = 10;
+             double particleX = 0.0;
+@@ -305,9 +305,9 @@
+ 
+             if (count > 0 && this.random.nextInt(3) < this.rainSoundCounter++) {
+                 this.rainSoundCounter = 0;
+-                if (particleY > player.posY + 1.0
++                if (particleY > player.getEyeY() + 1.0
+                     && world.isSpaceObstructed(MathHelper.floor_double(player.posX), MathHelper.floor_double(player.posZ))
+-                        > MathHelper.floor_double(player.posY)) {
++                        > MathHelper.floor_double(player.getEyeY())) {
+                     this.mc
+                         .world
+                         .playSoundEffect(particleX, particleY, particleZ, "loops.waterfall", 0.01F * (OptionValues.ambienceVol * OptionValues.masterVol), 0.5F);
 diff --git a/client/src/main/java/net/minecraft/client/render/game/GameRenderer.java b/client/src/main/java/net/minecraft/client/render/game/GameRenderer.java
-index 50a7408..1f61422 100644
+index 50a7408..b382ea1 100644
 --- a/client/src/main/java/net/minecraft/client/render/game/GameRenderer.java
 +++ b/client/src/main/java/net/minecraft/client/render/game/GameRenderer.java
 @@ -3,7 +3,6 @@
@@ -2441,7 +2634,46 @@ index 50a7408..1f61422 100644
  import net.minecraft.client.gui.screens.game.PhotoMode;
  import net.minecraft.client.options.OptionValues;
  import net.minecraft.client.render.Lighting;
-@@ -318,7 +317,7 @@
+@@ -71,7 +70,7 @@
+         float playerLightVal = this.mc
+             .world
+             .getBrightness(
+-                MathHelper.floor_double(this.cameraMob.posX), MathHelper.floor_double(this.cameraMob.posY), MathHelper.floor_double(this.cameraMob.posZ)
++                MathHelper.floor_double(this.cameraMob.posX), MathHelper.floor_double(this.cameraMob.getEyeY()), MathHelper.floor_double(this.cameraMob.posZ)
+             );
+         float renderDist = (32 - OptionValues.renderDistance) / 32.0F;
+         float col = playerLightVal * (1.0F - renderDist) + renderDist;
+@@ -241,14 +240,8 @@
+         double x = player.prevX + (player.posX - player.prevX) * tickDelta;
+         double y = player.prevY + (player.posY - player.prevY) * tickDelta;
+         double z = player.prevZ + (player.posZ - player.prevZ) * tickDelta;
+-        if (!(player instanceof Player)) {
+-            GL11.glTranslatef(0.0F, -player.getEyeHeight(), 0.0F);
+-        }
+-
+         if (player instanceof Player && ((Player)player).isPlayerSleeping() && OptionValues.cameraMode != 3) {
+-            float yOffset = player.yOffset - 1.62F;
+-            yOffset = (float)(yOffset + 1.0);
+-            GL11.glTranslatef(0.0F, yOffset + 0.3F, 0.0F);
++            GL11.glTranslatef(0.0F, -0.22F, 0.0F);
+             Block blockOn = this.mc
+                 .world
+                 .getBlock(MathHelper.floor_double(player.posX), MathHelper.floor_double(player.posY), MathHelper.floor_double(player.posZ));
+@@ -290,7 +283,7 @@
+                 TargetingSystem target = this.mc
+                     .world
+                     .rayTraceBlocks(
+-                        Vector.createVector(x + rotX, y + rotY + player.getEyeHeight(), z + rotZ),
++                        Vector.createVector(x + rotX, y + rotY + player.getEyeOffset(tickDelta), z + rotZ),
+                         Vector.createVector(x - upperYaw + rotX + rotZ, y - camRotation + rotY, z - lowerYaw + rotZ)
+                     );
+                 if (target != null) {
+@@ -314,11 +307,11 @@
+         } else if (!OptionValues.showArm && player instanceof Player) {
+             float yOff = -0.2F;
+             float zOffset = player.crawling ? 0.1F : -0.0F;
+-            Vector eye = Vector.createVector(x, y + player.getEyeHeight() - yOff, z);
++            Vector eye = Vector.createVector(x, y + player.getEyeOffset(tickDelta) - yOff, z);
              Vector target = eye.addVector(0.0, yOff, zOffset);
              TargetingSystem hit = this.mc.world.rayTraceBlocks(eye, target);
              float newYOffset = yOff;
@@ -2450,6 +2682,41 @@ index 50a7408..1f61422 100644
                  double allowedDist = hit.hitVec.distanceTo(eye) - 0.05;
                  Vector dir = target.subtract(eye).normalize();
                  newYOffset = (float)(dir.yCoord * allowedDist);
+@@ -343,6 +336,8 @@
+ 
+             GL11.glRotatef(player.prevYaw + (player.yaw - player.prevYaw) * tickDelta + 180.0F, 0.0F, 1.0F, 0.0F);
+         }
++
++        GL11.glTranslatef(0.0F, -player.getEyeOffset(tickDelta), 0.0F);
+     }
+ 
+     private void applyCameraEffects(float tickDelta) {
+diff --git a/client/src/main/java/net/minecraft/client/render/game/OverlayRenderer.java b/client/src/main/java/net/minecraft/client/render/game/OverlayRenderer.java
+index 6e6d5af..92d4825 100644
+--- a/client/src/main/java/net/minecraft/client/render/game/OverlayRenderer.java
++++ b/client/src/main/java/net/minecraft/client/render/game/OverlayRenderer.java
+@@ -28,7 +28,7 @@
+             boolean renderWater = this.mc.gameRenderer.cameraMob.isInMaterial(MaterialList.water) && OptionValues.fancyGraphics;
+             if (this.mc.gameRenderer.cameraMob.isInsideBlock() || renderWater) {
+                 int x = MathHelper.floor_double(this.mc.gameRenderer.cameraMob.posX);
+-                int y = MathHelper.floor_double(this.mc.gameRenderer.cameraMob.posY);
++                int y = MathHelper.floor_double(this.mc.gameRenderer.cameraMob.getEyeY());
+                 int z = MathHelper.floor_double(this.mc.gameRenderer.cameraMob.posZ);
+                 int texture = this.mc.textureLoader.getTexture("/terrain.png");
+                 GL11.glBindTexture(3553, texture);
+diff --git a/client/src/main/java/net/minecraft/client/render/item/ItemRenderer.java b/client/src/main/java/net/minecraft/client/render/item/ItemRenderer.java
+index a0108ba..d02b7b0 100644
+--- a/client/src/main/java/net/minecraft/client/render/item/ItemRenderer.java
++++ b/client/src/main/java/net/minecraft/client/render/item/ItemRenderer.java
+@@ -353,7 +353,7 @@
+ 
+         int brightness = this.mc
+             .world
+-            .getBrightness(MathHelper.floor_double(player.posX), MathHelper.floor_double(player.posY), MathHelper.floor_double(player.posZ), 0);
++            .getBrightness(MathHelper.floor_double(player.posX), MathHelper.floor_double(player.getEyeY()), MathHelper.floor_double(player.posZ), 0);
+         int u = brightness % 65536;
+         int v = brightness / 65536;
+         GL13.glMultiTexCoord2f(33985, u / 1.0F, v / 1.0F);
 diff --git a/client/src/main/java/net/minecraft/client/render/texture/TextureLoader.java b/client/src/main/java/net/minecraft/client/render/texture/TextureLoader.java
 index 6fff182..5e2f325 100644
 --- a/client/src/main/java/net/minecraft/client/render/texture/TextureLoader.java
@@ -2463,6 +2730,50 @@ index 6fff182..5e2f325 100644
      }
  
      public TextureLoader.ImageData obtainData(String name, TextureLoader.ImageDownloader downloader, boolean isSkin) {
+diff --git a/client/src/main/java/net/minecraft/client/render/world/WorldRenderer.java b/client/src/main/java/net/minecraft/client/render/world/WorldRenderer.java
+index fd43959..5b0d465 100644
+--- a/client/src/main/java/net/minecraft/client/render/world/WorldRenderer.java
++++ b/client/src/main/java/net/minecraft/client/render/world/WorldRenderer.java
+@@ -788,7 +788,7 @@
+         }
+ 
+         double soundX = xCoord - this.mc.gameRenderer.cameraMob.posX;
+-        double soundY = yCoord - this.mc.gameRenderer.cameraMob.posY;
++        double soundY = yCoord - this.mc.gameRenderer.cameraMob.getEyeY();
+         double soundZ = zCoord - this.mc.gameRenderer.cameraMob.posZ;
+         if (soundX * soundX + soundY * soundY + soundZ * soundZ < maxVol * maxVol) {
+             this.mc.sndManager.playSound(soundName, (float)xCoord, (float)yCoord, (float)zCoord, volume, pitch);
+@@ -803,7 +803,7 @@
+         }
+ 
+         double soundX = xCoord - this.mc.gameRenderer.cameraMob.posX;
+-        double soundY = yCoord - this.mc.gameRenderer.cameraMob.posY;
++        double soundY = yCoord - this.mc.gameRenderer.cameraMob.getEyeY();
+         double soundZ = zCoord - this.mc.gameRenderer.cameraMob.posZ;
+         if (soundX * soundX + soundY * soundY + soundZ * soundZ < maxVol * maxVol) {
+             this.mc.sndManager.playMobSound(soundName, id, (float)xCoord, (float)yCoord, (float)zCoord, volume, pitch);
+@@ -848,7 +848,7 @@
+     ) {
+         if (this.mc.gameRenderer.cameraMob != null && OptionValues.particleCount < 1) {
+             double xOff = this.mc.gameRenderer.cameraMob.posX - xCoordBlock;
+-            double yOff = this.mc.gameRenderer.cameraMob.posY - yCoordBlock;
++            double yOff = this.mc.gameRenderer.cameraMob.getEyeY() - yCoordBlock;
+             double zOff = this.mc.gameRenderer.cameraMob.posZ - zCoordBlock;
+             if (xOff * xOff + yOff * yOff + zOff * zOff <= 256.0) {
+                 ParticleRenderer renderer = this.mc.particleRenderer;
+diff --git a/client/src/main/java/net/minecraft/client/sound/SoundManager.java b/client/src/main/java/net/minecraft/client/sound/SoundManager.java
+index d6667d8..10ab632 100644
+--- a/client/src/main/java/net/minecraft/client/sound/SoundManager.java
++++ b/client/src/main/java/net/minecraft/client/sound/SoundManager.java
+@@ -316,7 +316,7 @@
+     public void playSound(String name, float x, float y, float z, float volume, float pitch) {
+         if (!name.equals("random.thunder")
+             || Minecraft.getMinecraft().gameRenderer.cameraMob == null
+-            || !(Minecraft.getMinecraft().gameRenderer.cameraMob.posY < Minecraft.getMinecraft().world.getSeaLevel() - 8)) {
++            || !(Minecraft.getMinecraft().gameRenderer.cameraMob.getEyeY() < Minecraft.getMinecraft().world.getSeaLevel() - 8)) {
+             this.playDirectionalSound(name, x, y, z, volume, pitch, OptionValues.soundVol, "sound_");
+         }
+     }
 diff --git a/core/src/main/java/com/mojang/nbt/tag/Tag.java b/core/src/main/java/com/mojang/nbt/tag/Tag.java
 index 48b4faa..7c86442 100644
 --- a/core/src/main/java/com/mojang/nbt/tag/Tag.java
@@ -2954,6 +3265,19 @@ index 5e1b456..1f9dbd8 100644
      public void registerIcons(IconRegister ir) {
          this.blockIcon = ir.registerIcon("machines/" + this.name);
      }
+diff --git a/core/src/main/java/net/minecraft/game/block/machines/Piston.java b/core/src/main/java/net/minecraft/game/block/machines/Piston.java
+index 38c767f..fa27845 100644
+--- a/core/src/main/java/net/minecraft/game/block/machines/Piston.java
++++ b/core/src/main/java/net/minecraft/game/block/machines/Piston.java
+@@ -334,7 +334,7 @@
+ 
+     private static int determineOrientation(World world, int x, int y, int z, Player player) {
+         if (MathHelper.abs((float)player.posX - x) < 2.0F && MathHelper.abs((float)player.posZ - z) < 2.0F) {
+-            double offset = player.posY + 1.82 - player.yOffset;
++            double offset = player.getEyeY() + 0.2;
+             if (offset - y > 2.0) {
+                 return 1;
+             }
 diff --git a/core/src/main/java/net/minecraft/game/block/utility/Anvil.java b/core/src/main/java/net/minecraft/game/block/utility/Anvil.java
 index 2d53eef..2d2ff0e 100644
 --- a/core/src/main/java/net/minecraft/game/block/utility/Anvil.java
@@ -3293,7 +3617,7 @@ index 61ea314..1f65eb9 100644
 +    }
  }
 diff --git a/core/src/main/java/net/minecraft/game/entity/Entity.java b/core/src/main/java/net/minecraft/game/entity/Entity.java
-index 6329d9f..77d0f04 100644
+index 6329d9f..00bd12d 100644
 --- a/core/src/main/java/net/minecraft/game/entity/Entity.java
 +++ b/core/src/main/java/net/minecraft/game/entity/Entity.java
 @@ -548,24 +548,7 @@
@@ -3361,6 +3685,34 @@ index 6329d9f..77d0f04 100644
      public void playStepSound() {
          int blockX = MathHelper.floor_double(this.posX);
          int blockY = MathHelper.floor_double(this.posY - 0.2F - this.yOffset);
+@@ -654,7 +669,7 @@
+     }
+ 
+     public boolean isInMaterial(Material material) {
+-        double yOff = this.posY + this.getEyeHeight();
++        double yOff = this.getEyeY();
+         if (!material.getIsLiquid()) {
+             yOff = this.posY;
+         }
+@@ -676,6 +691,18 @@
+         return 0.0F;
+     }
+ 
++    public double getEyeY() {
++        return this.boundingBox.minY + this.getEyeHeight();
++    }
++
++    public float getEyeOffset() {
++        return this.getEyeHeight() - this.yOffset;
++    }
++
++    public float getEyeOffset(float tickDelta) {
++        return this.getEyeOffset();
++    }
++
+     public void moveRelative(float xCoord, float yCoord, float zCoord) {
+         float dist = MathHelper.sqrt_float(xCoord * xCoord + yCoord * yCoord);
+         if (dist >= 0.01F) {
 diff --git a/core/src/main/java/net/minecraft/game/entity/EntityManager.java b/core/src/main/java/net/minecraft/game/entity/EntityManager.java
 index d9a8ee4..2640ba4 100644
 --- a/core/src/main/java/net/minecraft/game/entity/EntityManager.java
@@ -3405,6 +3757,19 @@ index d9a8ee4..2640ba4 100644
          addMapping(Zombie.class, "Zombie", 150);
          addMapping(Mummy.class, "Mummy", 151);
          addMapping(Skeleton.class, "Skeleton", 152);
+diff --git a/core/src/main/java/net/minecraft/game/entity/arrow/Arrow.java b/core/src/main/java/net/minecraft/game/entity/arrow/Arrow.java
+index 5aab778..c31f606 100644
+--- a/core/src/main/java/net/minecraft/game/entity/arrow/Arrow.java
++++ b/core/src/main/java/net/minecraft/game/entity/arrow/Arrow.java
+@@ -49,7 +49,7 @@
+         this.shooter = mob;
+         this.shotByPlayer = mob instanceof Player;
+         this.setSize(0.5F, 0.5F);
+-        this.teleportTo(mob.posX, mob.posY + mob.getEyeHeight(), mob.posZ, mob.yaw, mob.pitch);
++        this.teleportTo(mob.posX, mob.getEyeY(), mob.posZ, mob.yaw, mob.pitch);
+         float multiplier = 0.16F;
+         if (this.shotByPlayer && ((Player)mob).inventory.canUseItem()) {
+             multiplier = -0.16F;
 diff --git a/core/src/main/java/net/minecraft/game/entity/boat/Boat.java b/core/src/main/java/net/minecraft/game/entity/boat/Boat.java
 index 25817a5..7e0ecc6 100644
 --- a/core/src/main/java/net/minecraft/game/entity/boat/Boat.java
@@ -3889,7 +4254,7 @@ index 48139ad..e240eb4 100644
      private boolean isBlockable = false;
      private boolean creativeDamage = false;
 diff --git a/core/src/main/java/net/minecraft/game/entity/mob/Mob.java b/core/src/main/java/net/minecraft/game/entity/mob/Mob.java
-index c94ae0f..f5b9de9 100644
+index c94ae0f..17c2590 100644
 --- a/core/src/main/java/net/minecraft/game/entity/mob/Mob.java
 +++ b/core/src/main/java/net/minecraft/game/entity/mob/Mob.java
 @@ -584,11 +584,7 @@
@@ -3930,6 +4295,15 @@ index c94ae0f..f5b9de9 100644
      }
  
      public boolean canClimb(Block id) {
+@@ -836,7 +843,7 @@
+ 
+     public boolean isInsideBlock() {
+         int x = MathHelper.floor_double(this.posX);
+-        int y = MathHelper.floor_double(this.posY + this.getEyeHeight());
++        int y = MathHelper.floor_double(this.getEyeY());
+         int z = MathHelper.floor_double(this.posZ);
+         return this.world.isBlockFull(x, y, z);
+     }
 @@ -1059,6 +1066,10 @@
      }
  
@@ -3941,8 +4315,237 @@ index c94ae0f..f5b9de9 100644
          Entity entity = this.world.getClosestPlayer(this, -1.0);
          if (entity != null && this.canDespawn()) {
              double distX = entity.posX - this.posX;
+@@ -1184,8 +1195,8 @@
+     public boolean isVisible(Entity entity) {
+         return this.world
+                 .rayTraceBlocks(
+-                    Vector.createVector(this.posX, this.posY + this.getEyeHeight(), this.posZ),
+-                    Vector.createVector(entity.posX, entity.posY + entity.getEyeHeight(), entity.posZ)
++                    Vector.createVector(this.posX, this.getEyeY(), this.posZ),
++                    Vector.createVector(entity.posX, entity.getEyeY(), entity.posZ)
+                 )
+             == null;
+     }
+@@ -1394,11 +1405,11 @@
+ 
+     public Vector getPosition(float tick) {
+         if (tick == 1.0F) {
+-            return Vector.createVector(this.posX, this.posY, this.posZ);
++            return Vector.createVector(this.posX, this.posY + this.getEyeOffset(1.0F), this.posZ);
+         }
+ 
+         double x = this.prevX + (this.posX - this.prevX) * tick;
+-        double y = this.prevY + (this.posY - this.prevY) * tick;
++        double y = this.prevY + (this.posY - this.prevY) * tick + this.getEyeOffset(tick);
+         double z = this.prevZ + (this.posZ - this.prevZ) * tick;
+         return Vector.createVector(x, y, z);
+     }
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/ai/hostile/RangedAttack.java b/core/src/main/java/net/minecraft/game/entity/mob/ai/hostile/RangedAttack.java
+index a756341..79c2eca 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/ai/hostile/RangedAttack.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/ai/hostile/RangedAttack.java
+@@ -162,7 +162,7 @@
+                     projectile = new Fireball(this.world, this.source, 5);
+             }
+ 
+-            double distY = this.target.posY + this.target.getEyeHeight() - 1.1 - projectile.posY;
++            double distY = this.target.getEyeY() - 1.1 - projectile.posY;
+             projectile.setHeading(distX, distY + yOffset, distZ, this.arrowType == -7 ? 0.6F : 1.6F, 12.0F);
+             this.world.playEntitySound(this.source, snd, 1.0F, 1.0F / (this.source.rand.nextFloat() * 0.4F + 0.8F));
+             this.world.spawnEntity(projectile);
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/ai/passive/LookAround.java b/core/src/main/java/net/minecraft/game/entity/mob/ai/passive/LookAround.java
+index 0f7459b..bf22fb8 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/ai/passive/LookAround.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/ai/passive/LookAround.java
+@@ -37,6 +37,6 @@
+         this.idleTime--;
+         this.host
+             .lookControl
+-            .setLookPosition(this.host.posX + this.yaw, this.host.posY + this.host.getEyeHeight(), this.host.posZ + this.pitch, 10.0F, this.host.getFaceSpeed());
++            .setLookPosition(this.host.posX + this.yaw, this.host.getEyeY(), this.host.posZ + this.pitch, 10.0F, this.host.getFaceSpeed());
+     }
+ }
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/ai/passive/LookAt.java b/core/src/main/java/net/minecraft/game/entity/mob/ai/passive/LookAt.java
+index 4d85a97..fba24f9 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/ai/passive/LookAt.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/ai/passive/LookAt.java
+@@ -65,7 +65,7 @@
+     public void tick() {
+         this.host
+             .lookControl
+-            .setLookPosition(this.target.posX, this.target.posY - this.target.getEyeHeight(), this.target.posZ, 10.0F, this.host.getFaceSpeed());
++            .setLookPosition(this.target.posX, this.target.getEyeY(), this.target.posZ, 10.0F, this.host.getFaceSpeed());
+         this.lookTimer--;
+     }
+ }
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/ai/util/LookControl.java b/core/src/main/java/net/minecraft/game/entity/mob/ai/util/LookControl.java
+index 44c5c4d..e7c889e 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/ai/util/LookControl.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/ai/util/LookControl.java
+@@ -20,7 +20,7 @@
+     public void faceEntity(Entity target, float y, float p) {
+         this.posX = target.posX;
+         if (target instanceof Mob) {
+-            this.posY = target.posY + ((Mob)target).getEyeHeight();
++            this.posY = target.getEyeY();
+         } else {
+             this.posY = (target.boundingBox.minY + target.boundingBox.maxY) / 2.0;
+         }
+@@ -45,7 +45,7 @@
+         if (this.isRotating) {
+             this.isRotating = false;
+             double distX = this.posX - this.entity.posX;
+-            double distY = this.posY - (this.entity.posY + this.entity.getEyeHeight());
++            double distY = this.posY - this.entity.getEyeY();
+             double distZ = this.posZ - this.entity.posZ;
+             double dist = MathHelper.sqrt_double(distX * distX + distZ * distZ);
+             float yaw = (float)(Math.atan2(distZ, distX) * 180.0 / (float) Math.PI) - 90.0F;
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/animal/tameable/Wolf.java b/core/src/main/java/net/minecraft/game/entity/mob/animal/tameable/Wolf.java
+index 2a51aac..5738fac 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/animal/tameable/Wolf.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/animal/tameable/Wolf.java
+@@ -423,7 +423,7 @@
+         public void tick() {
+             this.wolf
+                 .lookControl
+-                .setLookPosition(this.owner.posX, this.owner.posY + this.owner.getEyeHeight(), this.owner.posZ, 10.0F, this.wolf.getFaceSpeed());
++                .setLookPosition(this.owner.posX, this.owner.getEyeY(), this.owner.posZ, 10.0F, this.wolf.getFaceSpeed());
+             this.tilt--;
+         }
+ 
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/monster/Golem.java b/core/src/main/java/net/minecraft/game/entity/mob/monster/Golem.java
+index b82eedc..33560ed 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/monster/Golem.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/monster/Golem.java
+@@ -118,8 +118,8 @@
+                 && this.attackTime == 0) {
+                 Projectile fireball = new Fireball(this.golem.world, this.golem, 10);
+                 fireball.posY++;
+-                fireball.setPosition(this.golem.posX, this.golem.posY + this.golem.getEyeHeight(), this.golem.posZ);
+-                double ballHeight = this.golem.attackTarget.posY + this.golem.attackTarget.getEyeHeight() - 1.1F - fireball.posY;
++                fireball.setPosition(this.golem.posX, this.golem.getEyeY(), this.golem.posZ);
++                double ballHeight = this.golem.attackTarget.getEyeY() - 1.1F - fireball.posY;
+                 this.golem.world.playEntitySound(this.golem, "random.bow", 1.0F, 1.0F / (this.golem.rand.nextFloat() * 0.4F + 0.8F));
+                 this.golem.world.spawnEntity(fireball);
+                 fireball.setHeading(distX, ballHeight, distZ, 1.0F, 12.0F);
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/monster/Pigman.java b/core/src/main/java/net/minecraft/game/entity/mob/monster/Pigman.java
+index 5131477..a1d7c43 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/monster/Pigman.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/monster/Pigman.java
+@@ -323,7 +323,7 @@
+                 this.pigman
+                     .lookControl
+                     .setLookPosition(
+-                        this.pigman.posX, this.pigman.posY + this.pigman.getEyeHeight() + 45.0, this.pigman.posZ, 10.0F, this.pigman.getFaceSpeed()
++                        this.pigman.posX, this.pigman.getEyeY() + 45.0, this.pigman.posZ, 10.0F, this.pigman.getFaceSpeed()
+                     );
+             }
+         }
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/monster/Stalker.java b/core/src/main/java/net/minecraft/game/entity/mob/monster/Stalker.java
+index 3b7038c..4164e50 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/monster/Stalker.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/monster/Stalker.java
+@@ -144,7 +144,7 @@
+ 
+     protected boolean teleportToEntity(Entity target) {
+         Vector distVector = Vector.createVector(
+-            this.posX - target.posX, this.boundingBox.minY + this.height / 2.0F - target.posY + target.getEyeHeight(), this.posZ - target.posZ
++            this.posX - target.posX, this.boundingBox.minY + this.height / 2.0F - target.getEyeY(), this.posZ - target.posZ
+         );
+         distVector = distVector.normalize();
+         double dist = 16.0;
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/monster/arachnid/Antlion.java b/core/src/main/java/net/minecraft/game/entity/mob/monster/arachnid/Antlion.java
+index 71ce8e7..afc4620 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/monster/arachnid/Antlion.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/monster/arachnid/Antlion.java
+@@ -261,7 +261,7 @@
+                 this.mob
+                     .lookControl
+                     .setLookPosition(
+-                        this.mob.posX + this.yaw, this.mob.posY + this.mob.getEyeHeight(), this.mob.posZ + this.pitch, 10.0F, this.mob.getFaceSpeed()
++                        this.mob.posX + this.yaw, this.mob.getEyeY(), this.mob.posZ + this.pitch, 10.0F, this.mob.getFaceSpeed()
+                     );
+             }
+         }
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/monster/boss/Seraphim.java b/core/src/main/java/net/minecraft/game/entity/mob/monster/boss/Seraphim.java
+index fa62978..de0fe7c 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/monster/boss/Seraphim.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/monster/boss/Seraphim.java
+@@ -131,7 +131,7 @@
+         }
+ 
+         int x = MathHelper.floor_double(this.posX);
+-        int y = MathHelper.floor_double(this.posY + this.getEyeHeight());
++        int y = MathHelper.floor_double(this.getEyeY());
+         int z = MathHelper.floor_double(this.posZ);
+         if (this.world.isBlockFull(x, y, z) || this.onGround) {
+             this.knockBack(null, 0.0, 0.0);
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/monster/elemental/Blaze.java b/core/src/main/java/net/minecraft/game/entity/mob/monster/elemental/Blaze.java
+index 52dbb39..be24dc4 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/monster/elemental/Blaze.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/monster/elemental/Blaze.java
+@@ -87,7 +87,7 @@
+                 this.rotations = 0.5F + (float)this.rand.nextGaussian() * 3.0F;
+             }
+ 
+-            if (this.attackTarget != null && this.attackTarget.posY + this.attackTarget.getEyeHeight() > this.posY + this.getEyeHeight() + this.rotations) {
++            if (this.attackTarget != null && this.attackTarget.getEyeY() > this.getEyeY() + this.rotations) {
+                 this.motionY = this.motionY + (0.3F - this.motionY) * 0.3F;
+             }
+         }
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/monster/slime/AquaCube.java b/core/src/main/java/net/minecraft/game/entity/mob/monster/slime/AquaCube.java
+index 54796c4..e455cff 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/monster/slime/AquaCube.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/monster/slime/AquaCube.java
+@@ -130,7 +130,7 @@
+             } else if (this.block == BlockList.slimeBlock) {
+                 Slime slime = new Slime(this.world);
+                 slime.setSlimeSize(this.getSlimeSize());
+-                slime.teleportTo(this.posX, this.posY + 0.5 + this.getEyeHeight(), this.posZ, this.rand.nextFloat() * 360.0F, 0.0F);
++                slime.teleportTo(this.posX, this.getEyeY() + 0.5, this.posZ, this.rand.nextFloat() * 360.0F, 0.0F);
+                 this.world.spawnEntity(slime);
+             }
+         }
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/monster/slime/MagmaCube.java b/core/src/main/java/net/minecraft/game/entity/mob/monster/slime/MagmaCube.java
+index 6cbc9b5..910c2d5 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/monster/slime/MagmaCube.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/monster/slime/MagmaCube.java
+@@ -53,7 +53,7 @@
+                 float offsetZ = (count / 2 - 0.5F) * size / 4.0F;
+                 MagmaCube magmaCube = new MagmaCube(this.world);
+                 magmaCube.setSlimeSize(size / 2);
+-                magmaCube.teleportTo(this.posX + offsetX, this.posY + 0.5 + this.getEyeHeight(), this.posZ + offsetZ, this.rand.nextFloat() * 360.0F, 0.0F);
++                magmaCube.teleportTo(this.posX + offsetX, this.getEyeY() + 0.5, this.posZ + offsetZ, this.rand.nextFloat() * 360.0F, 0.0F);
+                 this.world.spawnEntity(magmaCube);
+             }
+         }
+diff --git a/core/src/main/java/net/minecraft/game/entity/mob/monster/slime/Slime.java b/core/src/main/java/net/minecraft/game/entity/mob/monster/slime/Slime.java
+index 464ae45..b710e9d 100644
+--- a/core/src/main/java/net/minecraft/game/entity/mob/monster/slime/Slime.java
++++ b/core/src/main/java/net/minecraft/game/entity/mob/monster/slime/Slime.java
+@@ -156,9 +156,9 @@
+         double yOffset;
+         if (target instanceof Mob) {
+             Mob entityLiving10 = (Mob)target;
+-            yOffset = this.posY + this.getEyeHeight() - (entityLiving10.posY + entityLiving10.getEyeHeight());
++            yOffset = this.getEyeY() - entityLiving10.getEyeY();
+         } else {
+-            yOffset = (target.boundingBox.minY + target.boundingBox.maxY) / 2.0 - (this.posY + this.getEyeHeight());
++            yOffset = (target.boundingBox.minY + target.boundingBox.maxY) / 2.0 - this.getEyeY();
+         }
+ 
+         double dist = MathHelper.sqrt_double(distX * distX + distZ * distZ);
+@@ -191,7 +191,7 @@
+                 float offsetZ = (split / 2 - 0.5F) * scale / 4.0F;
+                 Slime slime = new Slime(this.world);
+                 slime.setSlimeSize(scale / 2);
+-                slime.teleportTo(this.posX + offsetX, this.posY + 0.5 + this.getEyeHeight(), this.posZ + offsetZ, this.rand.nextFloat() * 360.0F, 0.0F);
++                slime.teleportTo(this.posX + offsetX, this.getEyeY() + 0.5, this.posZ + offsetZ, this.rand.nextFloat() * 360.0F, 0.0F);
+                 this.world.spawnEntity(slime);
+             }
+         }
 diff --git a/core/src/main/java/net/minecraft/game/entity/player/Player.java b/core/src/main/java/net/minecraft/game/entity/player/Player.java
-index ca0d792..c646821 100644
+index ca0d792..8bad106 100644
 --- a/core/src/main/java/net/minecraft/game/entity/player/Player.java
 +++ b/core/src/main/java/net/minecraft/game/entity/player/Player.java
 @@ -4,6 +4,7 @@
@@ -3962,7 +4565,73 @@ index ca0d792..c646821 100644
      public PlayerInventory inventory = new PlayerInventory(this);
      public GlobalInventory inventoryChest = new GlobalInventory(this);
      public Container container;
-@@ -248,7 +251,7 @@
+@@ -117,6 +120,9 @@
+     public float modelRotZ;
+     public float prevLandSpeed;
+     public float prevJumpSpeed;
++    public float renderEye;
++    public float prevRenderEye;
++    private float renderEyeSpeed;
+     public float nauseaTime;
+     public float prevNauseaTime;
+     public float rotateElytraX;
+@@ -142,13 +148,13 @@
+         this.openContainer = this.container;
+         Position spawn = world.getSpawnPoint();
+         this.teleportTo(spawn.x + 0.5, spawn.y, spawn.z + 0.5, 0.0F, 0.0F);
+-        this.yOffset = 1.62F;
+         this.setHealth(20);
+         this.maxStamina = 200;
+         this.stamina = this.maxStamina;
+         this.texture = "/mob/player/char.png";
+         this.prevLandSpeed = this.landSpeed;
+         this.prevJumpSpeed = this.jumpSpeed;
++        this.renderEye = this.prevRenderEye = this.getEyeHeight();
+ 
+         for (int i = 0; i < 4; i++) {
+             this.teleporterPositionsIn.put(i, new Position[]{null, null, null, null, null, null});
+@@ -158,7 +164,7 @@
+ 
+     @Override
+     public double getYOffset() {
+-        return this.yOffset - 0.5;
++        return -0.5;
+     }
+ 
+     @Override
+@@ -168,8 +174,9 @@
+     }
+ 
+     public void spawn(boolean triggerOnce) {
+-        this.yOffset = 1.62F;
+         this.setSize(0.6F, 1.8F);
++        this.renderEye = this.prevRenderEye = this.getEyeHeight();
++        this.renderEyeSpeed = 0.0F;
+         if (this.world != null) {
+             while (true) {
+                 if (this.posY > 0.0) {
+@@ -223,6 +230,20 @@
+ 
+     @Override
+     public void onTick() {
++        this.prevRenderEye = this.renderEye;
++        float eye = this.getEyeHeight();
++        if (this.renderEye > eye) {
++            this.renderEyeSpeed -= 0.08F;
++            this.renderEyeSpeed *= 0.98F;
++            this.renderEye = this.renderEye + this.renderEyeSpeed;
++            if (this.renderEye < eye) {
++                this.renderEye = eye;
++                this.renderEyeSpeed = 0.0F;
++            }
++        } else {
++            this.renderEye = eye;
++            this.renderEyeSpeed = 0.0F;
++        }
+         if (this.itemInUse != null) {
+             ItemStack heldItem = this.inventory.getCurrentItem();
+             if (this.inventory.getOffHandItem() != null && this.inventory.getOffHandItem() == this.itemInUse) {
+@@ -248,7 +269,7 @@
                  this.sleepTimer = 100;
              }
  
@@ -3971,7 +4640,7 @@ index ca0d792..c646821 100644
                  this.wakeUpPlayer(true, true, false);
              } else if (!this.world.isOnline && this.awaken()) {
                  this.wakeUpPlayer(false, true, true);
-@@ -269,6 +272,8 @@
+@@ -269,6 +290,8 @@
          }
  
          super.onTick();
@@ -3980,7 +4649,7 @@ index ca0d792..c646821 100644
          if (!this.world.isOnline && this.openContainer != null && !this.openContainer.canUse(this)) {
              this.closeScreen();
              this.openContainer = this.container;
-@@ -704,7 +709,6 @@
+@@ -704,7 +727,6 @@
              this.triggerAchievement(AchievementList.cloud);
          }
  
@@ -3988,7 +4657,7 @@ index ca0d792..c646821 100644
          this.switchDimension(0, false);
      }
  
-@@ -946,6 +950,8 @@
+@@ -946,13 +968,14 @@
  
          Entity entity = ds.getEntity();
          if (entity != null) {
@@ -3997,7 +4666,23 @@ index ca0d792..c646821 100644
              this.motionX = -MathHelper.cos((this.attackAngle + this.yaw) * (float) Math.PI / 180.0F) * 0.1F;
              this.motionZ = -MathHelper.sin((this.attackAngle + this.yaw) * (float) Math.PI / 180.0F) * 0.1F;
          } else {
-@@ -1043,15 +1049,10 @@
+             this.motionX = this.motionZ = 0.0;
+         }
+ 
+-        this.yOffset = 0.1F;
+         this.addStat(StatList.deathsStat, 1);
+         if (entity != null) {
+             if (entity instanceof Mob) {
+@@ -991,7 +1014,7 @@
+ 
+     public void dropPlayerItem(ItemStack stack, boolean moving) {
+         if (stack != null) {
+-            DroppedItem item = new DroppedItem(this.world, this.posX, this.posY - 0.3F, this.posZ, stack);
++            DroppedItem item = new DroppedItem(this.world, this.posX, this.getEyeY() - 0.3F, this.posZ, stack);
+             item.pickupDelay = 40;
+             float offset = 0.1F;
+             if (moving) {
+@@ -1043,15 +1066,10 @@
  
          if (!keepStats && player.inventory != null && player.properties.getBabyMode()) {
              this.inventory = player.inventory;
@@ -4017,7 +4702,63 @@ index ca0d792..c646821 100644
              if (player.inventory.accessorySlots[2] != null && player.inventory.accessorySlots[2].hasTag()) {
                  ((PlayerContainer)this.container).loadContents(player.inventory.accessorySlots[2]);
              }
-@@ -2033,41 +2034,7 @@
+@@ -1346,12 +1364,20 @@
+     }
+ 
+     @Override
+-    public float getEyeHeight() {
+-        return 0.12F;
++    public float getEyeOffset(float tickDelta) {
++        return this.prevRenderEye + (this.renderEye - this.prevRenderEye) * tickDelta - this.yOffset;
+     }
+ 
+-    protected void resetHeight() {
+-        this.yOffset = 1.62F;
++    @Override
++    public float getEyeHeight() {
++        float eye = 1.62F;
++        if (this.crawling) {
++            eye = 0.56F;
++        } else if (this.sneaking) {
++            eye = 1.42F;
++        }
++
++        return Math.min(eye, this.height - 0.1F);
+     }
+ 
+     @Override
+@@ -1712,24 +1738,17 @@
+     }
+ 
+     public void setCrawling(boolean state) {
+-        if (state) {
+-            this.yOffset = 0.56F;
+-            this.setSize(0.6F, 0.9F);
+-            this.setPosition(this.posX, this.posY, this.posZ);
+-        } else {
+-            this.yOffset = 1.62F;
+-            this.setSize(0.6F, 1.8F);
+-            this.setPosition(this.posX, this.posY + 1.3F, this.posZ);
++        this.crawling = state;
++        this.setSize(0.6F, state ? 0.9F : 1.8F);
++        this.setPosition(this.posX, this.posY, this.posZ);
++        if (!state) {
++            this.renderEye = this.getEyeHeight() + 0.24F;
++            this.renderEyeSpeed = 0.0F;
+         }
+     }
+ 
+     public void setSneaking() {
+         this.sneaking = !this.sneaking;
+-        if (this.sneaking) {
+-            this.yOffset = 1.42F;
+-        } else {
+-            this.yOffset = 1.62F;
+-        }
+     }
+ 
+     protected void closeScreen() {
+@@ -2033,41 +2052,7 @@
  
              if ((this.timeWithoutRest <= 0 || !this.preventSleeping()) && this.world.settings.getEvent() <= 0) {
                  if (Math.abs(this.posX - x) <= 3.0 && Math.abs(this.posY - y) <= 2.0 && Math.abs(this.posZ - z) <= 3.0) {
@@ -4060,7 +4801,7 @@ index ca0d792..c646821 100644
                      return Bed.Status.OK;
                  } else {
                      return Bed.Status.TOO_FAR_AWAY;
-@@ -2096,6 +2063,49 @@
+@@ -2096,9 +2081,50 @@
          }
      }
  
@@ -4071,7 +4812,6 @@ index ca0d792..c646821 100644
 +     */
 +    public void putToBed(int x, int y, int z) {
 +        this.setSize(0.2F, 0.2F);
-+        this.yOffset = 0.2F;
 +        if (this.world.blockExists(x, y, z)) {
 +            int meta = this.world.getBlockMetadata(x, y, z);
 +            int bedDirection = Bed.getDirection(meta);
@@ -4092,9 +4832,9 @@ index ca0d792..c646821 100644
 +            }
 +
 +            this.rotatePlayerModel(bedDirection);
-+            this.setPosition(x + xOffset, y + 0.9375, z + zOffset);
++            this.setPosition(x + xOffset, y + 0.7375, z + zOffset);
 +        } else {
-+            this.setPosition(x + 0.5, y + 0.9375, z + 0.5);
++            this.setPosition(x + 0.5, y + 0.7375, z + 0.5);
 +        }
 +
 +        this.sleeping = true;
@@ -4109,8 +4849,23 @@ index ca0d792..c646821 100644
 +
      public void wakeUpPlayer(boolean resetTimer, boolean updateAllP, boolean setPos) {
          this.setSize(0.6F, 1.8F);
-         this.resetHeight();
-@@ -2139,9 +2149,8 @@
+-        this.resetHeight();
+         boolean forceWakeup = false;
+         if (this.dimension != 0) {
+             Phantom enemy = new Phantom(this.world);
+@@ -2116,9 +2142,9 @@
+                 respawnPos = new Position(bedPos.x, bedPos.y + 1, bedPos.z);
+             }
+ 
+-            this.setPosition(respawnPos.x + 0.5, (double)respawnPos.y + this.yOffset + 0.1, respawnPos.z + 0.5);
++            this.setPosition(respawnPos.x + 0.5, (double)respawnPos.y + 0.1, respawnPos.z + 0.5);
+         } else {
+-            this.setPosition(this.posX + 0.5, this.posY + this.yOffset + 0.1, this.posZ + 0.5);
++            this.setPosition(this.posX + 0.5, this.posY + 0.3, this.posZ + 0.5);
+         }
+ 
+         this.sleeping = false;
+@@ -2139,9 +2165,8 @@
                  return;
              }
  
@@ -4121,7 +4876,16 @@ index ca0d792..c646821 100644
          } else {
              this.sleepTimer = 0;
          }
-@@ -2518,27 +2527,34 @@
+@@ -2480,7 +2505,7 @@
+                 Vector vector2 = Vector.createVector((this.world.rand.nextFloat() - 0.5) * 0.3, -this.world.rand.nextFloat() * 0.6 - 0.3, 0.6);
+                 vector2.rotateAroundX(-this.pitch * 3.141593F / 180.0F);
+                 vector2.rotateAroundY(-this.yaw * 3.141593F / 180.0F);
+-                vector2 = vector2.addVector(this.posX, this.posY + this.getEyeHeight(), this.posZ);
++                vector2 = vector2.addVector(this.posX, this.getEyeY(), this.posZ);
+                 this.world
+                     .spawnParticle(
+                         ParticleContext.setIconContext(ParticleType.ICONCRACK, itemstack.getItem()),
+@@ -2518,27 +2543,34 @@
      }
  
      public void displayGUIChest(Inventory inventory, boolean b) {
@@ -4156,7 +4920,7 @@ index ca0d792..c646821 100644
      }
  
      public void displayGUIBook(ItemStack stack) {
-@@ -2548,35 +2564,49 @@
+@@ -2548,35 +2580,49 @@
      }
  
      public void displayGUIHellforge(HellforgeEntity furnace) {
@@ -4239,6 +5003,32 @@ index b995fb7..27a41ca 100644
 +        return this.gamemode == SPECTATOR;
 +    }
  }
+diff --git a/core/src/main/java/net/minecraft/game/entity/projectile/Bobber.java b/core/src/main/java/net/minecraft/game/entity/projectile/Bobber.java
+index 6f74155..7c075f8 100644
+--- a/core/src/main/java/net/minecraft/game/entity/projectile/Bobber.java
++++ b/core/src/main/java/net/minecraft/game/entity/projectile/Bobber.java
+@@ -90,7 +90,7 @@
+         this.angler.bobber = this;
+         this.hasBait = bait;
+         this.setSize(0.25F, 0.25F);
+-        this.teleportTo(player.posX, player.posY + 1.62F - player.yOffset, player.posZ, player.yaw, player.pitch);
++        this.teleportTo(player.posX, player.getEyeY(), player.posZ, player.yaw, player.pitch);
+         this.posX = this.posX - MathHelper.cos(this.yaw / 180.0F * (float) Math.PI) * 0.16F;
+         this.posY -= 0.1F;
+         this.posZ = this.posZ - MathHelper.sin(this.yaw / 180.0F * (float) Math.PI) * 0.16F;
+diff --git a/core/src/main/java/net/minecraft/game/entity/projectile/Glowstick.java b/core/src/main/java/net/minecraft/game/entity/projectile/Glowstick.java
+index a38290e..ac52d10 100644
+--- a/core/src/main/java/net/minecraft/game/entity/projectile/Glowstick.java
++++ b/core/src/main/java/net/minecraft/game/entity/projectile/Glowstick.java
+@@ -36,7 +36,7 @@
+         super(world);
+         this.thrower = thrower;
+         this.setSize(0.5F, 0.5F);
+-        this.teleportTo(thrower.posX, thrower.posY + thrower.getEyeHeight(), thrower.posZ, thrower.yaw, thrower.pitch);
++        this.teleportTo(thrower.posX, thrower.getEyeY(), thrower.posZ, thrower.yaw, thrower.pitch);
+         float multiplier = 0.16F;
+         if (((Player)thrower).inventory.canUseItem()) {
+             multiplier = -0.16F;
 diff --git a/core/src/main/java/net/minecraft/game/entity/projectile/Hook.java b/core/src/main/java/net/minecraft/game/entity/projectile/Hook.java
 index 44b6bd4..1b5a7fd 100644
 --- a/core/src/main/java/net/minecraft/game/entity/projectile/Hook.java
@@ -4256,9 +5046,18 @@ index 44b6bd4..1b5a7fd 100644
          if (!this.isReeling()) {
              if (mop.target == TargetingSystem.HitType.TILE && !this.world.isOnline) {
 diff --git a/core/src/main/java/net/minecraft/game/entity/projectile/Projectile.java b/core/src/main/java/net/minecraft/game/entity/projectile/Projectile.java
-index 95cc8aa..4d5b5e9 100644
+index 95cc8aa..75913ba 100644
 --- a/core/src/main/java/net/minecraft/game/entity/projectile/Projectile.java
 +++ b/core/src/main/java/net/minecraft/game/entity/projectile/Projectile.java
+@@ -33,7 +33,7 @@
+         super(world);
+         this.thrower = thrower;
+         this.setSize(0.25F, 0.25F);
+-        this.teleportTo(thrower.posX, thrower.posY + thrower.getEyeHeight(), thrower.posZ, thrower.yaw, thrower.pitch);
++        this.teleportTo(thrower.posX, thrower.getEyeY(), thrower.posZ, thrower.yaw, thrower.pitch);
+         this.posX = this.posX - MathHelper.cos(this.yaw / 180.0F * (float) Math.PI) * 0.16F;
+         this.posY -= 0.1F;
+         this.posZ = this.posZ - MathHelper.sin(this.yaw / 180.0F * (float) Math.PI) * 0.16F;
 @@ -149,7 +149,7 @@
              }
          }
@@ -4279,6 +5078,21 @@ index 95cc8aa..4d5b5e9 100644
      @Override
      public float getbbSize() {
          return 1.0F;
+diff --git a/core/src/main/java/net/minecraft/game/entity/projectile/Ring.java b/core/src/main/java/net/minecraft/game/entity/projectile/Ring.java
+index 3f3460b..043293b 100644
+--- a/core/src/main/java/net/minecraft/game/entity/projectile/Ring.java
++++ b/core/src/main/java/net/minecraft/game/entity/projectile/Ring.java
+@@ -98,8 +98,8 @@
+     private boolean canReachTarget(Entity entity) {
+         return this.world
+                 .rayTraceBlocks(
+-                    Vector.createVector(this.posX, this.posY + this.getEyeHeight(), this.posZ),
+-                    Vector.createVector(entity.posX, entity.posY + entity.getEyeHeight(), entity.posZ)
++                    Vector.createVector(this.posX, this.getEyeY(), this.posZ),
++                    Vector.createVector(entity.posX, entity.getEyeY(), entity.posZ)
+                 )
+             == null;
+     }
 diff --git a/core/src/main/java/net/minecraft/game/item/ItemStack.java b/core/src/main/java/net/minecraft/game/item/ItemStack.java
 index ee75f6f..e22f3ca 100644
 --- a/core/src/main/java/net/minecraft/game/item/ItemStack.java
@@ -4427,10 +5241,32 @@ index 0da7d1c..74a2575 100644
              if (player.properties.gamemode != 1) {
                  stack.stackSize--;
              }
+diff --git a/core/src/main/java/net/minecraft/game/item/misc/BoatItem.java b/core/src/main/java/net/minecraft/game/item/misc/BoatItem.java
+index 9765ffe..d5d03ac 100644
+--- a/core/src/main/java/net/minecraft/game/item/misc/BoatItem.java
++++ b/core/src/main/java/net/minecraft/game/item/misc/BoatItem.java
+@@ -28,7 +28,7 @@
+         float pitch = player.prevPitch + (player.pitch - player.prevPitch) * offset;
+         float yaw = player.prevYaw + (player.yaw - player.prevYaw) * offset;
+         double x = player.prevX + (player.posX - player.prevX) * offset;
+-        double y = player.prevY + (player.posY - player.prevY) * offset + 1.62 - player.yOffset;
++        double y = player.prevY + (player.posY - player.prevY) * offset + player.getEyeOffset();
+         double z = player.prevZ + (player.posZ - player.prevZ) * offset;
+         Vector position = Vector.createVector(x, y, z);
+         float yaw1 = MathHelper.cos(-yaw * (float) (Math.PI / 180.0) - (float) Math.PI);
 diff --git a/core/src/main/java/net/minecraft/game/item/misc/Bucket.java b/core/src/main/java/net/minecraft/game/item/misc/Bucket.java
-index b143e3b..47c6d64 100644
+index b143e3b..fa649ff 100644
 --- a/core/src/main/java/net/minecraft/game/item/misc/Bucket.java
 +++ b/core/src/main/java/net/minecraft/game/item/misc/Bucket.java
+@@ -37,7 +37,7 @@
+         float pitch = player.prevPitch + (player.pitch - player.prevPitch);
+         float yaw = player.prevYaw + (player.yaw - player.prevYaw);
+         double x = player.prevX + (player.posX - player.prevX);
+-        double y = player.prevY + (player.posY - player.prevY) * 1.0 + player.yOffset - player.yOffset;
++        double y = player.getEyeY();
+         double z = player.prevZ + (player.posZ - player.prevZ);
+         Vector position = Vector.createVector(x, y, z);
+         float yaw1 = MathHelper.cos(-yaw * (float) (Math.PI / 180.0) - (float) Math.PI);
 @@ -70,7 +70,7 @@
                          player.swingItem();
                      }
@@ -4522,6 +5358,19 @@ index b7eac36..272f397 100644
          return true;
      }
  
+diff --git a/core/src/main/java/net/minecraft/game/item/misc/Eye.java b/core/src/main/java/net/minecraft/game/item/misc/Eye.java
+index e36f90e..2e57ac7 100644
+--- a/core/src/main/java/net/minecraft/game/item/misc/Eye.java
++++ b/core/src/main/java/net/minecraft/game/item/misc/Eye.java
+@@ -23,7 +23,7 @@
+                 Slipgate.class, MathHelper.floor_double(player.posX), MathHelper.floor_double(player.posY), MathHelper.floor_double(player.posZ)
+             );
+             if (chunk != null) {
+-                EnderEye eye = new EnderEye(world, player.posX, player.posY + 1.62 - player.yOffset, player.posZ);
++                EnderEye eye = new EnderEye(world, player.posX, player.getEyeY(), player.posZ);
+                 eye.setFacing(chunk.x, chunk.y, chunk.z);
+                 world.spawnEntity(eye);
+                 world.playEntitySound(player, "random.throw", 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 diff --git a/core/src/main/java/net/minecraft/game/item/misc/Fertilizer.java b/core/src/main/java/net/minecraft/game/item/misc/Fertilizer.java
 index 5e6a15a..e3049a6 100644
 --- a/core/src/main/java/net/minecraft/game/item/misc/Fertilizer.java
@@ -6624,7 +7473,7 @@ index de1e8d0..b28b0ba 100644
              this.mcServer.configManager.playerLoggedIn(player);
              csnh.teleportTo(player.posX, player.posY, player.posZ, player.yaw, player.pitch);
 diff --git a/server/src/main/java/net/minecraft/server/network/NetServerHandler.java b/server/src/main/java/net/minecraft/server/network/NetServerHandler.java
-index e409b82..0b65f03 100644
+index e409b82..6d7b577 100644
 --- a/server/src/main/java/net/minecraft/server/network/NetServerHandler.java
 +++ b/server/src/main/java/net/minecraft/server/network/NetServerHandler.java
 @@ -4,52 +4,54 @@
@@ -6798,6 +7647,15 @@ index e409b82..0b65f03 100644
      public void teleportTo(double d1, double d3, double d5, float f7, float f8) {
          this.hasMoved = false;
          this.lastPosX = d1;
+@@ -311,7 +328,7 @@
+         // teleport therefore told the client it was standing 1.62 blocks higher than the server
+         // thought, with its eyes 1.62 blocks below its feet. That includes the teleport sent on
+         // login, so every player arrived floating and immediately fell.
+-        this.playerEntity.playerNetServerHandler.sendPacket(new PlayerTeleportPacket(d1, d3, d3 + 1.62, d5, f7, f8, false));
++        this.playerEntity.playerNetServerHandler.sendPacket(new PlayerTeleportPacket(d1, d3, d3 + this.playerEntity.getEyeHeight(), d5, f7, f8, false));
+     }
+ 
+     @Override
 @@ -384,7 +401,7 @@
      }
  
@@ -6960,7 +7818,7 @@ index e409b82..0b65f03 100644
 -    }
  }
 diff --git a/server/src/main/java/net/minecraft/server/player/EntityPlayerMP.java b/server/src/main/java/net/minecraft/server/player/EntityPlayerMP.java
-index 0c8e41b..b64395d 100644
+index 0c8e41b..8bde7a5 100644
 --- a/server/src/main/java/net/minecraft/server/player/EntityPlayerMP.java
 +++ b/server/src/main/java/net/minecraft/server/player/EntityPlayerMP.java
 @@ -4,21 +4,37 @@
@@ -7079,54 +7937,41 @@ index 0c8e41b..b64395d 100644
      public int ping;
  
      public EntityPlayerMP(MinecraftServer minecraftServer1, World world2, String string3, ItemInWorldManager itemInWorldManager4) {
-@@ -111,11 +146,36 @@
-         this.yOffset = 0.0F;
+@@ -87,7 +122,6 @@
+         this.mcServer = minecraftServer1;
+         this.stepHeight = 0.0F;
+         this.username = string3;
+-        this.yOffset = 0.0F;
      }
  
-+    // An MP player is anchored at its bounding-box minY (feet), not at an eye
-+    // line... so the constructor sets yOffset = 0 and every position the client
-+    // sends is feet-relative. Player.setCrawling is singleplayer code that
-+    // moves yOffset between 1.62 and 0.56 to swap eye height; run as-is here
-+    // it would leave yOffset at 0.56 while the feet anchor stays put, and the
-+    // movement handler's teleportTo(posY) then adds that offset a second time,
-+    // a persistent +0.56 desync that every moved-wrongly rubber-band resets to
-+    // the log's "Expected +0.56". The crawl bounding box (0.9m) is still what
-+    // collision and fitting use; only the eye offset is pinned
-+    @Override
-+    public void setCrawling(boolean state) {
-+        this.crawling = state;
-+        this.setSize(0.6F, state ? 0.9F : 1.8F);
-+    }
-+
      @Override
-     public float getEyeHeight() {
-         return 1.62F;
+@@ -107,16 +141,6 @@
      }
  
-+    // getEyeHeight is pinned at the standing 1.62 above, so cap the suffocation probe
-+    // under the box top - strictly under, or a box touching a ceiling floors into it.
-+    @Override
-+    public boolean isInsideBlock() {
-+        int x = MathHelper.floor_double(this.posX);
-+        int y = MathHelper.floor_double(Math.min(this.posY + this.getEyeHeight(), this.boundingBox.maxY - 0.1));
-+        int z = MathHelper.floor_double(this.posZ);
-+        return this.world.isBlockFull(x, y, z);
-+    }
-+
      @Override
+-    protected void resetHeight() {
+-        this.yOffset = 0.0F;
+-    }
+-
+-    @Override
+-    public float getEyeHeight() {
+-        return 1.62F;
+-    }
+-
+-    @Override
      public void onTick() {
          this.itemInWorldManager.beginBlockRemoval();
-@@ -158,7 +218,8 @@
+         this.ticksOfInvuln--;
+@@ -158,7 +182,7 @@
  
      @Override
      public void onDeath(DamageSource entity1) {
 -        this.inventory.clearContents(true);
 +        super.onDeath(entity1);
-+        this.resetHeight();
          this.score /= 2;
          String died = entity1.getDeathMsg(this);
          this.mcServer.configManager.sendPacketToAll(new ChatPacket(died));
-@@ -204,7 +265,17 @@
+@@ -204,7 +228,17 @@
      public void writeToNBT(CompoundTag nbtTagCompound) {
          super.writeToNBT(nbtTagCompound);
          nbtTagCompound.setInteger("Score", this.score);
@@ -7144,7 +7989,7 @@ index 0c8e41b..b64395d 100644
      }
  
      @Override
-@@ -213,10 +284,129 @@
+@@ -213,10 +247,129 @@
          this.score = nbtTagCompound.getInteger("Score");
          ListTag<? extends Tag> nBTTagList2 = nbtTagCompound.getTagList("Inventory");
          this.inventory.loadContents(nBTTagList2);
@@ -7274,7 +8119,7 @@ index 0c8e41b..b64395d 100644
          if (z1 && !this.loadedChunks.isEmpty()) {
              long chunkCoordIntPair7 = this.loadedChunks.get(0);
              boolean z8 = false;
-@@ -240,9 +430,18 @@
+@@ -240,9 +393,18 @@
              }
          }
  
@@ -7295,7 +8140,7 @@ index 0c8e41b..b64395d 100644
          }
      }
  
-@@ -301,33 +500,41 @@
+@@ -301,33 +463,41 @@
      }
  
      @Override
@@ -7314,8 +8159,8 @@ index 0c8e41b..b64395d 100644
 +            this.mcServer
 +                .getEntityTracker(this.dimension)
 +                .sendPacketToTrackedPlayersAndTrackedEntity(this, new SleepPacket(this, 0, var1, var2, var3));
-+            // moves lastPos* onto the bed, feet-first because teleportTo adds the sleeper's yOffset back on
-+            this.playerNetServerHandler.teleportTo(this.posX, this.posY - this.yOffset, this.posZ, this.yaw, this.pitch);
++            // moves lastPos* onto the bed; posY is the sleeper's box and teleportTo adds a zero yOffset
++            this.playerNetServerHandler.teleportTo(this.posX, this.posY, this.posZ, this.yaw, this.pitch);
          }
  
          return var4;
@@ -7350,7 +8195,7 @@ index 0c8e41b..b64395d 100644
      }
  
      @Override
-@@ -349,75 +556,175 @@
+@@ -349,75 +519,175 @@
          this.currentWindowId = this.currentWindowId % 100 + 1;
      }
  
@@ -7568,7 +8413,7 @@ index 0c8e41b..b64395d 100644
              this.playerNetServerHandler.sendPacket(new SlotPacket(container1.windowId, i2, itemStack3));
          }
      }
-@@ -444,9 +751,7 @@
+@@ -444,9 +714,7 @@
      }
  
      public void updateHeldItem() {
@@ -7579,7 +8424,7 @@ index 0c8e41b..b64395d 100644
      }
  
      public void closeCraftingGui() {
-@@ -493,6 +798,9 @@
+@@ -493,6 +761,9 @@
  
      public void setHealth() {
          this.lastHealth = -99999999;
