@@ -20,9 +20,8 @@ buildscript {
 }
 
 // Vineflower needs a modern JVM, but the game itself is built on Java 8. It will not run on
-// 8 at all. Measured: JDK 21 and JDK 25 produce byte-identical output, so the pin is not
-// load-bearing between those two - it is here because only those two were checked, and a
-// decompiler that shifts output on a future JDK would break every patch at once.
+// 8 at all. JDK 21 and JDK 25 produce the same output on each decompile, so the safe thing to do here
+// is pin to 21 or 25
 def DECOMPILER_JAVA = 21
 
 def UPSTREAM = [
@@ -302,7 +301,7 @@ tasks.register('bootstrap') {
     doLast {
         // Patch 0001 is applied to a throwaway copy under build/, never to the project
         // directory. JGit's ApplyCommand stages what it applies, so pointing it at the real
-        // repository would silently add every patched file back into the index.
+        // repository would silently add every patched file back into the index
         def stagedDir = new File(bootDir, 'staged')
         delete(stagedDir)
         copyTreeInto(baselineDir, stagedDir)
