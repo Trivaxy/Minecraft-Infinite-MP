@@ -1,17 +1,27 @@
-# Minecraft Infinite
-This repository was used to host an archive of "Minecraft Infinite" versions and report bugs with the mod, but has since been archived. 
-I am no longer updating or supporting the mod and I will not accept any bug reports. I don't care, even if there's some game breaking bug or crash. I've had enough. 
-For my own sanity, this project is discontinued. Below you will find some basic info and an install guide. Enjoy. 
+# Minecraft-Infinite-MP
 
-Common problems:
-* It is recommended to allocate at least 3GB of memory to the mod to ensure it runs smoothly. Technically it should work with only 1GB, but you may experience slowdown or crashes.
-* If sound doesnt work for you, it is 100% an issue with your setup. Get the sounds from the [repo](https://github.com/VesuviusVenox/Classic-Resources) and play in offline mode to avoid redownloading them. Also, make sure you are NOT using sound proxies like Betacraft, otherwise the mod will try to fetch the sounds from said proxy and fail, since it expects to connect to my own sounds repo.
-* Mac and Linux may experience mouse-related issues or other oddities with input methods. This is due to the mod using LWJGL 2.9.3/2.9.4, which has such issues on Linux and Mac. The only fix I know if is to update the mod to LWJGL 3, which I am NOT doing.
+This is an unofficial version of [Minecraft Infinite](https://github.com/VesuviusVenox/Minecraft-Infinite) that introduces support for Multiplayer.
 
-How to install:
-* For first time install, get the instance zip file ("Latest.zip) and drag-and-drop it (or import from zip) to your MultiMC/Prism launcher.
-* For updating, get the latest version jar file from the archive, right-click your instance, go to the version tab, REMOVE the old jar and click "Add to jar", then select the downloaded jar file.
-* IMPORTANT! Make sure you are using Java 8. Java version 21 and higher will cause the mod to crash due to some bullshit incompatability issues between newer Java versions and LWJGL 2.9
+The original mod, as of the time of writing, is no longer receiving updates and is effectively EOL. Unfortunately this means it never got multiplayer support. While it did have some of the foundation needed, it was left in a state where multiplayer was missing a ton of features, very buggy, and all around unplayable.
 
-<img width="1694" height="769" alt="image" src="https://github.com/user-attachments/assets/55e932ac-f07a-4316-ba44-370ba41939ef" />
+As a result, I've begun working on this project in my spare time to give Minecraft Infinite actual, proper multiplayer, mainly so I can enjoy it with my friends. If you want to try it out, please continue reading.
 
+## Disclaimer
+
+I am not affiliated or part of the Minecraft Infinite dev team (i.e. the Legacy+ team) nor am I affiliated with Minecraft or Mojang. This is a purely personal/community project.
+
+## Important
+
+Right now, this project is **heavily** WIP, meaning you are bound to encounter all sorts of bugs and issues while I squash them. Here be dragons. Once multiplayer gets to a stable state, I'll remove this warning. Back up any worlds you care about.
+
+You can do your part! When finding bugs, please report them on *this* repo's issue tracker rather than reporting it to the original developers. You'll notice that versions look like `Minecraft Infinite 1.0-150826`. That last number refers to a specific build of Minecraft Infinite MP, so include it with a description of what happened during the crash as well as logs. 
+
+Lastly, I won't be adding any new content, mechanics or features that aren't necessary for multiplayer. This project is purely focused on allowing people to play together. The only exception to this is commands, and only the strictly useful ones.
+
+## Installing and running
+
+Follow the instructions [here](https://github.com/VesuviusVenox/Minecraft-Infinite), just be sure to download the MultiMC/Prism instance from [this repo's releases](https://github.com/Trivaxy/Minecraft-Infinite-MP/releases) instead. The dedicated server jar is also available, which you'll need to host.
+
+As for how to host, search up port forwarding or rely on something like Radmin/ZeroTier.
+
+Run the server by using your terminal and running `java -Xms3G -Xmx3G -jar <server file>.jar nogui`
