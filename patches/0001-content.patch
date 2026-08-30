@@ -2370,7 +2370,7 @@ index 68cd336..829e3cc 100644
      }
  }
 diff --git a/client/src/main/java/net/minecraft/client/player/PlayerController.java b/client/src/main/java/net/minecraft/client/player/PlayerController.java
-index 42f5a02..328315a 100644
+index 42f5a02..f320ece 100644
 --- a/client/src/main/java/net/minecraft/client/player/PlayerController.java
 +++ b/client/src/main/java/net/minecraft/client/player/PlayerController.java
 @@ -2,8 +2,6 @@
@@ -2382,6 +2382,15 @@ index 42f5a02..328315a 100644
  import net.minecraft.client.gui.screens.game.PhotoMode;
  import net.minecraft.client.options.OptionValues;
  import net.minecraft.client.options.OptionsList;
+@@ -212,7 +210,7 @@
+     }
+ 
+     private void updateMovementKeys(Player player) {
+-        if (!player.sitting) {
++        if (!player.isSitting()) {
+             float forwardOffset = 0.8F;
+             boolean movementFlag = this.moveForward >= forwardOffset;
+             this.moveStrafe = 0.0F;
 @@ -274,7 +272,7 @@
                          } else {
                              player.clearGliding();
@@ -2400,10 +2409,11 @@ index 42f5a02..328315a 100644
                  while (this.options.flightKey.pressed()) {
                      player.flying = !player.flying;
                  }
-@@ -307,13 +305,7 @@
+@@ -306,14 +304,8 @@
+                 player.motionY -= 0.3F;
              }
  
-             if (OptionValues.sneakMode && !player.sleeping && !player.crawling && !player.sitting) {
+-            if (OptionValues.sneakMode && !player.sleeping && !player.crawling && !player.sitting) {
 -                if (this.mc.options.sneakKey.pressed) {
 -                    player.sneaking = true;
 -                    player.yOffset = 1.42F;
@@ -2411,6 +2421,7 @@ index 42f5a02..328315a 100644
 -                    player.sneaking = false;
 -                    player.yOffset = 1.62F;
 -                }
++            if (OptionValues.sneakMode && !player.sleeping && !player.crawling && !player.isSitting()) {
 +                player.sneaking = this.mc.options.sneakKey.pressed;
              }
          }
@@ -2463,7 +2474,7 @@ index 0d2a752..7d12017 100644
              GL11.glRotatef(-this.renderManager.yaw, 0.0F, 1.0F, 0.0F);
              GL11.glRotatef(this.renderManager.pitch, 1.0F, 0.0F, 0.0F);
 diff --git a/client/src/main/java/net/minecraft/client/render/entity/PlayerRenderer.java b/client/src/main/java/net/minecraft/client/render/entity/PlayerRenderer.java
-index 6729cc1..56344a6 100644
+index 6729cc1..eda6181 100644
 --- a/client/src/main/java/net/minecraft/client/render/entity/PlayerRenderer.java
 +++ b/client/src/main/java/net/minecraft/client/render/entity/PlayerRenderer.java
 @@ -1,7 +1,6 @@
@@ -2483,6 +2494,15 @@ index 6729cc1..56344a6 100644
              ItemStack equippedItem = player.inventory.getCurrentItem();
              if (player.inventory.getOffHandItem() != null && player.inventory.getOffHandItem() == player.itemInUse) {
                  equippedItem = player.inventory.getOffHandItem();
+@@ -76,7 +75,7 @@
+             );
+             this.armorOverlay.sneaking = this.leggingsOverlay.sneaking = this.accessoriesOverlay.sneaking = this.model.sneaking = player.sneaking;
+             this.armorOverlay.crawling = this.leggingsOverlay.crawling = this.accessoriesOverlay.crawling = this.model.crawling = player.crawling;
+-            this.armorOverlay.riding = this.leggingsOverlay.riding = this.accessoriesOverlay.riding = this.model.riding = player.sitting || player.isRiding();
++            this.armorOverlay.riding = this.leggingsOverlay.riding = this.accessoriesOverlay.riding = this.model.riding = player.isSitting() || player.isRiding();
+             this.armorOverlay.flying = this.leggingsOverlay.flying = this.accessoriesOverlay.flying = this.model.flying = player.isGliding();
+             this.armorOverlay.leftHanded = this.leggingsOverlay.leftHanded = this.accessoriesOverlay.leftHanded = this.model.leftHanded = player.swingingOffhand;
+             this.armorOverlay.heldItemLeft = this.leggingsOverlay.heldItemLeft = this.accessoriesOverlay.heldItemLeft = this.model.heldItemLeft = player.inventory
 @@ -514,9 +513,10 @@
  
                  if (!player.sneaking) {
@@ -3108,6 +3128,40 @@ index baf10fc..f383f36 100644
          }
  
          return true;
+diff --git a/core/src/main/java/net/minecraft/game/block/decoration/Chair.java b/core/src/main/java/net/minecraft/game/block/decoration/Chair.java
+index f815950..6c40ab2 100644
+--- a/core/src/main/java/net/minecraft/game/block/decoration/Chair.java
++++ b/core/src/main/java/net/minecraft/game/block/decoration/Chair.java
+@@ -105,7 +105,7 @@
+     public void onBlockRemoval(World world, int xCoord, int yCoord, int zCoord) {
+         Player player = world.getClosestPlayer(xCoord, yCoord, zCoord, 2.0);
+         if (player != null) {
+-            player.sitting = false;
++            player.setSitting(false);
+         }
+     }
+ 
+@@ -131,8 +131,7 @@
+ 
+     @Override
+     public final boolean blockActivated(World world, int x, int y, int z, Player player) {
+-        if (!world.isOnline
+-            && !player.isInWater()
++        if (!player.isInWater()
+             && !player.sneaking
+             && world.getBlockId(x, y + 1, z) == 0
+             && !player.sleeping
+@@ -141,8 +140,8 @@
+             && !player.gliding) {
+             player.motionX = player.motionY = player.motionZ = 0.0;
+             player.resetKeys();
+-            player.setPosition(x + 0.5, y + 1.7, z + 0.5);
+-            player.sitting = !player.sitting;
++            player.setPosition(x + 0.5, y + .7, z + 0.5);
++            player.setSitting(!player.isSitting());
+             player.addStat(StatList.chairUse, 1);
+             return true;
+         } else {
 diff --git a/core/src/main/java/net/minecraft/game/block/decoration/Door.java b/core/src/main/java/net/minecraft/game/block/decoration/Door.java
 index 5671300..da191c9 100644
 --- a/core/src/main/java/net/minecraft/game/block/decoration/Door.java
@@ -3278,6 +3332,19 @@ index 38c767f..fa27845 100644
              if (offset - y > 2.0) {
                  return 1;
              }
+diff --git a/core/src/main/java/net/minecraft/game/block/machines/Teleporter.java b/core/src/main/java/net/minecraft/game/block/machines/Teleporter.java
+index 6224f50..5de2842 100644
+--- a/core/src/main/java/net/minecraft/game/block/machines/Teleporter.java
++++ b/core/src/main/java/net/minecraft/game/block/machines/Teleporter.java
+@@ -82,7 +82,7 @@
+ 
+     @Override
+     public boolean blockActivated(World world, int xCoord, int yCoord, int zCoord, Player player) {
+-        player.sitting = false;
++        player.setSitting(false);
+         int meta = world.getBlockMetadata(xCoord, yCoord, zCoord);
+         boolean state = false;
+         if (player.hook != null) {
 diff --git a/core/src/main/java/net/minecraft/game/block/utility/Anvil.java b/core/src/main/java/net/minecraft/game/block/utility/Anvil.java
 index 2d53eef..2d2ff0e 100644
 --- a/core/src/main/java/net/minecraft/game/block/utility/Anvil.java
@@ -4545,7 +4612,7 @@ index 464ae45..b710e9d 100644
              }
          }
 diff --git a/core/src/main/java/net/minecraft/game/entity/player/Player.java b/core/src/main/java/net/minecraft/game/entity/player/Player.java
-index ca0d792..8bad106 100644
+index ca0d792..ccc3c01 100644
 --- a/core/src/main/java/net/minecraft/game/entity/player/Player.java
 +++ b/core/src/main/java/net/minecraft/game/entity/player/Player.java
 @@ -4,6 +4,7 @@
@@ -4727,7 +4794,7 @@ index ca0d792..8bad106 100644
      }
  
      @Override
-@@ -1712,24 +1738,17 @@
+@@ -1712,24 +1738,26 @@
      }
  
      public void setCrawling(boolean state) {
@@ -4755,10 +4822,28 @@ index ca0d792..8bad106 100644
 -        } else {
 -            this.yOffset = 1.62F;
 -        }
++    }
++
++    //bad implementation maybe? maybe also set this.sitting to the value but uhh this works so idk
++    public boolean isSitting() {
++        return this.getFlag(6);
++    }
++
++    public void setSitting(boolean sitting) {
++        this.setFlag(6, sitting);
      }
  
      protected void closeScreen() {
-@@ -2033,41 +2052,7 @@
+@@ -1970,6 +1998,8 @@
+         }
+     }
+ 
++
++
+     @Override
+     public Icon getItemIcon(ItemStack stack, int dmg) {
+         Icon icon = super.getItemIcon(stack, dmg);
+@@ -2033,41 +2063,7 @@
  
              if ((this.timeWithoutRest <= 0 || !this.preventSleeping()) && this.world.settings.getEvent() <= 0) {
                  if (Math.abs(this.posX - x) <= 3.0 && Math.abs(this.posY - y) <= 2.0 && Math.abs(this.posZ - z) <= 3.0) {
@@ -4801,7 +4886,7 @@ index ca0d792..8bad106 100644
                      return Bed.Status.OK;
                  } else {
                      return Bed.Status.TOO_FAR_AWAY;
-@@ -2096,9 +2081,50 @@
+@@ -2096,9 +2092,50 @@
          }
      }
  
@@ -4853,7 +4938,7 @@ index ca0d792..8bad106 100644
          boolean forceWakeup = false;
          if (this.dimension != 0) {
              Phantom enemy = new Phantom(this.world);
-@@ -2116,9 +2142,9 @@
+@@ -2116,9 +2153,9 @@
                  respawnPos = new Position(bedPos.x, bedPos.y + 1, bedPos.z);
              }
  
@@ -4865,7 +4950,7 @@ index ca0d792..8bad106 100644
          }
  
          this.sleeping = false;
-@@ -2139,9 +2165,8 @@
+@@ -2139,9 +2176,8 @@
                  return;
              }
  
@@ -4876,7 +4961,7 @@ index ca0d792..8bad106 100644
          } else {
              this.sleepTimer = 0;
          }
-@@ -2480,7 +2505,7 @@
+@@ -2480,7 +2516,7 @@
                  Vector vector2 = Vector.createVector((this.world.rand.nextFloat() - 0.5) * 0.3, -this.world.rand.nextFloat() * 0.6 - 0.3, 0.6);
                  vector2.rotateAroundX(-this.pitch * 3.141593F / 180.0F);
                  vector2.rotateAroundY(-this.yaw * 3.141593F / 180.0F);
@@ -4885,7 +4970,7 @@ index ca0d792..8bad106 100644
                  this.world
                      .spawnParticle(
                          ParticleContext.setIconContext(ParticleType.ICONCRACK, itemstack.getItem()),
-@@ -2518,27 +2543,34 @@
+@@ -2518,27 +2554,34 @@
      }
  
      public void displayGUIChest(Inventory inventory, boolean b) {
@@ -4920,7 +5005,7 @@ index ca0d792..8bad106 100644
      }
  
      public void displayGUIBook(ItemStack stack) {
-@@ -2548,35 +2580,49 @@
+@@ -2548,35 +2591,49 @@
      }
  
      public void displayGUIHellforge(HellforgeEntity furnace) {
@@ -7348,7 +7433,7 @@ index c265576..ac1b8e7 100644
 -    }
  }
 diff --git a/server/src/main/java/net/minecraft/server/network/NetLoginHandler.java b/server/src/main/java/net/minecraft/server/network/NetLoginHandler.java
-index de1e8d0..b28b0ba 100644
+index de1e8d0..5c58b69 100644
 --- a/server/src/main/java/net/minecraft/server/network/NetLoginHandler.java
 +++ b/server/src/main/java/net/minecraft/server/network/NetLoginHandler.java
 @@ -8,9 +8,11 @@
@@ -7393,13 +7478,21 @@ index de1e8d0..b28b0ba 100644
  
  public class NetLoginHandler extends NetworkHandler {
      public static Logger logger = Logger.getLogger("Minecraft");
-@@ -112,17 +115,7 @@
-                     @Override
-                     public void run() {
-                         try {
+@@ -109,34 +112,70 @@
+             this.doLogin(packet1Login1);
+         } else {
+             (new Thread() {
+-                    @Override
+-                    public void run() {
+-                        try {
 -                            String string1 = NetLoginHandler.this.serverId;
 -                            URL uRL2 = new URL(
--                                "https://session.minecraft.net/game/checkserver.jsp?user="
++                @Override
++                public void run() {
++                    try {
++                        String string1 = NetLoginHandler.this.serverId;
++                        URL uRL2 = new URL(
+                                 "https://session.minecraft.net/game/checkserver.jsp?user="
 -                                    + URLEncoder.encode(packet1Login1.username, "UTF-8")
 -                                    + "&serverId="
 -                                    + URLEncoder.encode(string1, "UTF-8")
@@ -7408,11 +7501,33 @@ index de1e8d0..b28b0ba 100644
 -                            String string4 = bufferedReader3.readLine();
 -                            bufferedReader3.close();
 -                            if (string4.equals("YES")) {
-+                            if (NetLoginHandler.this.hasJoined(packet1Login1.username)) {
-                                 NetLoginHandler.this.packet1login = packet1Login1;
-                             } else {
-                                 NetLoginHandler.this.kickUser("Failed to verify username!");
-@@ -137,6 +130,43 @@
+-                                NetLoginHandler.this.packet1login = packet1Login1;
+-                            } else {
+-                                NetLoginHandler.this.kickUser("Failed to verify username!");
+-                            }
+-                        } catch (Exception exception5) {
+-                            NetLoginHandler.this.kickUser("Failed to verify username! [internal error " + exception5 + "]");
+-                            exception5.printStackTrace();
++                                        + URLEncoder.encode(packet1Login1.username, "UTF-8")
++                                        + "&serverId="
++                                        + URLEncoder.encode(string1, "UTF-8")
++                        );
++                        BufferedReader bufferedReader3 = new BufferedReader(new InputStreamReader(uRL2.openStream()));
++                        String string4 = bufferedReader3.readLine();
++                        bufferedReader3.close();
++                        if (string4.equals("YES")) {
++                            NetLoginHandler.this.packet1login = packet1Login1;
++                        } else {
++                            NetLoginHandler.this.kickUser("Failed to verify username!");
+                         }
++                    } catch (Exception exception5) {
++                        NetLoginHandler.this.kickUser("Failed to verify username! [internal error " + exception5 + "]");
++                        exception5.printStackTrace();
+                     }
+-                })
+-                .start();
++                }
++            }).start();
          }
      }
  
@@ -7456,7 +7571,7 @@ index de1e8d0..b28b0ba 100644
      public void doLogin(LoginPacket packet1Login1) {
          EntityPlayerMP player = this.mcServer.configManager.login(this, packet1Login1.username);
          if (player != null) {
-@@ -178,11 +208,14 @@
+@@ -178,11 +217,14 @@
                      level.getSeed(),
                      (byte)player.dimension,
                      (byte)this.mcServer.configManager.getMaxPlayers(),
@@ -7472,6 +7587,39 @@ index de1e8d0..b28b0ba 100644
              this.mcServer.configManager.sendPacketToAll(new ChatPacket("§e" + player.username + " joined the game."));
              this.mcServer.configManager.playerLoggedIn(player);
              csnh.teleportTo(player.posX, player.posY, player.posZ, player.yaw, player.pitch);
+@@ -214,18 +256,21 @@
+         ByteArrayOutputStream baos = new ByteArrayOutputStream();
+ 
+         try {
+-            BufferedImage icon = ImageIO.read(iconFile);
+-            if (icon.getWidth() > 128 || icon.getHeight() > 128) {
+-                BufferedImage resized = new BufferedImage(128, 128, 2);
+-                Graphics2D g = resized.createGraphics();
+-                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+-                g.drawImage(icon, 0, 0, 128, 128, null);
+-                g.dispose();
+-                icon = resized;
+-            }
++            if(iconFile.exists()) {
++                BufferedImage icon = ImageIO.read(iconFile);
++                if (icon.getWidth() > 128 || icon.getHeight() > 128) {
++                    BufferedImage resized = new BufferedImage(128, 128, 2);
++                    Graphics2D g = resized.createGraphics();
++                    g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
++                    g.drawImage(icon, 0, 0, 128, 128, null);
++                    g.dispose();
++                    icon = resized;
++                }
+ 
+-            ImageIO.write(icon, "PNG", baos);
+-            baos.flush();
++
++                ImageIO.write(icon, "PNG", baos);
++                baos.flush();
++            }
+         } catch (IOException e) {
+             e.printStackTrace();
+         }
 diff --git a/server/src/main/java/net/minecraft/server/network/NetServerHandler.java b/server/src/main/java/net/minecraft/server/network/NetServerHandler.java
 index e409b82..6d7b577 100644
 --- a/server/src/main/java/net/minecraft/server/network/NetServerHandler.java
