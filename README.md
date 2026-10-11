@@ -10,6 +10,17 @@ As a result, I've begun working on this project in my spare time to give Minecra
 
 I am not affiliated or part of the Minecraft Infinite dev team (i.e. the Legacy+ team) nor am I affiliated with Minecraft or Mojang. This is a purely personal/community project.
 
+You may also notice that Claude is on the contributor list. Here's how Claude was used:
+- Investigating the root causes of bugs in multiplayer. This is by far where it is most helpful, as it saves hours worth of time. Multiplayer bugs can be nasty to address.
+- Proposing *candidate* fixes for me to evaluate. This is where I am most actively involved, as Claude sometimes offers fixes that make incorrect assumptions about what code should look like, or worse, offers a fix that acts as a bandaid (addressing the symptom of a bug, rather than the root cause of the bug itself). It's my responsibility here to push back on Claude and have it doubt itself.
+- Exploring the codebase. It's pretty big, and much of it is still unknown to me. Claude does a decent job at explaining/pointing me to where I should look.
+- Every single task I give to Claude is scoped so that it is easy to review and test. Telling Claude "Please fix dimensions in multiplayer" is the exact kind of prompt that is *not* well-scoped that leads to the model making a bunch of assumptions and running rampant in the codebase. It might end up succeeding, but no one can actually own the changes it made. So no.
+- The gradle-based patch system this repo uses. Frankly, I despise gradle with a burning passion, and wanted some infrastructure in place to allow others to contribute to this repo. I gave it direction on what to build, skimmed its output, and made sure it works. That said, this repo will likely not have code available for much longer.
+
+Aside from that, here's how Claude is NOT used:
+- Testing. I test every single fix or code change Claude makes manually and don't trust its output blindly. The *only* exceptions here are small code changes where I know for a fact it does not need testing. Usually this is small refactors.
+- Writing documents, comments, changelogs, anything that other people need to read. All of it is 100% human written by me because of two reasons: firstly, AI *still* sucks at talking to people despite becoming more capable. Secondly, having AI do the writing for you is disrespectful to the people who will be reading your work due to the asymmetry of effort involved.
+
 ## Important
 
 Right now, this project is **heavily** WIP, meaning you are bound to encounter all sorts of bugs and issues while I squash them. Here be dragons. Once multiplayer gets to a stable state, I'll remove this warning. Back up any worlds you care about.
